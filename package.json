@@ -1,0 +1,40 @@
+{
+  "name": "@mitriyweb/agent-team",
+  "version": "0.1.0",
+  "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
+  "license": "MIT",
+  "author": "Mitriyweb",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mitriyweb/agent-team.git"
+  },
+  "homepage": "https://github.com/Mitriyweb/agent-team#readme",
+  "bugs": {
+    "url": "https://github.com/Mitriyweb/agent-team/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai-agents",
+    "agent-team",
+    "anthropic",
+    "automation",
+    "llm"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "fix": "bun run lint:fix && bun run check:fix",
+    "prepare": "prek install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@j178/prek": "0.3.3",
+    "markdownlint-cli2": "latest"
+  }
+}

@@ -1,0 +1,55 @@
+services:
+
+  # ── Ollama — local LLM runtime ────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_NUM_THREAD=${OLLAMA_THREADS:-16}
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+    deploy:
+      resources:
+        limits:
+          cpus: "${OLLAMA_CPUS:-16}"
+          memory: ${OLLAMA_MEMORY:-24G}
+
+  # ── Model pull — runs once on first start ─────────────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    depends_on:
+      - ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      sh -c "
+        echo 'Waiting for Ollama...' &&
+        sleep 10 &&
+        OLLAMA_HOST=http://ollama:11434 ollama pull qwen3-coder:30b-q4_K_M &&
+        echo 'Model ready.'
+      "
+    restart: "no"
+
+  # ── LiteLLM proxy — routes between local and cloud ───────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./litellm.yaml:/app/config.yaml
+    command: --config /app/config.yaml --port 8080
+    env_file:
+      - ../.env
+    depends_on:
+      - ollama
+
+volumes:
+  ollama_data:
