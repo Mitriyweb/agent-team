@@ -1,0 +1,19 @@
+config:
+  # Line length — disable for tables and code blocks, increase limit for prose
+  MD013:
+    line_length: 160
+    tables: false
+    code_blocks: false
+    headings: false
+
+  # First line heading — agent files use YAML frontmatter, not headings
+  MD041: false
+
+  # Emphasis as heading — used intentionally in README for diagram labels
+  MD036: false
+
+  # Fenced code language — too strict for protocol/flow diagrams
+  MD040: false
+
+  # Table column style — pipe spacing is a style preference, not an error
+  MD060: false
