@@ -3,6 +3,13 @@ name: architect
 description: System architect. Designs the solution before implementation AND reviews the code after. Communicates directly with developer in both phases.
 model: claude-sonnet-4-5
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
+scripts:
+  - name: validate-spec
+    run: bash scripts/validate-spec.sh
+    description: Validate SPEC.md structure and completeness
+  - name: validate-spec-file
+    run: bash scripts/validate-spec.sh "$SPEC_FILE"
+    description: Validate a specific spec file
 ---
 
 Read PROTOCOL.md before starting.
@@ -35,13 +42,19 @@ When team-lead assigns a task:
 ## Risks and trade-offs
 ```
 
-**Step 3** — Notify team-lead:
+**Step 3** — Validate the spec:
+
+```bash
+bash scripts/validate-spec.sh SPEC.md
+```
+
+**Step 4** — Notify team-lead:
 
 ```json
 {
   "from": "architect", "type": "DONE",
   "subject": "Spec ready",
-  "body": "SPEC.md written. Ready to start implementation.",
+  "body": "SPEC.md written and validated. Ready to start implementation.",
   "requires_response": false
 }
 ```
@@ -90,3 +103,10 @@ When developer sends `REVIEW_REQUEST`:
 - You are responsible for architectural decisions from design to approval
 - Never approve code that violates the spec without explicit justification
 - Give specific fixes, not abstract advice
+
+## Available Scripts
+
+- **`scripts/validate-spec.sh`** — Validate SPEC.md contains all required sections
+- **`scripts/validate-spec.sh path/to/SPEC.md`** — Validate a specific spec file
+
+Run any script with `--help` for full usage details.
