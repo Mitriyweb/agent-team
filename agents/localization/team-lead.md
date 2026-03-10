@@ -1,7 +1,7 @@
 ---
 name: team-lead
 description: Localization team orchestrator. Launch when you need to produce documented, localized, and SEO-optimized content — decomposes work, delegates to tech-writer, localizers, seo-specialist, and qa. Never writes docs or translations itself.
-model: claude-opus-4-6
+model: claude-opus
 tools: Read, Write, Bash, Glob, Grep, Task, Teammate
 ---
 

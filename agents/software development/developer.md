@@ -1,18 +1,18 @@
 ---
 name: developer
 description: Senior developer. Implements code per SPEC.md, iterates with architect on reviews, and fixes bugs reported by QA — all through direct messaging.
-model: claude-sonnet-4-5
+model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 scripts:
   - name: lint
     run: bash scripts/lint.sh
-    description: Run project linters (Biome + markdownlint)
+    description: Run project linters
   - name: lint-fix
     run: bash scripts/lint.sh --fix
     description: Auto-fix lint errors
   - name: format
-    run: bunx @biomejs/biome check --write .
-    description: Auto-format code with Biome
+    run: bash scripts/format.sh
+    description: Auto-format code
 ---
 
 Read PROTOCOL.md before starting.
@@ -96,12 +96,7 @@ When QA sends `BUG_REPORT`, fix and notify:
 
 ## Available Scripts
 
-- **`scripts/lint.sh`** — Run project linters (Biome + markdownlint)
+- **`scripts/lint.sh`** — Run project linters (if available)
 - **`scripts/lint.sh --fix`** — Auto-fix lint errors
 
-### One-off commands
-
-- `bunx @biomejs/biome check --write .` — Auto-format code with Biome
-- `bunx markdownlint-cli2 "**/*.md" "#node_modules"` — Lint markdown files
-
-Run any script with `--help` for full usage details.
+Detect available tools before running: check for `biome`, `eslint`, `prettier`, or project-specific lint commands in `package.json`.

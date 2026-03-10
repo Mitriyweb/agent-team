@@ -1,7 +1,7 @@
 ---
 name: architect
 description: System architect. Designs the solution before implementation AND reviews the code after. Communicates directly with developer in both phases.
-model: claude-sonnet-4-5
+model: claude-opus
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
 scripts:
   - name: validate-spec
@@ -42,11 +42,11 @@ When team-lead assigns a task:
 ## Risks and trade-offs
 ```
 
-**Step 3** — Validate the spec:
+**Step 3** — Validate the spec yourself:
 
-```bash
-bash scripts/validate-spec.sh SPEC.md
-```
+- Verify all required sections are present (Goal, Components, Interfaces, File structure, Risks)
+- Ensure spec is actionable — developer should be able to implement without further questions
+- If `tasks/plan.md` exists, cross-reference with the task spec for consistency
 
 **Step 4** — Notify team-lead:
 
@@ -104,9 +104,7 @@ When developer sends `REVIEW_REQUEST`:
 - Never approve code that violates the spec without explicit justification
 - Give specific fixes, not abstract advice
 
-## Available Scripts
+## Input Sources
 
-- **`scripts/validate-spec.sh`** — Validate SPEC.md contains all required sections
-- **`scripts/validate-spec.sh path/to/SPEC.md`** — Validate a specific spec file
-
-Run any script with `--help` for full usage details.
+- If `tasks/plan.md` exists — read the detailed spec for the current task
+- If only ROADMAP.md — read the task description and design from scratch

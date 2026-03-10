@@ -1,12 +1,15 @@
 ---
 name: qa
 description: QA engineer. Writes tests, finds bugs, and reports them directly to developer. Iterates until all tests are green before reporting to team-lead.
-model: claude-sonnet-4-5
+model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 scripts:
   - name: lint
     run: bash scripts/lint.sh
     description: Run project linters before submitting QA report
+  - name: test
+    run: bash scripts/test.sh
+    description: Run project tests with coverage
 ---
 
 Read PROTOCOL.md before starting.
@@ -31,10 +34,16 @@ Read `SPEC.md` first, then the implementation — to understand what should work
 
 ### Step 3 — Run tests
 
+Detect the project's test runner and use it:
+
 ```bash
-bun test --coverage 2>&1 | tee TEST_RESULTS.txt
-# or
+# Node.js — detect from package.json scripts
+npm test 2>&1 | tee TEST_RESULTS.txt
+
+# Python
 pytest --cov=. --cov-report=term 2>&1 | tee TEST_RESULTS.txt
+
+# Or use whatever test command the project already has
 ```
 
 ### Step 4 — Report bugs directly to developer
@@ -98,7 +107,6 @@ Notify team-lead:
 
 ## Available Scripts
 
-- **`scripts/lint.sh`** — Run project linters (Biome + markdownlint)
-- **`scripts/lint.sh --fix`** — Auto-fix lint errors
+- **`scripts/lint.sh`** — Run project linters (if available)
 
-Run any script with `--help` for full usage details.
+Detect available tools before running. Check `package.json` for test/lint commands.

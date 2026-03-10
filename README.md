@@ -23,16 +23,14 @@ team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
 
 ```bash
 # 1. Clone into your project
-git clone https://github.com/your-org/claude-agent-team .claude-team
+git clone https://github.com/Mitriyweb/agent-team .claude-team
 
-# 2. Setup folders
-mkdir -p .claude
-cp -r .claude-team/claude/* .claude/
-cp -r .claude-team/agents .claude/
-cp -r .claude-team/scripts ./
+# 2. Setup (no bun needed)
+cd .claude-team && ./scripts/setup.sh
 
-# 3. Configure environment
-echo "ANTHROPIC_API_KEY=your_key_here" > .env
+# 3. Configure provider in .env (see .env.example)
+cp .env.example .env
+# Edit .env: set PROVIDER and your API key
 
 # 4. Create ROADMAP.md with tasks, then run
 touch ROADMAP.md
@@ -41,14 +39,30 @@ touch ROADMAP.md
 ./scripts/run.sh --dry-run  # preview without running
 ```
 
+## Planning
+
+The autonomous work of the agent team is driven by the `ROADMAP.md` file located in the root of your project.
+
+1. **Define Tasks**: Create a `ROADMAP.md` and add tasks using markdown checklists (`- [ ]`).
+2. **Orchestration**: The `team-lead` agent parses the roadmap, selects the highest priority
+   pending task, decomposes it into subtasks, and assigns them to the appropriate agents.
+3. **Dependencies**: You can specify dependencies (`depends:001`) to ensure tasks are executed in strict order.
+
+   ```markdown
+   - [ ] id:001 priority:high type:feature agents:architect,developer Implement login API
+   ```
+
+4. **Reference**: For a complete reference on task fields and statuses, see [docs/task-format.md](docs/task-format.md).
+
 ## Requirements
 
-| Tool | Version | Install |
-|------|---------|---------|
-| Bun | 1.0+ | [bun.sh](https://bun.sh) |
-| Claude Code | latest | `bun install -g @anthropic-ai/claude-code` |
-| Docker | 24+ | [docker.com](https://docker.com) *(optional, for local model)* |
-| tmux | any | `apt install tmux` *(optional, for multi-agent view)* |
+| Tool | Required | Install |
+|------|----------|---------|
+| Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` or [claude.ai/download](https://claude.ai/download) |
+| API key | **yes** | Anthropic key or Azure APIM subscription key (see `.env.example`) |
+| Docker | no | [docker.com](https://docker.com) *(for local model via Ollama)* |
+| tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
+| Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |
 
 ## Repository Structure
 
@@ -73,6 +87,7 @@ touch ROADMAP.md
 │   └── settings.json       # Claude Code project settings
 ├── scripts/
 │   ├── run.sh              # Main autonomous loop
+│   ├── claude.sh           # Launch Claude Code with provider from .env
 │   ├── agents.sh           # Launch agents manually (local / cloud / both)
 │   ├── setup.sh            # One-time environment setup
 │   └── _common.sh          # Shared helpers for scripts
@@ -86,9 +101,10 @@ touch ROADMAP.md
 │   ├── agents-software development.md  # How agent roles work
 │   ├── routing.md                      # Local vs cloud model routing
 │   └── task-format.md                  # Full ROADMAP.md field reference
-├── package.json                # Dev dependencies (biome, markdownlint-cli2, prek)
+├── package.json                # Optional dev dependencies (biome, markdownlint-cli2, prek)
 ├── biome.json                  # Biome config (lint + format JSON)
 ├── .pre-commit-config.yaml     # Pre-commit hooks via prek
+├── .env.example                # Environment template
 ├── .github/
 │   └── workflows/
 │       └── lint.yml            # CI — markdownlint-cli2 on push and PR
@@ -102,27 +118,33 @@ touch ROADMAP.md
 
 | Agent | Model | Responsibility |
 |-------|-------|----------------|
-| `team-lead` | claude-opus-4-6 | Decomposes tasks, orchestrates agents, writes final summary |
-| `architect` | claude-sonnet-4-6 | Designs solution, reviews implementation, approves before QA |
-| `developer` | claude-sonnet-4-6 | Writes code per spec, iterates on architect + QA feedback |
-| `reviewer` | claude-sonnet-4-6 | Reviews style, security, best practices (parallel with QA) |
-| `qa` | claude-sonnet-4-6 | Writes tests, reports bugs directly to developer, iterates to green |
+| `team-lead` | claude-opus | Decomposes tasks, orchestrates agents, writes final summary |
+| `architect` | claude-sonnet | Designs solution, reviews implementation, approves before QA |
+| `developer` | claude-sonnet | Writes code per spec, iterates on architect + QA feedback |
+| `reviewer` | claude-sonnet | Reviews style, security, best practices (parallel with QA) |
+| `qa` | claude-sonnet | Writes tests, reports bugs directly to developer, iterates to green |
 
 ### Localization
 
 | Agent | Model | Responsibility |
 |-------|-------|----------------|
-| `team-lead` | claude-opus-4-6 | Orchestrates writing, translations, SEO, and QA |
-| `tech-writer` | claude-sonnet-4-6 | Writes English source docs, reviews localizations and SEO changes |
-| `localizer` | claude-sonnet-4-6 | Translates into one target language, iterates on tech-writer feedback |
-| `seo-specialist` | claude-sonnet-4-6 | Optimizes source and all translations for search (metadata, keywords, structure) |
-| `qa` | claude-sonnet-4-6 | Reviews source docs, translations, and SEO changes, reports issues to responsible agent |
+| `team-lead` | claude-opus | Orchestrates writing, translations, SEO, and QA |
+| `tech-writer` | claude-sonnet | Writes English source docs, reviews localizations and SEO changes |
+| `localizer` | claude-sonnet | Translates into one target language, iterates on tech-writer feedback |
+| `seo-specialist` | claude-sonnet | Optimizes source and all translations for search (metadata, keywords, structure) |
+| `qa` | claude-sonnet | Reviews source docs, translations, and SEO changes, reports issues to responsible agent |
 
 ## Running Modes
 
 ### Cloud only (default)
 
-Uses Anthropic API. Requires `ANTHROPIC_API_KEY`.
+Set `PROVIDER` in `.env` (see `.env.example`):
+
+| Provider | `PROVIDER=` | Keys in `.env` |
+|----------|-------------|----------------|
+| Anthropic (direct) | `anthropic` | `ANTHROPIC_API_KEY` |
+| Azure APIM | `azure-apim` | `AZURE_APIM_ENDPOINT` + `AZURE_APIM_KEY` |
+| LiteLLM proxy | `litellm` | `LITELLM_HOST` |
 
 ```bash
 ./scripts/run.sh --all

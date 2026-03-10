@@ -1,5 +1,14 @@
 {
   "permissions": {
-    "allow": ["Bash(bun run:*)"]
+    "allow": [
+      "Bash(bun run:*)",
+      "Bash(tree -L 3 -I 'node_modules' /Users/dmytro.zvieriev/sandbox/agent-team/ 2>/dev/null || find /Users/dmytro.zvieriev/sandbox/agent-team -type d -not -path \"*/node_modules/*\" -not -path \"*/.git/*\" | sort)",
+      "Bash(bash -n scripts/setup.sh && echo \"setup.sh: syntax OK\" && bash -n scripts/run.sh && echo \"run.sh: syntax OK\" && bash -n scripts/_common.sh && echo \"_common.sh: syntax OK\")",
+      "Bash(bash -n scripts/run.sh && echo \"run.sh OK\" && bash -n scripts/agents.sh && echo \"agents.sh OK\" && bash -n scripts/_common.sh && echo \"_common.sh OK\" && bash -n scripts/setup.sh && echo \"setup.sh OK\")",
+      "Bash(bash -n scripts/run.sh && bash -n scripts/agents.sh && bash -n scripts/_common.sh && bash -n scripts/setup.sh && echo \"All scripts OK\")",
+      "Bash(chmod +x /Users/dmytro.zvieriev/sandbox/agent-team/scripts/claude.sh)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(chmod +x /Users/dmytro.zvieriev/sandbox/agent-team/scripts/*.sh)"
+    ]
   }
 }

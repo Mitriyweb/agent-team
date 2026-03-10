@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code reviewer. Focuses on style, security, and best practices. Runs in parallel with QA after developer finishes. Does not duplicate architect's architectural review.
-model: claude-sonnet-4-5
+model: claude-opus
 tools: Read, Grep, Glob, Bash, Teammate
 ---
 
