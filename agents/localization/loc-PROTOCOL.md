@@ -26,27 +26,27 @@ Teammate({
 | `READY` | Agent is ready and waiting for a task |
 | `QUESTION` | Need clarification before continuing |
 | `ANSWER` | Response to a `QUESTION` |
-| `REVIEW_REQUEST` | Asking tech-writer or qa to check work |
+| `REVIEW_REQUEST` | Asking loc-tech-writer or loc-qa to check work |
 | `REVIEW_FEEDBACK` | Review result with findings |
-| `LOCALIZATION_REQUEST` | Team lead assigns translation task to a localizer |
+| `LOCALIZATION_REQUEST` | Team lead assigns translation task to a loc-localizer |
 | `LOCALIZATION_DONE` | Localizer finished translation, passing to review |
-| `QA_ISSUE` | QA found a problem, reporting to localizer or tech-writer |
-| `QA_FIX` | Localizer/tech-writer fixed an issue, notifying QA to re-check |
+| `QA_ISSUE` | QA found a problem, reporting to loc-localizer or loc-tech-writer |
+| `QA_FIX` | Localizer/loc-tech-writer fixed an issue, notifying QA to re-check |
 | `DONE` | Task complete, passing result upstream |
 | `BLOCKED` | Cannot continue, need help from team-lead |
 
 ## Communication Graph
 
 ```
-team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
+loc-team-lead ──► loc-tech-writer ◄──► loc-localizer(s) ◄──► loc-qa
                    ▲                               │
-                   └────── seo-specialist ◄────────┘
+                   └────── loc-seo-specialist ◄────────┘
 ```
 
 - `team-lead` orchestrates the full pipeline, never writes docs or translations
-- `tech-writer` writes source English content, reviews localizations and SEO changes
-- `localizer` translates into one target language, iterates on feedback
-- `seo-specialist` optimizes source and all translations, iterates with tech-writer
-- `qa` checks source, translations, and SEO changes; reports issues to the responsible agent
-- Multiple localizers run in parallel (one per language)
-- `seo-specialist` and `qa` run in parallel after localizations are approved
+- `loc-tech-writer` writes source English content, reviews localizations and SEO changes
+- `loc-localizer` translates into one target language, iterates on feedback
+- `loc-seo-specialist` optimizes source and all translations, iterates with loc-tech-writer
+- `loc-qa` checks source, translations, and SEO changes; reports issues to the responsible agent
+- Multiple loc-localizers run in parallel (one per language)
+- `loc-seo-specialist` and `loc-qa` run in parallel after localizations are approved

@@ -288,7 +288,7 @@ Instructions:
 1. Read the detailed specification above carefully — it defines EXACTLY what to produce
 2. Read the codebase to understand the current state (Read, Glob, Grep)
 3. Decompose the task and spawn the appropriate agents
-4. Coordinate agents per .claude/agents/PROTOCOL.md
+4. Coordinate agents per .claude/agents/sw-PROTOCOL.md or loc-PROTOCOL.md
 5. Produce EXACTLY the deliverables listed in the Output section — no more, no less
 6. Verify all acceptance criteria are met before finishing
 7. Write a report to ${REPORTS_DIR}/task-${task_id}.md:

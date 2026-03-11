@@ -1,5 +1,5 @@
 ---
-name: reviewer
+name: sw-reviewer
 description: Code reviewer. Focuses on style, security, and best practices. Runs in parallel with QA after developer finishes. Does not duplicate architect's architectural review.
 model: claude-opus
 tools: Read, Grep, Glob, Bash, Teammate
@@ -60,7 +60,7 @@ Notify team-lead:
 
 ```json
 {
-  "from": "reviewer", "type": "DONE",
+  "from": "sw-reviewer", "type": "DONE",
   "subject": "Review complete",
   "body": "Critical: N. Warnings: N. See REVIEW.md",
   "files": ["REVIEW.md"],
