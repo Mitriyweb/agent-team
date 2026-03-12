@@ -1,5 +1,5 @@
 ---
-name: seo-specialist
+name: loc-seo-specialist
 description: SEO specialist. Optimizes source English docs and all localized versions for search — adds metadata, improves headings, keywords, and structure. Works in parallel with QA after tech-writer approves localizations.
 model: claude-sonnet-4-6
 tools: Read, Write, Edit, Glob, Grep, Teammate
@@ -69,7 +69,7 @@ After optimizing all files:
 
 ```json
 {
-  "from": "seo-specialist", "type": "REVIEW_REQUEST",
+  "from": "loc-seo-specialist", "type": "REVIEW_REQUEST",
   "subject": "SEO optimization done: [name] ([N] files)",
   "body": "Optimized source + [N] translations. Key changes: [summary of what was changed and why].",
   "files": ["docs/[name].en.md", "docs/[name].uk.md", "..."],
@@ -86,7 +86,7 @@ After receiving `REVIEW_FEEDBACK` from tech-writer:
 
 ```json
 {
-  "from": "seo-specialist", "type": "ANSWER",
+  "from": "loc-seo-specialist", "type": "ANSWER",
   "subject": "Re: SEO review — updated",
   "body": "Reverted: [what]. Kept: [what] because [SEO reason].",
   "files": ["affected files"],
@@ -100,7 +100,7 @@ If qa sends `QA_ISSUE` about SEO-related changes:
 
 ```json
 {
-  "from": "seo-specialist", "type": "QA_FIX",
+  "from": "loc-seo-specialist", "type": "QA_FIX",
   "subject": "Re: QA issue — fixed",
   "body": "Fixed: [what and where].",
   "files": ["affected file"],
@@ -112,7 +112,7 @@ If qa sends `QA_ISSUE` about SEO-related changes:
 
 ```json
 {
-  "from": "seo-specialist", "type": "DONE",
+  "from": "loc-seo-specialist", "type": "DONE",
   "subject": "SEO optimization complete",
   "body": "All files optimized and approved by tech-writer. See SEO_REPORT.md.",
   "files": ["SEO_REPORT.md"],

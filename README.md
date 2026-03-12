@@ -21,6 +21,23 @@ team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
 
 ## Quickstart
 
+### Option 1: One-command installation (Recommended)
+
+Drop the agent team into any existing project:
+
+```bash
+npx @mitriyweb/agent-team init
+```
+
+This will:
+
+- Create `.claude/agents/` with all agent roles
+- Create `scripts/claude-team/` with orchestration scripts
+- Setup `.env` and `.claude/settings.json`
+- Create a template `ROADMAP.md`
+
+### Option 2: Manual clone
+
 ```bash
 # 1. Clone into your project
 git clone https://github.com/Mitriyweb/agent-team .claude-team

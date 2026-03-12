@@ -1,5 +1,5 @@
 ---
-name: localizer
+name: loc-localizer
 description: Localizer. Translates source English documentation into an assigned target language, iterates on tech-writer review feedback until approved.
 model: claude-sonnet-4-6
 tools: Read, Write, Edit, Glob, Grep, Teammate
@@ -41,7 +41,7 @@ Translation standards:
 
 ```json
 {
-  "from": "localizer", "type": "REVIEW_REQUEST",
+  "from": "loc-localizer", "type": "REVIEW_REQUEST",
   "subject": "Translation ready: docs/[name].[lang-code].md ([Language])",
   "body": "Translation complete. Notes: [any translation decisions worth flagging, e.g. term choices].",
   "files": ["docs/[name].[lang-code].md"],
@@ -59,7 +59,7 @@ After receiving `REVIEW_FEEDBACK` from tech-writer:
 
 ```json
 {
-  "from": "localizer", "type": "ANSWER",
+  "from": "loc-localizer", "type": "ANSWER",
   "subject": "Re: [lang] review — fixed",
   "body": "Fixed: [what]. Did not fix: [what] because [reason].",
   "files": ["docs/[name].[lang-code].md"],
@@ -73,7 +73,7 @@ Repeat until tech-writer approves.
 
 ```json
 {
-  "from": "localizer", "type": "LOCALIZATION_DONE",
+  "from": "loc-localizer", "type": "LOCALIZATION_DONE",
   "subject": "Localization approved: [Language]",
   "body": "docs/[name].[lang-code].md approved by tech-writer.",
   "files": ["docs/[name].[lang-code].md"],
@@ -87,7 +87,7 @@ If qa sends `QA_ISSUE`, fix and notify:
 
 ```json
 {
-  "from": "localizer", "type": "QA_FIX",
+  "from": "loc-localizer", "type": "QA_FIX",
   "subject": "Re: QA issue — fixed",
   "body": "Fixed: [what and where].",
   "files": ["docs/[name].[lang-code].md"],

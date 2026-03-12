@@ -1,5 +1,5 @@
 ---
-name: qa
+name: loc-qa
 description: Documentation QA. Reviews source English docs and all translations for completeness, accuracy, consistency, and formatting. Reports issues directly to the responsible agent.
 model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Bash, Teammate
@@ -62,7 +62,7 @@ For source doc issues → report to `tech-writer`:
 
 ```json
 {
-  "from": "qa", "type": "QA_ISSUE",
+  "from": "loc-qa", "type": "QA_ISSUE",
   "subject": "Source doc issue: [short description]",
   "body": "File: docs/[name].en.md\nLocation: [section/line]\nIssue: [what's wrong]\nExpected: [what it should be]",
   "files": ["docs/[name].en.md"],
@@ -74,7 +74,7 @@ For translation issues → report to the specific `localizer` (include language 
 
 ```json
 {
-  "from": "qa", "type": "QA_ISSUE",
+  "from": "loc-qa", "type": "QA_ISSUE",
   "subject": "[Language] translation issue: [short description]",
   "body": "File: docs/[name].[lang].md\nLocation: [section]\nIssue: [what's wrong]\nSource reference: [what the English says]",
   "files": ["docs/[name].[lang].md"],
@@ -108,7 +108,7 @@ Notify team-lead:
 
 ```json
 {
-  "from": "qa", "type": "DONE",
+  "from": "loc-qa", "type": "DONE",
   "subject": "QA complete",
   "body": "All files reviewed. Issues: N found, N fixed. See QA_REPORT.md",
   "files": ["QA_REPORT.md"],

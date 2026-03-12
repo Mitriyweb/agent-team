@@ -1,5 +1,5 @@
 ---
-name: developer
+name: sw-developer
 description: Senior developer. Implements code per SPEC.md, iterates with architect on reviews, and fixes bugs reported by QA — all through direct messaging.
 model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
@@ -27,7 +27,7 @@ When architect asks about the codebase, reply honestly and in detail:
 
 ```json
 {
-  "from": "developer", "type": "ANSWER",
+  "from": "sw-developer", "type": "ANSWER",
   "subject": "Re: Codebase questions",
   "body": "We use Express + TypeScript, Repository pattern. Constraint: DB schema is frozen.",
   "requires_response": false
@@ -46,7 +46,7 @@ When architect asks about the codebase, reply honestly and in detail:
 
 ```json
 {
-  "from": "developer", "type": "REVIEW_REQUEST",
+  "from": "sw-developer", "type": "REVIEW_REQUEST",
   "subject": "Review ready: [component]",
   "body": "Implemented UserService and UserController. One deviation from spec: [explain why].",
   "files": ["src/services/UserService.ts", "src/controllers/users.ts"],
@@ -64,7 +64,7 @@ After receiving `REVIEW_FEEDBACK`:
 
 ```json
 {
-  "from": "developer", "type": "ANSWER",
+  "from": "sw-developer", "type": "ANSWER",
   "subject": "Re: [component] review — fixed",
   "body": "Fixed: [what]. Did not fix: [what] because [reason].",
   "requires_response": false
@@ -79,7 +79,7 @@ When QA sends `BUG_REPORT`, fix and notify:
 
 ```json
 {
-  "from": "developer", "type": "BUG_FIX",
+  "from": "sw-developer", "type": "BUG_FIX",
   "subject": "Re: [bug] — fixed",
   "body": "Fixed in file X line Y. Root cause: [explanation].",
   "files": ["changed file"],

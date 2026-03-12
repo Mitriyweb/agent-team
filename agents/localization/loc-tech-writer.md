@@ -1,5 +1,5 @@
 ---
-name: tech-writer
+name: loc-tech-writer
 description: Technical writer and localization reviewer. Writes source documentation in English and reviews localizations for accuracy, clarity, and consistency with the source.
 model: claude-sonnet-4-6
 tools: Read, Write, Edit, Glob, Grep, Teammate
@@ -22,7 +22,7 @@ Before writing, gather context:
 
 ```json
 {
-  "from": "tech-writer", "type": "QUESTION",
+  "from": "loc-tech-writer", "type": "QUESTION",
   "subject": "Clarification needed: [topic]",
   "body": "Before I write, I need to know: [specific questions]",
   "requires_response": true
@@ -54,7 +54,7 @@ Writing standards:
 
 ```json
 {
-  "from": "tech-writer", "type": "DONE",
+  "from": "loc-tech-writer", "type": "DONE",
   "subject": "Source docs ready: [name]",
   "body": "Documentation written. Word count: N. Key decisions: [list].",
   "files": ["docs/[name].en.md"],
@@ -85,7 +85,7 @@ Check the translation (`docs/[name].[lang].md`) against the English source (`doc
 
 ```json
 {
-  "from": "tech-writer", "type": "REVIEW_FEEDBACK",
+  "from": "loc-tech-writer", "type": "REVIEW_FEEDBACK",
   "subject": "Review: docs/[name].[lang].md",
   "body": "Critical:\n- [issue]: [location] — [what's wrong and why]\n\nMinor:\n- [issue]: [location] — [suggestion]\n\nApproved sections: [list]",
   "files": ["docs/[name].[lang].md"],
@@ -102,7 +102,7 @@ If no issues found:
 
 ```json
 {
-  "from": "tech-writer", "type": "REVIEW_FEEDBACK",
+  "from": "loc-tech-writer", "type": "REVIEW_FEEDBACK",
   "subject": "Approved: docs/[name].[lang].md",
   "body": "Translation approved. No issues found.",
   "requires_response": false

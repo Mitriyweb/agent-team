@@ -9,7 +9,7 @@ ROADMAP.md → plan.sh (team-lead creates tasks/plan.md)
                          ↓
 tasks/plan.md → run.sh (executes tasks one by one)
                          ↓
-           team-lead → agents (per task spec)
+           sw-team-lead → sw-agents (per task spec)
 ```
 
 1. **Planning**: `plan.sh` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
@@ -40,7 +40,7 @@ Teammate({
 | `READY` | Agent is ready and waiting for a task |
 | `QUESTION` | Need clarification before continuing |
 | `ANSWER` | Response to a `QUESTION` |
-| `REVIEW_REQUEST` | Asking architect or reviewer to check work |
+| `REVIEW_REQUEST` | Asking architect or sw-reviewer to check work |
 | `REVIEW_FEEDBACK` | Review result with findings |
 | `BUG_REPORT` | QA found a bug, reporting to developer |
 | `BUG_FIX` | Developer fixed a bug, notifying QA to re-run |
@@ -50,24 +50,24 @@ Teammate({
 ## Communication Graph
 
 ```
-team-lead ──► architect ◄──► developer ◄──► qa
+sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-qa
                                   │
-                              reviewer
+                              sw-reviewer
 ```
 
 - `team-lead` coordinates all agents, never writes code
 - `architect` talks directly to `developer` during design and implementation review
 - `developer` iterates with `architect` until approved, then with `qa` until tests pass
-- `reviewer` and `qa` run in parallel after developer finishes
-- `reviewer` reports only to `team-lead`
+- `sw-reviewer` and `qa` run in parallel after developer finishes
+- `sw-reviewer` reports only to `team-lead`
 - `qa` reports bugs directly to `developer`, final status to `team-lead`
 
-## Example: architect → developer review loop
+## Example: sw-architect → sw-developer review loop
 
 ```json
-// architect → developer
+// sw-architect → sw-developer
 {
-  "from": "architect",
+  "from": "sw-architect",
   "type": "REVIEW_FEEDBACK",
   "subject": "Implementation review: UserService",
   "body": "🚨 Critical: no email validation in createUser.\n✅ Good: error handling is solid.",
@@ -75,9 +75,9 @@ team-lead ──► architect ◄──► developer ◄──► qa
   "requires_response": true
 }
 
-// developer → architect
+// sw-developer → sw-architect
 {
-  "from": "developer",
+  "from": "sw-developer",
   "type": "ANSWER",
   "subject": "Re: UserService review — fixed",
   "body": "Added zod validation on line 42. Ready for re-review.",
@@ -86,12 +86,12 @@ team-lead ──► architect ◄──► developer ◄──► qa
 }
 ```
 
-## Example: qa → developer bug loop
+## Example: sw-qa → sw-developer bug loop
 
 ```json
-// qa → developer
+// sw-qa → sw-developer
 {
-  "from": "qa",
+  "from": "sw-qa",
   "type": "BUG_REPORT",
   "subject": "Bug: createUser returns 500 on duplicate email",
   "body": "Test: POST /users with existing email.\nExpected: 409 Conflict.\nActual: 500 Internal Server Error.\nLocation: src/controllers/users.ts:78",
@@ -99,9 +99,9 @@ team-lead ──► architect ◄──► developer ◄──► qa
   "requires_response": true
 }
 
-// developer → qa
+// sw-developer → sw-qa
 {
-  "from": "developer",
+  "from": "sw-developer",
   "type": "BUG_FIX",
   "subject": "Re: duplicate email bug — fixed",
   "body": "Added UniqueConstraintError handler in UserController.ts:78. Please re-run tests.",

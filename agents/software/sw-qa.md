@@ -1,5 +1,5 @@
 ---
-name: qa
+name: sw-qa
 description: QA engineer. Writes tests, finds bugs, and reports them directly to developer. Iterates until all tests are green before reporting to team-lead.
 model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
@@ -52,7 +52,7 @@ For each failing test:
 
 ```json
 {
-  "from": "qa", "type": "BUG_REPORT",
+  "from": "sw-qa", "type": "BUG_REPORT",
   "subject": "Bug: [short description]",
   "body": "Test: [test name]\nSteps: [what I did]\nExpected: [expected result]\nActual: [actual result]\nLocation: file:line",
   "files": ["tests/failing.test.ts"],
@@ -90,7 +90,7 @@ Notify team-lead:
 
 ```json
 {
-  "from": "qa", "type": "DONE",
+  "from": "sw-qa", "type": "DONE",
   "subject": "QA complete",
   "body": "All tests green. Coverage: X%. Bugs fixed: N. See QA_REPORT.md",
   "files": ["QA_REPORT.md"],

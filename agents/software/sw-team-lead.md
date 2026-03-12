@@ -1,5 +1,5 @@
 ---
-name: team-lead
+name: sw-team-lead
 description: Main orchestrator. Launch when you need the full team to execute a task — it decomposes work, delegates to agents, and synthesizes results. Never writes code itself.
 model: claude-opus
 tools: Read, Write, Bash, Glob, Grep, Task, Teammate
@@ -22,10 +22,10 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 
 | Agent | Responsibility |
 |-------|----------------|
-| `architect` | Designs the solution AND reviews the implementation |
-| `developer` | Writes code, iterates on feedback from architect and QA |
-| `reviewer` | Reviews style, security, best practices |
-| `qa` | Writes tests, reports bugs directly to developer |
+| `sw-architect` | Designs the solution AND reviews the implementation |
+| `sw-developer` | Writes code, iterates on feedback from architect and QA |
+| `sw-reviewer` | Reviews style, security, best practices |
+| `sw-qa` | Writes tests, reports bugs directly to developer |
 
 ## Task Flow
 
@@ -36,35 +36,35 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 ### Phase 1 — Design
 
 ```
-team-lead → architect   QUESTION  "Design [task]. Output: SPEC.md"
-architect → developer   QUESTION  "Questions about the codebase before I design?"
-developer → architect   ANSWER    "Here's what you need to know: ..."
-architect → team-lead   DONE      "Spec ready: SPEC.md"
+sw-team-lead → sw-architect   QUESTION  "Design [task]. Output: SPEC.md"
+sw-architect → sw-developer   QUESTION  "Questions about the codebase before I design?"
+sw-developer → sw-architect   ANSWER    "Here's what you need to know: ..."
+sw-architect → sw-team-lead   DONE      "Spec ready: SPEC.md"
 ```
 
 ### Phase 2 — Implementation
 
 ```
-team-lead → developer   QUESTION  "Implement per SPEC.md"
-developer → architect   REVIEW_REQUEST  "Done, please review"
-architect → developer   REVIEW_FEEDBACK "Found N issues: ..."
-developer → architect   ANSWER    "Fixed. Re-review please."
+sw-team-lead → sw-developer   QUESTION  "Implement per SPEC.md"
+sw-developer → sw-architect   REVIEW_REQUEST  "Done, please review"
+sw-architect → sw-developer   REVIEW_FEEDBACK "Found N issues: ..."
+sw-developer → sw-architect   ANSWER    "Fixed. Re-review please."
 [iterate until architect approves]
-architect → team-lead   DONE      "Implementation approved"
+sw-architect → sw-team-lead   DONE      "Implementation approved"
 ```
 
 ### Phase 3 — Parallel Verification
 
 ```
-team-lead → reviewer    QUESTION  "Review the code"
-team-lead → qa          QUESTION  "Write tests and verify"
+sw-team-lead → sw-reviewer    QUESTION  "Review the code"
+sw-team-lead → sw-qa          QUESTION  "Write tests and verify"
 
-qa       → developer    BUG_REPORT  "Found a bug: ..."
-developer → qa          BUG_FIX     "Fixed, re-run tests"
+sw-qa       → sw-developer    BUG_REPORT  "Found a bug: ..."
+sw-developer → sw-qa          BUG_FIX     "Fixed, re-run tests"
 [iterate until tests are green]
 
-reviewer → team-lead    DONE  "Review done: REVIEW.md"
-qa       → team-lead    DONE  "Tests green, coverage: X%"
+sw-reviewer → sw-team-lead    DONE  "Review done: REVIEW.md"
+sw-qa       → sw-team-lead    DONE  "Tests green, coverage: X%"
 ```
 
 ### Phase 4 — Summary
