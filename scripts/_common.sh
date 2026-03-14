@@ -28,6 +28,32 @@ sed_inplace() {
   fi
 }
 
+# ── Cost calculation ────────────────────────────────────────────
+# Estimates cost based on token usage.
+# Claude 3.5 Sonnet: $3/1M input, $15/1M output
+# Claude 3 Opus: $15/1M input, $75/1M output
+calculate_cost() {
+  local model="$1"
+  local input_tokens="$2"
+  local output_tokens="$3"
+  local cost="0"
+
+  case "$model" in
+    *opus*)
+      cost=$(awk "BEGIN {print ($input_tokens * 0.000015) + ($output_tokens * 0.000075)}")
+      ;;
+    *sonnet*|*haiku*)
+      # Using Sonnet 3.5 prices as default for non-Opus cloud models
+      cost=$(awk "BEGIN {print ($input_tokens * 0.000003) + ($output_tokens * 0.000015)}")
+      ;;
+    *)
+      # Local models or unknown
+      cost="0"
+      ;;
+  esac
+  echo "$cost"
+}
+
 # ── Provider configuration ──────────────────────────────────────
 # Reads PROVIDER from .env and exports ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY
 # so that `claude` subprocess inherits them.

@@ -6,6 +6,10 @@
 #    ./scripts/run.sh              — run one task (highest priority)
 #    ./scripts/run.sh --all        — run all tasks in sequence
 #    ./scripts/run.sh --dry-run    — preview without executing
+#    ./scripts/run.sh --resume ID  — resume from task ID
+#    ./scripts/run.sh --budget USD — set budget limit
+#    ./scripts/run.sh --retry-limit N — retry failed tasks N times
+#    ./scripts/run.sh --approve-plan — wait for human approval of plans
 # ─────────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -14,17 +18,40 @@ source "$(dirname "$0")/_common.sh"
 configure_provider
 
 # Use tasks/plan.md if it exists, otherwise ROADMAP.md
-if [[ -f "tasks/plan.md" ]]; then
-  ROADMAP="${ROADMAP_FILE:-tasks/plan.md}"
+if [[ -n "${ROADMAP_FILE:-}" ]]; then
+  ROADMAP="$ROADMAP_FILE"
+elif [[ -f "tasks/plan.md" ]]; then
+  ROADMAP="tasks/plan.md"
 else
-  ROADMAP="${ROADMAP_FILE:-ROADMAP.md}"
+  ROADMAP="ROADMAP.md"
 fi
 LOG_DIR=".claude-loop/logs"
 REPORTS_DIR=".claude-loop/reports"
 SESSIONS_DIR=".claude-loop/sessions"
 MAX_TURNS="${MAX_TURNS:-20}"
-MODE="${1:-}"
+RUN_ALL=false
+DRY_RUN=false
+RESUME_ID=""
+RETRY_LIMIT=0
+BUDGET=0
+APPROVE_PLAN=false
 STOP_REQUESTED=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all)          RUN_ALL=true; shift ;;
+    --dry-run)      DRY_RUN=true; shift ;;
+    --resume)       RESUME_ID="$2"; shift 2 ;;
+    --retry-limit)  RETRY_LIMIT="$2"; shift 2 ;;
+    --budget)       BUDGET="$2"; shift 2 ;;
+    --approve-plan) APPROVE_PLAN=true; shift ;;
+    *) err "Unknown option: $1" ;;
+  esac
+done
+
+# Legacy MODE support for internal logic
+MODE=""
+if $DRY_RUN; then MODE="--dry-run"; elif $RUN_ALL; then MODE="--all"; fi
 
 mkdir -p "$LOG_DIR" "$REPORTS_DIR" "$SESSIONS_DIR"
 
@@ -132,15 +159,79 @@ trap cleanup SIGINT SIGTERM
 get_roadmap_tasks() {
   local status_filter="${1:-.}"  # regex for status char, default = any
   local in_block=false
-  while IFS= read -r line; do
-    if echo "$line" | grep -qE '^\`\`\`'; then
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Remove carriage returns
+    line=$(echo "$line" | tr -d '\r')
+    if echo "$line" | grep -qE '^```'; then
       if $in_block; then in_block=false; else in_block=true; fi
       continue
     fi
-    if $in_block && echo "$line" | grep -qE "^\- \[${status_filter}\] id:[0-9]+"; then
+    if $in_block && echo "$line" | grep -qE "^- \[${status_filter}\] id:[0-9]+"; then
       echo "$line"
     fi
   done < "$ROADMAP"
+}
+
+# ── Validate roadmap ─────────────────────────────────────────────
+validate_roadmap() {
+  log "Validating roadmap ${BLUE}${ROADMAP}${NC}..."
+  local errors=0
+
+  # Check if task block exists
+  if ! grep -q '^\`\`\`' "$ROADMAP"; then
+    warn "Roadmap should contain tasks inside \` \` \` blocks"
+    # Not a fatal error but good to warn
+  fi
+
+  # Extract all tasks
+  local tasks
+  tasks=$(get_roadmap_tasks | grep '.' || true)
+  if [[ -z "$tasks" ]]; then
+    err "No valid tasks found in ${ROADMAP}. Ensure they match '- [ ] id:NNN priority:LEVEL type:TYPE ...'"
+  fi
+
+  # Check for unique IDs and required fields
+  local ids
+  ids=$(echo "$tasks" | grep -oE 'id:[0-9]+' | sed 's/id://' | sort)
+  local dups
+  dups=$(echo "$ids" | uniq -d)
+  if [[ -n "$dups" ]]; then
+    for id in $dups; do
+      warn "Duplicate task ID found: ${id}"
+      errors=$((errors + 1))
+    done
+  fi
+
+  while IFS= read -r line; do
+    local tid
+    tid=$(get_task_id "$line")
+    if ! echo "$line" | grep -qE 'priority:(high|medium|low)'; then
+      warn "Task #${tid} missing valid priority (high|medium|low)"
+      errors=$((errors + 1))
+    fi
+    if ! echo "$line" | grep -qE 'type:[a-z]+'; then
+      warn "Task #${tid} missing type"
+      errors=$((errors + 1))
+    fi
+
+    # Check dependencies
+    if echo "$line" | grep -qE 'depends:'; then
+      local deps
+      deps=$(echo "$line" | sed -n 's/.*depends:\([0-9,]*\).*/\1/p')
+      for dep in ${deps//,/ }; do
+        if ! echo "$ids" | grep -qE "(^| )${dep}( |$)" ; then
+          warn "Task #${tid} depends on non-existent task #${dep}"
+          errors=$((errors + 1))
+        fi
+      done
+    fi
+  done <<< "$tasks"
+
+  if [[ $errors -gt 0 ]]; then
+    err "Roadmap validation failed with ${errors} error(s)"
+  fi
+  ok "Roadmap valid"
 }
 
 # ── Pick next task ────────────────────────────────────────────────
@@ -205,6 +296,34 @@ get_agents()    { echo "$1" | grep -oE 'agents:[a-z,\-]+' | sed 's/agents://' ||
 get_desc()      { echo "$1" | sed 's/^.*priority:[a-z]*//' | sed 's/ type:[a-z]*//' | sed 's/ depends:[0-9,]*//' | sed 's/ agents:[a-z,\-]*//' | xargs; }
 
 # Extract detailed spec for a task from Section 2 of plan.md
+# ── Cost tracking ───────────────────────────────────────────────
+COST_SUMMARY_FILE="${REPORTS_DIR}/cost-summary.json"
+
+get_cumulative_cost() {
+  if [[ -f "$COST_SUMMARY_FILE" ]]; then
+    jq -r '.total_cost // 0' "$COST_SUMMARY_FILE"
+  else
+    echo "0"
+  fi
+}
+
+update_cost() {
+  local task_id="$1" cost="$2"
+  local current_total
+  current_total=$(get_cumulative_cost)
+  local new_total
+  new_total=$(awk "BEGIN {print $current_total + $cost}")
+
+  if [[ ! -f "$COST_SUMMARY_FILE" ]]; then
+    echo "{\"total_cost\": $new_total, \"tasks\": {}}" > "$COST_SUMMARY_FILE"
+  fi
+
+  local tmp_file
+  tmp_file=$(mktemp)
+  jq --arg tid "$task_id" --argjson cost "$cost" --argjson total "$new_total" \
+    '.total_cost = $total | .tasks[$tid] = $cost' "$COST_SUMMARY_FILE" > "$tmp_file" && mv "$tmp_file" "$COST_SUMMARY_FILE"
+}
+
 get_task_spec() {
   local task_id="$1"
   local in_block=false
@@ -253,6 +372,14 @@ run_task() {
   log "Starting task ${BLUE}#${task_id}${NC} [${task_type}]: ${task_desc}"
   [[ -n "$agents" ]] && log "  Agents: ${agents}"
 
+  if [[ $(awk "BEGIN {print ($BUDGET > 0)}") -eq 1 ]]; then
+    local current_cost
+    current_cost=$(get_cumulative_cost)
+    if [[ $(awk "BEGIN {print ($current_cost >= $BUDGET)}") -eq 1 ]]; then
+      err "Budget exceeded: ${current_cost} >= ${BUDGET}"
+    fi
+  fi
+
   mark_status "$task_id" " " "~"
   TASK_START_TIME=$(date +%s)
 
@@ -277,8 +404,16 @@ ${task_spec}"
   fi
 
   local prompt
+  local hitl_instruction=""
+  if $APPROVE_PLAN; then
+    hitl_instruction="
+IMPORTANT: After Phase 1 (Design/Planning) is complete and you have a solid plan from the architect, STOP and output 'TASK_STATUS: PENDING_APPROVAL'.
+Wait for human approval before proceeding to Phase 2 (Implementation)."
+  fi
+
   read -r -d '' prompt <<EOF || true
 You are the team-lead autonomous agent executing a task from the project roadmap.
+${hitl_instruction}
 
 TASK #${task_id} [${task_type}]: ${task_desc}
 ${agents_instruction}
@@ -312,70 +447,124 @@ EOF
   # Start progress spinner
   show_progress_bar "$task_id" "$task_desc" "${CURRENT_TASK_NUM:-1}" "${TOTAL_TASKS:-?}"
 
-  local response
-  if response=$(claude -p "$prompt" \
-      --max-turns "$MAX_TURNS" \
-      --output-format json \
-      --allowedTools "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate" \
-      2>"$log_file"); then
+  local attempt=0
+  local response=""
+  local success=false
 
-    stop_progress_bar
-    local elapsed=$(( $(date +%s) - TASK_START_TIME ))
-    local elapsed_fmt
-    elapsed_fmt=$(format_duration $elapsed)
-
-    local result
-    result=$(echo "$response" | jq -r '.result // empty' 2>/dev/null || echo "$response")
-
-    echo "$response" | jq -r '.session_id // empty' 2>/dev/null > "${SESSIONS_DIR}/task-${task_id}.session"
-
-    # Check for success in agent output or in the report file as fallback
-    local report_file="${REPORTS_DIR}/task-${task_id}.md"
-    local is_success=false
-    if echo "$result" | grep -q "TASK_STATUS: SUCCESS"; then
-      is_success=true
-    elif [[ -f "$report_file" ]] && grep -q "Status: SUCCESS" "$report_file"; then
-      is_success=true
+  while [[ $attempt -le $RETRY_LIMIT ]]; do
+    if [[ $attempt -gt 0 ]]; then
+      local backoff=$(( 10 * 2**(attempt-1) ))
+      warn "Retrying task #${task_id} in ${backoff}s (attempt ${attempt}/${RETRY_LIMIT})..."
+      sleep $backoff
     fi
 
-    if $is_success; then
-      ok "Task #${task_id} completed ${CYAN}(${elapsed_fmt})${NC}"
-      mark_status "$task_id" "~" "x"
-    else
-      local reason
-      reason=$(echo "$result" | grep "TASK_STATUS: FAILED:" | sed 's/TASK_STATUS: FAILED: //' || echo "unknown")
-      if [[ -f "$report_file" ]] && grep -q "Status: FAILED" "$report_file"; then
-        reason=$(grep "Status: FAILED" "$report_file" | head -1 | sed 's/.*Status: FAILED[: ]*//' || echo "unknown")
+    local claude_args=(-p "$prompt" --max-turns "$MAX_TURNS" --output-format json --allowedTools "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate")
+
+    # Use session ID if resuming after approval
+    local current_session
+    current_session=$(cat "${SESSIONS_DIR}/task-${task_id}.session" 2>/dev/null || echo "")
+    if [[ -n "$current_session" && "$prompt" == "User has approved"* ]]; then
+      claude_args+=(--resume "$current_session")
+    fi
+
+    # Start/restart progress spinner if not running
+    if [[ -z "$SPINNER_PID" ]]; then
+       show_progress_bar "$task_id" "$task_desc" "${CURRENT_TASK_NUM:-1}" "${TOTAL_TASKS:-?}"
+    fi
+
+    if response=$(claude "${claude_args[@]}" 2>"$log_file"); then
+
+      local result
+      result=$(echo "$response" | jq -r '.result // empty' 2>/dev/null || echo "$response")
+
+      echo "$response" | jq -r '.session_id // empty' 2>/dev/null > "${SESSIONS_DIR}/task-${task_id}.session"
+
+      # Extract usage and update cost
+      local usage
+      usage=$(echo "$response" | jq -r '.usage // empty' 2>/dev/null)
+      if [[ -n "$usage" ]]; then
+        local input output model
+        input=$(echo "$usage" | jq -r '.input_tokens // 0')
+        output=$(echo "$usage" | jq -r '.output_tokens // 0')
+        model=$(echo "$response" | jq -r '.model // "claude-3-5-sonnet-20241022"')
+        local cost
+        cost=$(calculate_cost "$model" "$input" "$output")
+        update_cost "$task_id" "$cost"
+        log "Task cost: ${YELLOW}\$${cost}${NC} (Cumulative: ${YELLOW}\$$(get_cumulative_cost)${NC})"
       fi
-      warn "Task #${task_id} failed ${CYAN}(${elapsed_fmt})${NC}: ${reason}"
-      mark_status "$task_id" "~" "!"
-      # Append failure reason to the first occurrence only
-      awk -v id="$task_id" -v reason="$reason" '
-        BEGIN { done=0 }
-        !done && $0 ~ "^- \\[!\\] id:" id " " {
-          $0 = $0 " [FAILED: " reason "]"
-          done=1
-        }
-        { print }
-      ' "$ROADMAP" > "${ROADMAP}.tmp" && mv "${ROADMAP}.tmp" "$ROADMAP"
-      return 1
+
+      # Check for success in agent output or in the report file as fallback
+      local report_file="${REPORTS_DIR}/task-${task_id}.md"
+      local is_success=false
+      if echo "$result" | grep -q "TASK_STATUS: SUCCESS"; then
+        is_success=true
+      elif [[ -f "$report_file" ]] && grep -q "Status: SUCCESS" "$report_file"; then
+        is_success=true
+      fi
+
+      if $is_success; then
+        stop_progress_bar
+        local elapsed=$(( $(date +%s) - TASK_START_TIME ))
+        local elapsed_fmt
+        elapsed_fmt=$(format_duration $elapsed)
+        ok "Task #${task_id} completed ${CYAN}(${elapsed_fmt})${NC}"
+        mark_status "$task_id" "~" "x"
+        return 0
+      elif echo "$result" | grep -q "TASK_STATUS: PENDING_APPROVAL"; then
+        stop_progress_bar
+        echo -e "\n${YELLOW}══ PLAN PENDING APPROVAL ══════════════════════════════════════${NC}"
+        echo -e "Task #${task_id} plan is ready for review."
+        echo -e "Check the logs/output above."
+        echo -en "${CYAN}Approve plan and continue? (y/n): ${NC}"
+        read -r choice
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
+          ok "Plan approved. Continuing task #${task_id}..."
+          prompt="User has approved the plan. Proceed with implementation and all remaining phases to complete the task."
+          attempt=$((attempt))
+          continue
+        else
+          warn "Plan rejected. Marking task as failed."
+          reason="Plan rejected by user"
+        fi
+      else
+        local reason
+        reason=$(echo "$result" | grep "TASK_STATUS: FAILED:" | sed 's/TASK_STATUS: FAILED: //' || echo "unknown")
+        if [[ -f "$report_file" ]] && grep -q "Status: FAILED" "$report_file"; then
+          reason=$(grep "Status: FAILED" "$report_file" | head -1 | sed 's/.*Status: FAILED[: ]*//' || echo "unknown")
+        fi
+        warn "Task #${task_id} failed: ${reason}"
+      fi
+    else
+      local elapsed=$(( $(date +%s) - TASK_START_TIME ))
+      local elapsed_fmt
+      elapsed_fmt=$(format_duration $elapsed)
+      warn "Task #${task_id}: Claude Code returned an error ${CYAN}(${elapsed_fmt})${NC} (see ${log_file})"
     fi
-  else
-    stop_progress_bar
-    local elapsed=$(( $(date +%s) - TASK_START_TIME ))
-    local elapsed_fmt
-    elapsed_fmt=$(format_duration $elapsed)
-    warn "Task #${task_id}: Claude Code returned an error ${CYAN}(${elapsed_fmt})${NC} (see ${log_file})"
-    mark_status "$task_id" "~" "!"
-    return 1
-  fi
+
+    attempt=$((attempt + 1))
+  done
+
+  stop_progress_bar
+  mark_status "$task_id" "~" "!"
+  # Append failure reason to the first occurrence only
+  awk -v id="$task_id" -v reason="${reason:-unknown error}" '
+    BEGIN { done=0 }
+    !done && $0 ~ "^- \\[!\\] id:" id " " {
+      $0 = $0 " [FAILED: " reason "]"
+      done=1
+    }
+    { print }
+  ' "$ROADMAP" > "${ROADMAP}.tmp" && mv "${ROADMAP}.tmp" "$ROADMAP"
+  return 1
 }
 
 # ── Main ──────────────────────────────────────────────────────────
 main() {
   print_header
 
-  [[ ! -f "$ROADMAP" ]] && err "ROADMAP.md not found"
+  [[ ! -f "$ROADMAP" ]] && err "${ROADMAP} not found"
+
+  validate_roadmap
 
   if [[ "$MODE" == "--all" || "$MODE" == "--dry-run" ]]; then
     # Count total tasks for progress display
@@ -389,6 +578,9 @@ main() {
     local run_total=0 passed=0 failed=0
     local run_start
     run_start=$(date +%s)
+
+    local found_resume=false
+    if [[ -z "$RESUME_ID" ]]; then found_resume=true; fi
 
     while true; do
       if $STOP_REQUESTED; then
@@ -405,6 +597,19 @@ main() {
       elif [[ $pick_status -eq 1 ]]; then
         # No pending tasks left
         break
+      fi
+
+      if ! $found_resume; then
+        local tid
+        tid=$(get_task_id "$task_line")
+        if [[ "$tid" == "$RESUME_ID" ]]; then
+          found_resume=true
+          log "Resuming from task #${tid}"
+        else
+          log "Skipping task #${tid} (resume target is #${RESUME_ID})"
+          mark_status "$tid" " " "x"
+          continue
+        fi
       fi
 
       run_total=$((run_total + 1))
@@ -427,7 +632,12 @@ main() {
     print_dashboard
     log "Loop finished in ${CYAN}${run_elapsed_fmt}${NC}: ${GREEN}${passed} done${NC}, ${RED}${failed} failed${NC}, ${run_total} executed"
   else
-    task_line=$(pick_next_task 2>/dev/null) || { ok "All tasks in ROADMAP.md are done!"; exit 0; }
+    if [[ -n "$RESUME_ID" ]]; then
+      task_line=$(get_roadmap_tasks | grep "id:$RESUME_ID " | head -n 1)
+      [[ -z "$task_line" ]] && err "Task #$RESUME_ID not found in ${ROADMAP}"
+    else
+      task_line=$(pick_next_task 2>/dev/null) || { ok "All tasks in ROADMAP.md are done!"; exit 0; }
+    fi
     run_task "$task_line"
   fi
 }
