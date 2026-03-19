@@ -19,6 +19,11 @@ You MUST read the following environment variables to guide your implementation:
 - `CSS_APPROACH` (e.g., Tailwind, CSS Modules, Styled Components)
 - `DESIGN_TOKENS_PATH` (location of theme/style variables)
 
+## Framework context
+
+Read `FRONTEND_FRAMEWORK` from environment before writing any code.
+Default assumption is NOT permitted — if env is unset, ask team-lead.
+
 ## Workflow
 
 ### Step 1 — Review the UI Spec

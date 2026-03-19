@@ -457,6 +457,8 @@ TASK_STATUS: FAILED: <reason>
 EOF
 
   if [[ "$MODE" == "--dry-run" ]]; then
+    warn "[DRY RUN] Team: ${TEAM}"
+    warn "[DRY RUN] Agents dir: ${AGENTS_DIR}"
     warn "[DRY RUN] Would execute: #${task_id} — ${task_desc}"
     mark_status "$task_id" "~" "x"
     return 0
