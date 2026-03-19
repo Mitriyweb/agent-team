@@ -36,6 +36,7 @@ RETRY_LIMIT=0
 BUDGET=0
 APPROVE_PLAN=false
 STOP_REQUESTED=false
+TEAM="software development"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -45,9 +46,18 @@ while [[ $# -gt 0 ]]; do
     --retry-limit)  RETRY_LIMIT="$2"; shift 2 ;;
     --budget)       BUDGET="$2"; shift 2 ;;
     --approve-plan) APPROVE_PLAN=true; shift ;;
+    --team)         TEAM="$2"; shift 2 ;;
     *) err "Unknown option: $1" ;;
   esac
 done
+
+# Validate team directory
+AGENTS_DIR="./agents/${TEAM}"
+if [[ ! -d "$AGENTS_DIR" ]]; then
+  echo "Unknown team: $TEAM"
+  echo "Available: $(ls ./agents/)"
+  exit 1
+fi
 
 # Legacy MODE support for internal logic
 MODE=""
@@ -411,8 +421,16 @@ IMPORTANT: After Phase 1 (Design/Planning) is complete and you have a solid plan
 Wait for human approval before proceeding to Phase 2 (Implementation)."
   fi
 
+  # Determine protocol file
+  local protocol_file="sw-PROTOCOL.md"
+  if [[ "$TEAM" == "localization" ]]; then
+    protocol_file="loc-PROTOCOL.md"
+  elif [[ "$TEAM" == "frontend" ]]; then
+    protocol_file="PROTOCOL.md"
+  fi
+
   read -r -d '' prompt <<EOF || true
-You are the team-lead autonomous agent executing a task from the project roadmap.
+You are the ${TEAM}-lead autonomous agent executing a task from the project roadmap.
 ${hitl_instruction}
 
 TASK #${task_id} [${task_type}]: ${task_desc}
@@ -423,7 +441,7 @@ Instructions:
 1. Read the detailed specification above carefully — it defines EXACTLY what to produce
 2. Read the codebase to understand the current state (Read, Glob, Grep)
 3. Decompose the task and spawn the appropriate agents
-4. Coordinate agents per .claude/agents/sw-PROTOCOL.md or loc-PROTOCOL.md
+4. Coordinate agents per agents/${TEAM}/${protocol_file}
 5. Produce EXACTLY the deliverables listed in the Output section — no more, no less
 6. Verify all acceptance criteria are met before finishing
 7. Write a report to ${REPORTS_DIR}/task-${task_id}.md:
@@ -439,6 +457,8 @@ TASK_STATUS: FAILED: <reason>
 EOF
 
   if [[ "$MODE" == "--dry-run" ]]; then
+    warn "[DRY RUN] Team: ${TEAM}"
+    warn "[DRY RUN] Agents dir: ${AGENTS_DIR}"
     warn "[DRY RUN] Would execute: #${task_id} — ${task_desc}"
     mark_status "$task_id" "~" "x"
     return 0

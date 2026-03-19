@@ -19,6 +19,14 @@ team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
                   └────── seo-specialist ◄─────────┘
 ```
 
+**Frontend**
+
+```
+team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
+                                  │
+                          fe-reviewer
+```
+
 ## Quickstart
 
 ### Option 1: One-command installation (Recommended)
@@ -150,6 +158,16 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 | `localizer` | claude-sonnet | Translates into one target language, iterates on tech-writer feedback |
 | `seo-specialist` | claude-sonnet | Optimizes source and all translations for search (metadata, keywords, structure) |
 | `qa` | claude-sonnet | Reviews source docs, translations, and SEO changes, reports issues to responsible agent |
+
+### Frontend
+
+| Agent | Model | Responsibility |
+|-------|-------|----------------|
+| `team-lead` | claude-opus | Orchestrates UI pipeline, decomposes frontend tasks, synthesizes results |
+| `fe-architect` | claude-sonnet | Defines component hierarchy, design tokens, and state management strategy |
+| `fe-dev` | claude-sonnet | Implements UI components and views per spec. Framework and styling aware |
+| `fe-reviewer` | claude-sonnet | Performs visual review for pixel-perfection and WCAG 2.1 AA accessibility |
+| `fe-qa` | claude-sonnet | Writes and executes E2E tests, visual regression, and performance monitoring |
 
 ## Running Modes
 
