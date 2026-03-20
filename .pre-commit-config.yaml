@@ -13,3 +13,9 @@ repos:
         entry: bun run check
         pass_filenames: false
         always_run: true
+      - id: audit
+        name: bun audit
+        language: system
+        entry: bun audit --audit-level=high
+        pass_filenames: false
+        always_run: true
