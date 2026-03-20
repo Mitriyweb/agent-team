@@ -1,0 +1,6 @@
+claude-opus-4-6:
+  input_per_token: 0.000015
+  output_per_token: 0.000075
+claude-sonnet-4-6:
+  input_per_token: 0.000003
+  output_per_token: 0.000015

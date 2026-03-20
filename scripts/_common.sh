@@ -30,28 +30,45 @@ sed_inplace() {
 
 # ── Cost calculation ────────────────────────────────────────────
 # Estimates cost based on token usage.
-# Claude 3.5 Sonnet: $3/1M input, $15/1M output
-# Claude 3 Opus: $15/1M input, $75/1M output
 calculate_cost() {
   local model="$1"
   local input_tokens="$2"
   local output_tokens="$3"
-  local cost="0"
+  local pricing_file="config/pricing.yaml"
 
-  case "$model" in
-    *opus*)
-      cost=$(awk "BEGIN {print ($input_tokens * 0.000015) + ($output_tokens * 0.000075)}")
-      ;;
-    *sonnet*|*haiku*)
-      # Using Sonnet 3.5 prices as default for non-Opus cloud models
-      cost=$(awk "BEGIN {print ($input_tokens * 0.000003) + ($output_tokens * 0.000015)}")
-      ;;
-    *)
-      # Local models or unknown
-      cost="0"
-      ;;
-  esac
-  echo "$cost"
+  if [[ ! -f "$pricing_file" ]]; then
+    # Fallback to hardcoded defaults if config is missing
+    case "$model" in
+      *opus*)
+        echo "$(awk "BEGIN {print ($input_tokens * 0.000015) + ($output_tokens * 0.000075)}")"
+        return
+        ;;
+      *)
+        echo "$(awk "BEGIN {print ($input_tokens * 0.000003) + ($output_tokens * 0.000015)}")"
+        return
+        ;;
+    esac
+  fi
+
+  # Try to find exact match or partial match in pricing.yaml
+  local input_price output_price
+  input_price=$(yq -r ".[\"$model\"].input_per_token // empty" "$pricing_file")
+  output_price=$(yq -r ".[\"$model\"].output_per_token // empty" "$pricing_file")
+
+  # If not found, try to fuzzy match (e.g. "claude-3-5-sonnet" matches "claude-sonnet-4-6" if we're not careful,
+  # but the task says to read from pricing.yaml. Let's stick to what's there.)
+  if [[ -z "$input_price" || "$input_price" == "null" ]]; then
+     # Try a simple fallback for common names if not in yaml
+     if [[ "$model" == *opus* ]]; then
+       input_price=$(yq -r '."claude-opus-4-6".input_per_token' "$pricing_file")
+       output_price=$(yq -r '."claude-opus-4-6".output_per_token' "$pricing_file")
+     else
+       input_price=$(yq -r '."claude-sonnet-4-6".input_per_token' "$pricing_file")
+       output_price=$(yq -r '."claude-sonnet-4-6".output_per_token' "$pricing_file")
+     fi
+  fi
+
+  awk "BEGIN {print ($input_tokens * ${input_price:-0}) + ($output_tokens * ${output_price:-0})}"
 }
 
 # ── Provider configuration ──────────────────────────────────────

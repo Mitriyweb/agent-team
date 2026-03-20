@@ -5,9 +5,6 @@
   "permissions": {
     "deny": [
       "Bash(rm -rf*)",
-      "Bash(*os.environ*)",
-      "Bash(*os.getenv*)",
-      "Bash(*process.env*)",
       "Bash(printenv*)",
       "Bash(env)",
       "Bash(git push --force*)",

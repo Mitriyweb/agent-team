@@ -37,6 +37,7 @@ BUDGET=0
 APPROVE_PLAN=false
 STOP_REQUESTED=false
 TEAM="software development"
+USE_BRANCH=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --budget)       BUDGET="$2"; shift 2 ;;
     --approve-plan) APPROVE_PLAN=true; shift ;;
     --team)         TEAM="$2"; shift 2 ;;
+    --no-branch)    USE_BRANCH=false; shift ;;
     *) err "Unknown option: $1" ;;
   esac
 done
@@ -400,6 +402,18 @@ Agents for this task (in order): ${agents}
 Spawn and coordinate only the agents listed above."
   fi
 
+  # Feature branch workflow
+  local original_branch=""
+  local branch_name="task/${task_id}"
+  if $USE_BRANCH && [[ "$MODE" != "--dry-run" ]]; then
+    if [[ -z "${GH_TOKEN:-}" ]]; then
+      err "GH_TOKEN must be set to use feature-branch workflow. Use --no-branch to skip."
+    fi
+    original_branch=$(git branch --show-current)
+    log "Creating branch ${BLUE}${branch_name}${NC}..."
+    git checkout -b "$branch_name" 2>/dev/null || git checkout "$branch_name"
+  fi
+
   # Pull detailed spec from Section 2 of plan
   local task_spec
   task_spec=$(get_task_spec "$task_id")
@@ -459,7 +473,7 @@ EOF
   if [[ "$MODE" == "--dry-run" ]]; then
     warn "[DRY RUN] Team: ${TEAM}"
     warn "[DRY RUN] Agents dir: ${AGENTS_DIR}"
-    warn "[DRY RUN] Would execute: #${task_id} — ${task_desc}"
+    warn "[DRY RUN] Task: ${task_id} (${task_type}) — ${task_desc}"
     mark_status "$task_id" "~" "x"
     return 0
   fi
@@ -524,6 +538,22 @@ EOF
 
       if $is_success; then
         stop_progress_bar
+
+        # Commit and PR if on task branch
+        if $USE_BRANCH && [[ -n "$original_branch" ]]; then
+          log "Committing changes and creating PR..."
+          git add .
+          git commit -m "feat(task): #${task_id} - ${task_desc}" || true
+
+          log "Pushing branch ${BLUE}${branch_name}${NC}..."
+          git push -u origin "$branch_name" || warn "Failed to push branch (git push failed)"
+
+          gh pr create --title "feat: #${task_id} - ${task_desc}" --body "Automated PR for task #${task_id}" || warn "Failed to create PR (gh pr create failed)"
+
+          git checkout "$original_branch"
+          original_branch="" # Mark as returned
+        fi
+
         local elapsed=$(( $(date +%s) - TASK_START_TIME ))
         local elapsed_fmt
         elapsed_fmt=$(format_duration $elapsed)
@@ -565,6 +595,13 @@ EOF
   done
 
   stop_progress_bar
+
+  # Ensure we switch back to the original branch on failure
+  if [[ -n "$original_branch" ]]; then
+    warn "Returning to branch ${BLUE}${original_branch}${NC} after task failure..."
+    git checkout "$original_branch"
+  fi
+
   mark_status "$task_id" "~" "!"
   # Append failure reason to the first occurrence only
   awk -v id="$task_id" -v reason="${reason:-unknown error}" '
@@ -592,6 +629,10 @@ main() {
     counts=$(count_tasks)
     TOTAL_TASKS=${counts##*|}
     CURRENT_TASK_NUM=0
+
+    if [[ "$MODE" == "--dry-run" ]]; then
+      warn "[DRY RUN] Tasks found: ${TOTAL_TASKS}"
+    fi
 
     print_dashboard
 
