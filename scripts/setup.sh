@@ -76,6 +76,18 @@ mkdir -p .claude-loop/{logs,reports,sessions}
 ok "Log directories created"
 
 # ── Script permissions ──────────────────────────────────────────
+# ── yq (required) ───────────────────────────────────────────────
+if command -v yq &>/dev/null; then
+  ok "yq $(yq --version)"
+else
+  warn "yq not found — required for model/pricing config parsing."
+  if [[ "$(uname)" == "Darwin" ]]; then
+    echo "Install via: brew install yq"
+  else
+    echo "Install via: sudo apt install yq  (or visit https://github.com/kislyuk/yq)"
+  fi
+fi
+
 chmod +x scripts/*.sh
 ok "Script permissions set"
 

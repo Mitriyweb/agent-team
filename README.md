@@ -85,6 +85,7 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 |------|----------|---------|
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` or [claude.ai/download](https://claude.ai/download) |
 | API key | **yes** | Anthropic key or Azure APIM subscription key (see `.env.example`) |
+| yq | **yes** | `brew install yq` or `apt install yq` *(required for model/pricing config)* |
 | Docker | no | [docker.com](https://docker.com) *(for local model via Ollama)* |
 | tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
 | Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |

@@ -473,6 +473,9 @@ EOF
   if [[ "$MODE" == "--dry-run" ]]; then
     warn "[DRY RUN] Team: ${TEAM}"
     warn "[DRY RUN] Agents dir: ${AGENTS_DIR}"
+    if $USE_BRANCH; then
+      warn "[DRY RUN] Branch: ${branch_name}"
+    fi
     warn "[DRY RUN] Task: ${task_id} (${task_type}) — ${task_desc}"
     mark_status "$task_id" "~" "x"
     return 0
