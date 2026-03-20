@@ -12,7 +12,16 @@
 
 set -euo pipefail
 
-source "$(dirname "$0")/_common.sh"
-configure_provider
+# NEW: Enable xtrace if COVERAGE is set
+if [[ -n "${COVERAGE:-}" && -f "$(dirname "${BASH_SOURCE[0]}")/_common.sh" ]]; then
+  source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
+fi
 
-exec claude "$@"
+main() {
+  configure_provider
+  exec claude "$@"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi

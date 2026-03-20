@@ -1,6 +1,17 @@
 #!/bin/bash
 # Shared helpers — sourced by all scripts
 
+# NEW: Enable xtrace if COVERAGE is set
+if [[ -n "${COVERAGE:-}" ]]; then
+  # Use an absolute path for trace.log to avoid issues with cd
+  : "${TRACE_FILE:=$(pwd)/trace.log}"
+  export TRACE_FILE
+  # Open FD 3 for appending to TRACE_FILE
+  exec 3>>"$TRACE_FILE"
+  export BASH_XTRACEFD=3
+  set -x
+fi
+
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 

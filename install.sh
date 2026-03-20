@@ -8,6 +8,13 @@
 
 set -euo pipefail
 
+# NEW: Enable xtrace if COVERAGE is set
+if [[ -n "${COVERAGE:-}" && -f "$(dirname "${BASH_SOURCE[0]}")/scripts/_common.sh" ]]; then
+  source "$(dirname "${BASH_SOURCE[0]}")/scripts/_common.sh"
+elif [[ -n "${COVERAGE:-}" && -f "$(dirname "${BASH_SOURCE[0]}")/_common.sh" ]]; then
+  source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
+fi
+
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; BLUE='\033[0;34m'; NC='\033[0m'
 ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
@@ -21,7 +28,7 @@ echo ""
 
 # 1. Detect environment
 TARGET_DIR=$(pwd)
-SOURCE_DIR=$(dirname "$(readlink -f "$0")")
+SOURCE_DIR="${SOURCE_DIR:-$(dirname "$(readlink -f "$0")")}"
 
 if [[ "$TARGET_DIR" == "$SOURCE_DIR" ]]; then
   info "Running from project root. Installing into current directory..."
@@ -38,13 +45,22 @@ ok "Directories created"
 
 # 3. Copy agents
 info "Copying agents to .claude/agents/..."
-cp "$SOURCE_DIR"/agents/software/sw-*.md .claude/agents/
+# Fix: Handle space in directory name
+if [[ -d "$SOURCE_DIR/agents/software development" ]]; then
+  cp "$SOURCE_DIR/agents/software development"/sw-*.md .claude/agents/
+elif [[ -d "$SOURCE_DIR/agents/software" ]]; then
+  cp "$SOURCE_DIR/agents/software"/sw-*.md .claude/agents/
+fi
 cp "$SOURCE_DIR"/agents/localization/loc-*.md .claude/agents/
 
 # 3a. Copy agent-specific scripts
-if [[ -d "$SOURCE_DIR/agents/software/scripts" ]]; then
+if [[ -d "$SOURCE_DIR/agents/software development/scripts" ]]; then
   mkdir -p .claude/agents/scripts
-  cp "$SOURCE_DIR"/agents/software/scripts/*.sh .claude/agents/scripts/
+  cp "$SOURCE_DIR/agents/software development/scripts"/*.sh .claude/agents/scripts/
+  chmod +x .claude/agents/scripts/*.sh
+elif [[ -d "$SOURCE_DIR/agents/software/scripts" ]]; then
+  mkdir -p .claude/agents/scripts
+  cp "$SOURCE_DIR/agents/software/scripts"/*.sh .claude/agents/scripts/
   chmod +x .claude/agents/scripts/*.sh
 fi
 
