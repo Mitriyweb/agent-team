@@ -108,3 +108,9 @@ When developer sends `REVIEW_REQUEST`:
 
 - If `tasks/plan.md` exists — read the detailed spec for the current task
 - If only ROADMAP.md — read the task description and design from scratch
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

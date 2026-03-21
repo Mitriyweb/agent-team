@@ -122,3 +122,9 @@ Notify team-lead:
 - Severity: `Critical` = incorrect meaning, missing content, broken code; `Minor` = style, formatting
 - Do not approve until all Critical issues are resolved
 - Test examples where possible (copy-paste commands and verify they look executable)
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

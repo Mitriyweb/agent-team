@@ -101,3 +101,9 @@ If qa sends `QA_ISSUE`, fix and notify:
 - If a term has no established translation, keep the English term and add a note in parentheses on first use
 - If the source is ambiguous, ask tech-writer via QUESTION before guessing
 - Do not fix source English errors yourself — report them to tech-writer via QUESTION
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

@@ -87,3 +87,9 @@ Create `SUMMARY.md`:
 - If architect and reviewer conflict — you decide
 - Shut down agents after receiving DONE: `Teammate requestShutdown`
 - On failure: mark task as FAILED in ROADMAP.md and log the reason
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

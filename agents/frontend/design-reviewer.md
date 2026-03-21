@@ -42,3 +42,9 @@ When implementation is complete:
 - Writing production UI code
 - Managing functional QA (functional logic, data handling)
 - Writing unit or integration tests
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.
