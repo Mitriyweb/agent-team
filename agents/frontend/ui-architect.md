@@ -49,3 +49,9 @@ When developer sends a `REVIEW_REQUEST`:
 - Infrastructure/CI configuration
 - Writing production implementation code
 - Creating visual design assets (Figma/Sketch)
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

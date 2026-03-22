@@ -148,3 +148,9 @@ Files optimized: [list]
 - Do not add keywords that are not relevant to the actual content
 - All code, commands, and file paths must remain unchanged
 - Readability takes priority over keyword density — if it reads unnaturally, rewrite
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

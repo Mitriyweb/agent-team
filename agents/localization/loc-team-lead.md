@@ -86,3 +86,9 @@ Create `SUMMARY.md`:
 - QA runs only after all localizations are tech-writer-approved
 - If an agent is BLOCKED — unblock or reassign
 - Shut down agents after receiving DONE: `Teammate requestShutdown`
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

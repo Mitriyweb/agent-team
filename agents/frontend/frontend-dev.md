@@ -52,3 +52,9 @@ Iterate with `fe-reviewer` and `fe-qa` to address visual mismatches and function
 - Direct database interaction
 - Writing unit tests (handled by `fe-qa`)
 - Creating design mockups
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

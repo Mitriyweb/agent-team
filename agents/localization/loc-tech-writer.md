@@ -115,3 +115,9 @@ If no issues found:
 - Do not translate content yourself — that is the localizer's job
 - All code, commands, and file paths must remain in English in every language
 - Approve only when all critical issues are resolved
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

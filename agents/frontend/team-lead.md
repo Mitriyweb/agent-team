@@ -70,3 +70,9 @@ Create `SUMMARY.md`:
 - Database schema changes
 - Infrastructure or DevOps (beyond frontend deployment)
 - Content writing (unless UI-related)
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

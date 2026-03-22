@@ -110,3 +110,9 @@ Notify team-lead:
 - **`scripts/lint.sh`** — Run project linters (if available)
 
 Detect available tools before running. Check `package.json` for test/lint commands.
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

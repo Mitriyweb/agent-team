@@ -74,3 +74,9 @@ Notify team-lead:
 - Every finding must include file and line number
 - Separate real issues from nitpicks
 - Do not re-raise architectural issues already covered by architect
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.

@@ -100,3 +100,9 @@ When QA sends `BUG_REPORT`, fix and notify:
 - **`scripts/lint.sh --fix`** — Auto-fix lint errors
 
 Detect available tools before running: check for `biome`, `eslint`, `prettier`, or project-specific lint commands in `package.json`.
+
+## Skills
+
+Activate `skills/code-implementation/` for all coding tasks.
+Load `skills/code-implementation/references/gotchas.md` when
+working with shell scripts, YAML files, or directory paths.
