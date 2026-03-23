@@ -14,3 +14,4 @@ jobs:
       - run: bun run lint
       - run: bun run check
       - run: bun audit --audit-level=high
+      - run: bun run test

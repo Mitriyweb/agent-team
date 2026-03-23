@@ -30,11 +30,14 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "fix": "bun run lint:fix && bun run check:fix",
-    "prepare": "prek install"
+    "prepare": "prek install",
+    "test": "bats tests/scripts",
+    "bin": "node bin/init.js"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@j178/prek": "0.3.3",
+    "bats": "1.13.0",
     "markdownlint-cli2": "latest"
   }
 }

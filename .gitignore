@@ -1,3 +1,5 @@
 node_modules
 .claude-loop/
 settings.local.json
+test_install/
+target_dir/

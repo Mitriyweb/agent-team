@@ -12,10 +12,7 @@
 
 set -euo pipefail
 
-# NEW: Enable xtrace if COVERAGE is set
-if [[ -n "${COVERAGE:-}" && -f "$(dirname "${BASH_SOURCE[0]}")/_common.sh" ]]; then
-  source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
 main() {
   configure_provider
