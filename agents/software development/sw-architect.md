@@ -31,10 +31,13 @@ When team-lead assigns a task:
 }
 ```
 
-**Step 2** — Write `SPEC.md` after developer replies:
+**Step 2** — Write `SPEC.md` after developer replies. This is the **Spec Freeze** phase.
+
+The spec must be an immutable contract. It must include:
 
 ```markdown
 ## Goal
+## Acceptance Criteria (AC1, AC2, ...)
 ## Components and responsibilities
 ## Interfaces (types, function signatures)
 ## File structure
@@ -42,19 +45,20 @@ When team-lead assigns a task:
 ## Risks and trade-offs
 ```
 
-**Step 3** — Validate the spec yourself:
+**Step 3** — Validate and Freeze the spec:
 
-- Verify all required sections are present (Goal, Components, Interfaces, File structure, Risks)
-- Ensure spec is actionable — developer should be able to implement without further questions
-- If `tasks/plan.md` exists, cross-reference with the task spec for consistency
+- Verify all required sections are present, especially **Acceptance Criteria**.
+- Ensure ACs are testable and unambiguous (e.g., "API returns 200 OK for valid credentials" rather than "API works").
+- If `tasks/plan.md` exists, cross-reference with the task spec for consistency.
+- Once validated, declare the spec as **FROZEN**.
 
 **Step 4** — Notify team-lead:
 
 ```json
 {
   "from": "sw-architect", "type": "DONE",
-  "subject": "Spec ready",
-  "body": "SPEC.md written and validated. Ready to start implementation.",
+  "subject": "Spec frozen",
+  "body": "SPEC.md written, validated, and FROZEN. It contains explicit Acceptance Criteria (AC1, AC2, etc.). Ready for implementation.",
   "requires_response": false
 }
 ```
@@ -65,9 +69,9 @@ When team-lead assigns a task:
 
 When developer sends `REVIEW_REQUEST`:
 
-1. Read the code — compare against what you designed
+1. Read the code and **EVIDENCE.md** — compare against the frozen spec.
 2. Check:
-   - Spec compliance
+   - Spec compliance and AC coverage (Verify all ACs have PASS in Evidence)
    - Business logic correctness
    - Architectural integrity (no layer violations, SRP respected)
    - Edge cases you anticipated during design
