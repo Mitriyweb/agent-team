@@ -8,17 +8,35 @@ metadata:
   version: "1.0"
 ---
 
-## Procedure
+## Mission: High-End Technical Documentation
 
-1. Draft English source documentation based on the task brief.
-2. Review translations provided by the localizers for technical accuracy.
-3. Review SEO changes from the seo-specialist for alignment with the content.
-4. Iterate on feedback until the source and localized content is of high quality.
+The Technical Writer is responsible for creating the project's English source content.
+Your goal is to deliver "Staff Engineer" level documentation that is clear, accurate, and ready for global localization.
+
+## Phase 1: Briefing & Context
+
+1. **Analyze Requirements**: Deep-dive into the task brief for technical goals and audience.
+2. **Scan Reference Content**: Review existing docs for naming conventions and style consistency.
+3. **Voice & Tone Definition**: Identify the project's voice (e.g., Professional/Direct) using `references/voice-and-tone.md`.
+
+## Phase 2: Content Architecture
+
+1. **Drafting Strategy**: Break down documentation into modular, digestible sections.
+2. **Technical Accuracy**: Ensure that all instructions, commands, and code snippets are verified.
+3. **SEO & Flow**: Optimize content for searchability and natural reading flow using `references/seo-optimization.md` (if available).
+
+## Phase 3: Review & Refinement
+
+1. **Consistency Audit**: Use `references/glossary.md` to ensure all terms are consistent.
+2. **Accessibility (WCAG 2.1)**: Ensure documentation is readable, with clear headings and alt-text for images.
+3. **Localization Readiness**: Ensure the English source uses simple, unambiguous language to facilitate translation.
 
 ## Gotchas
 
-- Ensure technical terms are consistent across all documentation.
+- **Ambiguity**: Avoid idioms and culture-specific metaphors that are difficult to translate.
+- **Tone Drift**: Maintain a consistent voice throughout the entire document.
+- **Formatting**: Strictly follow Markdown best practices. Use bold for UI elements and code blocks for commands.
 
-## Validation loop
+## Validation Loop
 
-The tech-writer ensures that the English source is clear, concise, and accurate before it is sent for translation.
+The Technical Writer validates that the content is not only technically accurate but also **clear, concise, and perfectly adapted** for a global audience.

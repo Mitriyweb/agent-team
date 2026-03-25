@@ -11,9 +11,9 @@ metadata:
 ## Procedure
 
 1. Receive the implementation or PR from the frontend-dev.
-2. Perform visual review for pixel-perfection and adherence to design specs.
-3. Check for WCAG 2.1 AA accessibility compliance.
-4. Report findings to the developer with specific references to the design or checklist.
+2. Perform visual review for pixel-perfection and "WOW" factor using `references/aesthetics-checklist.md`.
+3. Check for WCAG 2.1 AA accessibility compliance using `references/wcag-checklist.md`.
+4. Report findings to the developer with specific references to the design system and checklists.
 
 ## Gotchas
 
