@@ -44,6 +44,7 @@ Teammate({
 | `REVIEW_FEEDBACK` | Review result with findings |
 | `BUG_REPORT` | QA found a bug, reporting to developer |
 | `BUG_FIX` | Developer fixed a bug, notifying QA to re-run |
+| `HUMAN_REVIEW` | Need human input or approval before proceeding |
 | `DONE` | Task complete, passing result upstream |
 | `BLOCKED` | Cannot continue, need help from team-lead |
 

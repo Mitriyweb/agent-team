@@ -4,13 +4,13 @@ repos:
       - id: markdownlint-cli2
         name: markdownlint-cli2
         language: system
-        entry: bun run lint
+        entry: bun run lint:fix
         pass_filenames: false
         always_run: true
       - id: biome
         name: biome check
         language: system
-        entry: bun run check
+        entry: bun run check:fix
         pass_filenames: false
         always_run: true
       - id: audit
@@ -19,3 +19,16 @@ repos:
         entry: bun audit --audit-level=high
         pass_filenames: false
         always_run: true
+      - id: validate
+        name: validate
+        language: system
+        entry: bun run validate
+        pass_filenames: false
+        always_run: true
+      - id: build
+        name: build
+        language: system
+        entry: bun run build:local
+        pass_filenames: false
+        always_run: true
+

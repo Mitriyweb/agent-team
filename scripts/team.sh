@@ -18,12 +18,14 @@ create_team() {
     local name=""
     local description=""
     local roles_str=""
-    
+    local human_review=true
+
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --name) name="$2"; shift 2 ;;
             --description) description="$2"; shift 2 ;;
             --roles) roles_str="$2"; shift 2 ;;
+            --no-human-review) human_review=false; shift ;;
             *) shift ;;
         esac
     done
@@ -42,6 +44,9 @@ create_team() {
     # 1. Create PROTOCOL.md
     local protocol_file="${team_dir}/${prefix}PROTOCOL.md"
     sed "s/{{TEAM_PREFIX}}/${prefix}/g" "${TEMPLATE_DIR}/PROTOCOL.md" > "$protocol_file"
+    if ! $human_review; then
+        sed -i '' '/HUMAN_REVIEW/d' "$protocol_file" || sed -i '/HUMAN_REVIEW/d' "$protocol_file"
+    fi
     ok "Created ${protocol_file}"
 
     # 2. Create agent profiles
@@ -62,6 +67,77 @@ create_team() {
     mkdir -p "${team_dir}/skills"
     
     ok "Team '${name}' successfully created in ${team_dir}"
+}
+
+init_project() {
+    local team_name=""
+    local human_review=true
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --team) team_name="$2"; shift 2 ;;
+            --no-human-review) human_review=false; shift ;;
+            -*) shift ;;
+            *)
+                # Positional argument: treat as team name
+                if [[ -z "$team_name" ]]; then
+                    team_name="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    log "Initializing agent-team project..."
+
+    # 1. Create directory structure
+    mkdir -p agents scripts tasks .agents/workflows
+
+    # 2. Copy core scripts (from SOURCE_DIR)
+    local src_dir="${SOURCE_DIR:-.}"
+    local scripts=(run.sh plan.sh _common.sh bash_coverage.sh team.sh)
+    for script in "${scripts[@]}"; do
+        cp "${src_dir}/scripts/${script}" "scripts/"
+        chmod +x "scripts/${script}"
+    done
+    ok "Copied core scripts to scripts/"
+
+    # 3. Copy templates
+    mkdir -p scripts/templates
+    cp "${src_dir}/scripts/templates/"* "scripts/templates/"
+    ok "Copied templates to scripts/templates/"
+
+    # 4. Copy workflows
+    cp -r "${src_dir}/.agents/workflows/"* ".agents/workflows/"
+    ok "Copied workflows to .agents/workflows/"
+
+    # 5. Create default memory and roadmap
+    if [[ ! -f "MEMORY.md" ]]; then
+        cp "${src_dir}/MEMORY.md" "MEMORY.md" || echo "# Project Memory" > "MEMORY.md"
+        ok "Created MEMORY.md"
+    fi
+    if [[ ! -f "ROADMAP.md" ]]; then
+        echo "# Project Roadmap" > "ROADMAP.md"
+        echo "" >> "ROADMAP.md"
+        echo "\` \` \`markdown" >> "ROADMAP.md"
+        echo "- [ ] id:1 priority:high type:feature Initialize project agents:100" >> "ROADMAP.md"
+        echo "\` \` \`" >> "ROADMAP.md"
+        ok "Created default ROADMAP.md"
+    fi
+
+    # 6. Copy specified team if requested
+    if [[ -n "$team_name" ]]; then
+        if [[ -d "${src_dir}/agents/${team_name}" ]]; then
+            mkdir -p "agents/${team_name}"
+            cp -r "${src_dir}/agents/${team_name}/"* "agents/${team_name}/"
+            ok "Initialized team: ${team_name}"
+        else
+            warn "Team '${team_name}' not found in ${src_dir}/agents/"
+        fi
+    fi
+
+    ok "Project initialized successfully."
+    log "Run ${BLUE}./scripts/run.sh --plan --all${NC} to start."
 }
 
 validate_team() {
@@ -120,6 +196,7 @@ main() {
     case "$command" in
         create) create_team "$@" ;;
         validate) validate_team "$@" ;;
+        init) init_project "$@" ;;
         *) err "Unknown command: $command" ;;
     esac
 }

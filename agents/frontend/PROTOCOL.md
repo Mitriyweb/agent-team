@@ -42,6 +42,7 @@ Teammate({
 | `BUG_REPORT` | QA found a functional UI bug |
 | `BUG_FIX` | Developer fixed a bug or design issue |
 | `DONE` | Task complete, passing result upstream |
+| `HUMAN_REVIEW` | Need human input or approval before proceeding |
 | `BLOCKED` | Cannot continue, need help from team-lead |
 
 ## Communication Graph

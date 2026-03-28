@@ -1,14 +1,14 @@
 setup() {
-    mkdir -p bin
-    cat <<'EOF' > bin/claude
+    mkdir -p test_bin
+    cat <<'EOF' > test_bin/claude
 echo "MOCKED CLAUDE $*"
 EOF
-    chmod +x bin/claude
-    export PATH=$(pwd)/bin:$PATH
+    chmod +x test_bin/claude
+    export PATH=$(pwd)/test_bin:$PATH
 }
 
 teardown() {
-    rm -rf bin
+    rm -rf test_bin
 }
 
 @test "claude.sh passes arguments" {

@@ -1,14 +1,15 @@
 setup() {
-    mkdir -p bin
-    cat <<'EOF' > bin/claude
+    TEST_DIR="$(mktemp -d)"
+    mkdir -p "$TEST_DIR/bin"
+    cat <<'EOF' > "$TEST_DIR/bin/claude"
 echo '{"result": "SUCCESS"}'
 EOF
-    chmod +x bin/claude
-    export PATH=$(pwd)/bin:$PATH
+    chmod +x "$TEST_DIR/bin/claude"
+    export PATH="$TEST_DIR/bin:$PATH"
 }
 
 teardown() {
-    rm -rf bin
+    rm -rf "$TEST_DIR"
 }
 
 @test "agents.sh local launches local agent" {
