@@ -46,6 +46,7 @@ APPROVE_PLAN=false
 STOP_REQUESTED=false
 TEAM="software development"
 USE_BRANCH=true
+PLAN_FIRST=false
 
 count_tasks() {
   local done failed pending running total
@@ -370,6 +371,15 @@ Wait for human approval before proceeding to Phase 2 (Implementation)."
   elif [[ "$TEAM" == "frontend" ]]; then
     protocol_file="PROTOCOL.md"
   fi
+  # Ensure MEMORY.md exists
+  if [[ ! -f "MEMORY.md" ]]; then
+    cat <<EOF > "MEMORY.md"
+# Project Memory
+
+This file serves as a persistent memory for all agents.
+EOF
+  fi
+
   read -r -d '' prompt <<EOF || true
 You are the ${TEAM}-lead autonomous agent executing a task from the project roadmap.
 ${hitl_instruction}
@@ -383,9 +393,10 @@ Instructions:
 2. Read the codebase to understand the current state (Read, Glob, Grep)
 3. Decompose the task and spawn the appropriate agents
 4. Coordinate agents per agents/${TEAM}/${protocol_file}
-5. Produce EXACTLY the deliverables listed in the Output section — no more, no less
-6. Verify all acceptance criteria are met before finishing
-7. Write a report to ${REPORTS_DIR}/task-${task_id}.md:
+5. Read and update MEMORY.md with important shared knowledge, decisions, or lessons learned.
+6. Produce EXACTLY the deliverables listed in the Output section — no more, no less
+7. Verify all acceptance criteria are met before finishing
+8. Write a report to ${REPORTS_DIR}/task-${task_id}.md:
    - What was done
    - Files changed/created (with full paths)
    - Acceptance criteria checklist (each criterion: PASS/FAIL)
@@ -540,6 +551,7 @@ main() {
       --approve-plan) APPROVE_PLAN=true; shift ;;
       --team)         TEAM="$2"; shift 2 ;;
       --no-branch)    USE_BRANCH=false; shift ;;
+      --plan)         PLAN_FIRST=true; shift ;;
       *) err "Unknown option: $1" ;;
     esac
   done
@@ -559,6 +571,19 @@ main() {
 
   print_header
   [[ ! -f "$ROADMAP" ]] && err "${ROADMAP} not found"
+
+  if $PLAN_FIRST; then
+    log "Planning phase triggered by ${BLUE}--plan${NC}..."
+    if ! bash "$(dirname "$0")/plan.sh" "$ROADMAP"; then
+      err "Planning failed. Aborting execution."
+    fi
+    # After planning, we should use tasks/plan.md if it was created
+    if [[ -f "tasks/plan.md" ]]; then
+      ROADMAP="tasks/plan.md"
+      log "Using generated plan: ${BLUE}${ROADMAP}${NC}"
+    fi
+  fi
+
   validate_roadmap
 
   if [[ "$MODE" == "--all" || "$MODE" == "--dry-run" ]]; then

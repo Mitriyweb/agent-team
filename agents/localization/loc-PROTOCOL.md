@@ -50,3 +50,10 @@ loc-team-lead ──► loc-tech-writer ◄──► loc-localizer(s) ◄──�
 - `loc-qa` checks source, translations, and SEO changes; reports issues to the responsible agent
 - Multiple loc-localizers run in parallel (one per language)
 - `loc-seo-specialist` and `loc-qa` run in parallel after localizations are approved
+
+## Memory Management
+
+All agents should use `MEMORY.md` to persist and share knowledge across tasks.
+
+- **Read**: At the start of every task, read `MEMORY.md` to get context on terminology, style guides, and cultural preferences.
+- **Write**: Before finishing a task, update `MEMORY.md` if you've established a new translation rule or terminology standard.

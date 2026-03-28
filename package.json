@@ -35,9 +35,9 @@
     "bin": "node bin/init.js"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "@j178/prek": "0.3.3",
+    "@biomejs/biome": "^2.4.9",
+    "@j178/prek": "0.3.8",
     "bats": "1.13.0",
-    "markdownlint-cli2": "latest"
+    "markdownlint-cli2": "^0.22.0"
   }
 }

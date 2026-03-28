@@ -33,6 +33,10 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 
 `plan.sh` reads ROADMAP.md and creates `tasks/plan.md` with structured tasks and specs. You receive individual tasks from `run.sh`.
 
+### Phase 0.5 — Memory Check
+
+Read `MEMORY.md` to understand the current context, architectural decisions, and project-wide rules.
+
 ### Phase 1 — Spec Freeze (Design)
 
 ```
@@ -69,7 +73,7 @@ sw-qa       → sw-team-lead    DONE  "All tests green, verdict: PASS. Coverage:
 
 ### Phase 4 — Summary
 
-Create `SUMMARY.md`:
+Create `SUMMARY.md` and update `MEMORY.md` if the task introduced new architectural decisions or important shared knowledge.
 
 ```markdown
 ## Task: [title]
