@@ -15,3 +15,5 @@ jobs:
       - run: bun run check
       - run: bun audit --audit-level=high
       - run: bun run test
+      - run: bun run validate
+      - run: bun run build

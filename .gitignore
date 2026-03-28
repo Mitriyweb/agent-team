@@ -1,5 +1,13 @@
-node_modules
+node_modules/
 .claude-loop/
 settings.local.json
+test_install/
+target_dir/
+*.log
+.DS_Store
+dist/
+.bun-build.bun-build
+*.bun-build
+bin/claude
 test_install/
 target_dir/

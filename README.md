@@ -27,38 +27,58 @@ team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
                           fe-reviewer
 ```
 
-## Quickstart
+## Installation
 
-### Option 1: One-command installation (Recommended)
-
-Drop the agent team into any existing project:
+### Option 1: One-line install (Recommended)
 
 ```bash
-npx @mitriyweb/agent-team init
+curl -fsSL https://raw.githubusercontent.com/Mitriyweb/agent-team/main/install.sh | bash
+```
+
+Detects your platform, downloads the binary, and installs to `~/.local/bin/`.
+
+### Option 2: npx (no install)
+
+```bash
+npx @mitriyweb/agent-team init --team frontend
+```
+
+### Option 3: Clone from source
+
+```bash
+git clone https://github.com/Mitriyweb/agent-team.git
+cd agent-team && bun install && bun run build
+# Link binary
+ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team
+```
+
+> Make sure `~/.local/bin` is in your `PATH`.
+
+## Quickstart
+
+Initialize a project with a specific agent team:
+
+```bash
+# Initialize with the frontend team
+agent-team init --team frontend
+
+# Initialize with the software development team
+agent-team init --team "software development"
+
+# Initialize without human review checkpoints
+agent-team init --team frontend --no-human-review
 ```
 
 This will:
 
-- Create `.claude/agents/` with all agent roles
-- Create `scripts/claude-team/` with orchestration scripts
-- Setup `.env` and `.claude/settings.json`
-- Create a template `ROADMAP.md`
+- Copy agent definitions to `agents/<team>/`
+- Copy orchestration scripts to `scripts/`
+- Copy workflows to `.agents/workflows/`
+- Create a template `ROADMAP.md` and `MEMORY.md`
 
-### Option 2: Manual clone
+Then run:
 
 ```bash
-# 1. Clone into your project
-git clone https://github.com/Mitriyweb/agent-team .claude-team
-
-# 2. Setup (no bun needed)
-cd .claude-team && ./scripts/setup.sh
-
-# 3. Configure provider in .env (see .env.example)
-cp .env.example .env
-# Edit .env: set PROVIDER and your API key
-
-# 4. Create ROADMAP.md with tasks, then run
-touch ROADMAP.md
 ./scripts/run.sh          # execute one task (highest priority)
 ./scripts/run.sh --all    # execute all tasks in sequence
 ./scripts/run.sh --dry-run  # preview without running
@@ -90,50 +110,39 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 | tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
 | Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |
 
+## CLI Commands
+
+```bash
+agent-team init [--team NAME] [--no-human-review]   # Initialize project
+agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2  # Create custom team
+agent-team validate NAME                             # Validate team structure
+```
+
 ## Repository Structure
 
 ```
 .
-├── agents/
-│   ├── software development/   # Software dev team
-│   │   ├── team-lead.md         # Orchestrator — decomposes tasks, coordinates team
-│   │   ├── architect.md         # Designs system + reviews implementation
-│   │   ├── developer.md         # Writes code, iterates on feedback
-│   │   ├── reviewer.md          # Reviews style, security, best practices
-│   │   ├── qa.md                # Writes tests, reports bugs directly to developer
-│   │   └── PROTOCOL.md          # Inter-agent messaging protocol
-│   └── localization/           # Docs & localization team
-│       ├── team-lead.md         # Orchestrator — coordinates writing and translations
-│       ├── tech-writer.md       # Writes English source docs, reviews translations and SEO
-│       ├── localizer.md         # Translates into one assigned target language
-│       ├── seo-specialist.md    # Optimizes source and translations for search
-│       ├── qa.md                # Reviews source docs, translations, and SEO changes
-│       └── PROTOCOL.md          # Inter-agent messaging protocol
-├── claude/
-│   └── settings.json       # Claude Code project settings
+├── agents/                     # Agent team definitions
+│   ├── software development/   # Software dev team (sw-*)
+│   ├── frontend/               # Frontend team (fe-*)
+│   └── localization/           # Localization team (loc-*)
+├── .agents/
+│   └── workflows/              # Workflow definitions (human-review, new-team, etc.)
+├── bin/
+│   └── init.js                 # CLI entry point
 ├── scripts/
-│   ├── run.sh              # Main autonomous loop
-│   ├── claude.sh           # Launch Claude Code with provider from .env
-│   ├── agents.sh           # Launch agents manually (local / cloud / both)
-│   ├── setup.sh            # One-time environment setup
-│   └── _common.sh          # Shared helpers for scripts
-├── config/
-│   ├── docker-compose.yml  # Ollama + LiteLLM for local model support
-│   ├── litellm.yaml        # Route requests between local and cloud models
-│   └── scheduling/
-│       ├── cron.example         # Cron schedule examples
-│       └── claude-loop.service  # systemd unit file
-├── docs/
-│   ├── agents-software development.md  # How agent roles work
-│   ├── routing.md                      # Local vs cloud model routing
-│   └── task-format.md                  # Full ROADMAP.md field reference
-├── package.json                # Optional dev dependencies (biome, markdownlint-cli2, prek)
-├── biome.json                  # Biome config (lint + format JSON)
-├── .pre-commit-config.yaml     # Pre-commit hooks via prek
-├── .env.example                # Environment template
-├── .github/
-│   └── workflows/
-│       └── lint.yml            # CI — markdownlint-cli2 on push and PR
+│   ├── run.sh                  # Main autonomous loop
+│   ├── team.sh                 # Team management (init, create, validate)
+│   ├── plan.sh                 # Planning phase
+│   ├── _common.sh              # Shared helpers
+│   └── templates/              # Templates for new teams
+├── .github/workflows/
+│   ├── lint.yml                # CI — lint, check, test, build
+│   └── release.yml             # Release — build binary on tag push
+├── package.json
+├── biome.json
+├── .pre-commit-config.yaml
+├── install.sh                  # Standalone installer
 ├── README.md
 └── LICENSE
 ```
@@ -215,20 +224,7 @@ Every task execution produces:
 └── sessions/task-001.session  # Session ID for resuming
 ```
 
-## Configuration
-
-`claude/settings.json` is included in the repo and configures two things:
-
-### Enabling Agent Teams
-
-Agent Teams are experimental and off by default. The setting is already enabled:
-
-```bash
-# Per session (alternative)
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-```
-
-### Security Permissions
+## Security Permissions
 
 The following destructive operations are blocked by default via `permissions.deny`:
 
@@ -240,6 +236,17 @@ The following destructive operations are blocked by default via `permissions.den
 | Disk operations | `mkfs`, `fdisk`, `parted` |
 
 To allow a specific command, remove its entry from `permissions.deny` in `claude/settings.json`.
+
+## Creating Custom Teams
+
+```bash
+agent-team new-team \
+  --name "security-audit" \
+  --description "Security and vulnerability assessment team" \
+  --roles "auditor,pentester,reviewer"
+```
+
+This creates `agents/security-audit/` with a PROTOCOL.md and agent profiles for each role.
 
 ## License
 

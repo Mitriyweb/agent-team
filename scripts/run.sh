@@ -493,6 +493,22 @@ EOF
           warn "Plan rejected. Marking task as failed."
           reason="Plan rejected by user"
         fi
+      elif echo "$result" | grep -q "TASK_STATUS: HUMAN_REVIEW_NEEDED"; then
+        stop_progress_bar
+        echo -e "\n${YELLOW}══ HUMAN REVIEW NEEDED ════════════════════════════════════════${NC}"
+        echo -e "Task #${task_id} requested a human review."
+        echo -e "Check the logs/output or specific review files mentioned."
+        echo -en "${CYAN}Approve and continue? (y/n): ${NC}"
+        read -r choice
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
+          ok "Review approved. Continuing task #${task_id}..."
+          prompt="User has approved the human review. Continue with the next steps."
+          attempt=$((attempt))
+          continue
+        else
+          warn "Review rejected. Marking task as failed."
+          reason="Human review rejected by user"
+        fi
       else
         local reason
         reason=$(echo "$result" | grep "TASK_STATUS: FAILED:" | sed 's/TASK_STATUS: FAILED: //' || echo "unknown")

@@ -33,6 +33,7 @@ Teammate({
 | `QA_ISSUE` | QA found a problem, reporting to loc-localizer or loc-tech-writer |
 | `QA_FIX` | Localizer/loc-tech-writer fixed an issue, notifying QA to re-check |
 | `DONE` | Task complete, passing result upstream |
+| `HUMAN_REVIEW` | Need human input or approval before proceeding |
 | `BLOCKED` | Cannot continue, need help from team-lead |
 
 ## Communication Graph

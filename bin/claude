@@ -1,9 +1,0 @@
-echo '{"result": "PLAN_READY"}'
-cat <<'PLAN' > tasks/plan.md
-### Section 1: Structured tasks for run.sh
-```
-- [ ] id:001 priority:high type:feature agents:architect,developer Implement login API
-```
-### Section 2: Detailed spec per task
-### Task #001 Implement login API
-PLAN

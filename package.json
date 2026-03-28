@@ -25,14 +25,20 @@
     "llm"
   ],
   "scripts": {
-    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
-    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\"",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "fix": "bun run lint:fix && bun run check:fix",
     "prepare": "prek install",
     "test": "bats tests/scripts",
+    "validate": "bun run lint && bun run check && bun run test",
+    "build": "bun build ./bin/init.js --compile --outfile dist/agent-team",
+    "build:local": "bun run build && ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team",
     "bin": "node bin/init.js"
+  },
+  "overrides": {
+    "picomatch": ">=2.3.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
