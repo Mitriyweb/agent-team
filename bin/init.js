@@ -40,8 +40,25 @@ if (command === "init") {
   child.on("close", (code) => {
     process.exit(code || 0);
   });
+} else if (command === "new-team") {
+  const teamPath = path.join(__dirname, "../scripts/team.sh");
+  const child = spawn("bash", [teamPath, "create", ...args.slice(1)], {
+    stdio: "inherit",
+    env: { ...process.env, SOURCE_DIR: path.join(__dirname, "..") },
+  });
+  child.on("close", (code) => process.exit(code || 0));
+} else if (command === "validate") {
+  const teamPath = path.join(__dirname, "../scripts/team.sh");
+  const child = spawn("bash", [teamPath, "validate", ...args.slice(1)], {
+    stdio: "inherit",
+    env: { ...process.env, SOURCE_DIR: path.join(__dirname, "..") },
+  });
+  child.on("close", (code) => process.exit(code || 0));
 } else {
   console.log("Claude Code Agent Team");
-  console.log("Usage: npx @mitriyweb/agent-team init");
+  console.log("Usage:");
+  console.log("  npx @mitriyweb/agent-team init");
+  console.log("  npx @mitriyweb/agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2");
+  console.log("  npx @mitriyweb/agent-team validate NAME");
   process.exit(0);
 }
