@@ -31,7 +31,8 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 | `sw-architect` | Designs the solution AND reviews the implementation |
 | `sw-developer` | Writes code, iterates on feedback from architect and QA |
 | `sw-reviewer` | Reviews style, security, best practices |
-| `sw-qa` | Writes tests, reports bugs directly to developer |
+| `sw-qa` | Manual testing, unit tests, and fresh verification |
+| `sw-aqa` | Automated E2E, integration, and performance testing |
 
 ## Task Flow (Repo Task Proof Loop)
 
@@ -68,8 +69,10 @@ sw-architect → sw-team-lead   DONE      "Implementation approved and Evidence 
 ```
 sw-team-lead → sw-reviewer    QUESTION  "Review the code style and security"
 sw-team-lead → sw-qa          QUESTION  "Perform fresh verification of the codebase. Output: VERDICT.json and QA_REPORT.md"
+sw-team-lead → sw-aqa         QUESTION  "Run automated E2E and integration tests. Output: AQA_REPORT.md"
 
 sw-qa       → sw-developer    BUG_REPORT  "Fresh verification failed: VERDICT.json contains FAIL for AC[X]. Problems: PROBLEMS.md"
+sw-aqa      → sw-developer    BUG_REPORT  "Automated test failed: [Test Name]. Reason: [Failure]"
 sw-developer → sw-qa          BUG_FIX     "Fixed and Evidence updated. Please re-verify."
 [iterate until QA reports PASS for all ACs]
 

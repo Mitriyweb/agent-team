@@ -49,16 +49,16 @@ Teammate({
 
 ```
 fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
-                                  │
+                                  │       └──► fe-aqa
                           fe-reviewer
 ```
 
 - `fe-team-lead` coordinates all frontend agents, never writes UI code.
 - `fe-architect` talks directly to `fe-dev` during design and architectural review.
-- `fe-dev` iterates with `fe-architect` until approved, then with `fe-reviewer` and `fe-qa`.
-- `fe-reviewer` and `fe-qa` run in parallel after developer finishes initial implementation.
+- `fe-dev` iterates with `fe-architect` until approved, then with `fe-reviewer`, `fe-qa`, and `fe-aqa`.
+- `fe-reviewer`, `fe-qa`, and `fe-aqa` run in parallel after developer finishes implementation.
 - `fe-reviewer` reports visual issues directly to `fe-dev`, final status to `fe-team-lead`.
-- `fe-qa` reports functional bugs directly to `fe-dev`, final status to `fe-team-lead`.
+- `fe-qa` and `fe-aqa` report bugs directly to `fe-dev`, final status to `fe-team-lead`.
 
 ## Memory Management
 

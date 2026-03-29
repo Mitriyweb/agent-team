@@ -11,3 +11,4 @@ dist/
 bin/claude
 test_install/
 target_dir/
+.claude/settings.json

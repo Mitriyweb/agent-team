@@ -65,6 +65,13 @@ create_team() {
 
     # 3. Create skills dir
     mkdir -p "${team_dir}/skills"
+
+    # 4. Create claude config dir
+    mkdir -p "${team_dir}/claude"
+    if [[ -f "claude/settings.json" ]]; then
+        cp "claude/settings.json" "${team_dir}/claude/settings.json"
+        ok "Copied default claude settings to ${team_dir}/claude/"
+    fi
     
     ok "Team '${name}' successfully created in ${team_dir}"
 }
@@ -134,6 +141,16 @@ init_project() {
         else
             warn "Team '${team_name}' not found in ${src_dir}/agents/"
         fi
+    fi
+
+    # 7. Setup Claude settings
+    mkdir -p .claude
+    if [[ -n "$team_name" ]] && [[ -f "${src_dir}/agents/${team_name}/claude/settings.json" ]]; then
+        cp "${src_dir}/agents/${team_name}/claude/settings.json" ".claude/settings.json"
+        ok "Applied team-specific Claude settings for ${team_name}"
+    elif [[ -f "${src_dir}/claude/settings.json" ]]; then
+        cp "${src_dir}/claude/settings.json" ".claude/settings.json"
+        ok "Applied default Claude settings"
     fi
 
     ok "Project initialized successfully."
