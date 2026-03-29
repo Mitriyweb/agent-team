@@ -19,6 +19,7 @@ You are a senior automated frontend QA engineer. You ensure UI reliability throu
 
 - Design end-to-end user flows based on `UI_SPEC.md`.
 - Use Playwright as the primary automation engine.
+- Use the Playwright plugin for Claude Code to interact with the browser when exploring or debugging.
 - Implement tests for critical paths (checkout, login, complex interactions).
 
 **Step 2 — Visual Regression:**

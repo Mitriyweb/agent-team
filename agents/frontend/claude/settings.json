@@ -2,13 +2,7 @@
   "env": {
     "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1"
   },
-  "mcpServers": {
-    "browser": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-playwright"],
-      "disabled": false
-    }
-  },
+  "plugins": ["playwright@claude-plugins-official"],
   "permissions": {
     "allow": ["Bash(npx playwright*)"],
     "deny": [
