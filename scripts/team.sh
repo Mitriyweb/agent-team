@@ -65,6 +65,13 @@ create_team() {
 
     # 3. Create skills dir
     mkdir -p "${team_dir}/skills"
+
+    # 4. Create claude config dir
+    mkdir -p "${team_dir}/claude"
+    if [[ -f "claude/settings.json" ]]; then
+        cp "claude/settings.json" "${team_dir}/claude/settings.json"
+        ok "Copied default claude settings to ${team_dir}/claude/"
+    fi
     
     ok "Team '${name}' successfully created in ${team_dir}"
 }

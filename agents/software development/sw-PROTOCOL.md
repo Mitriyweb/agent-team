@@ -52,16 +52,16 @@ Teammate({
 
 ```
 sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-qa
-                                  │
+                                  │             └──► sw-aqa
                               sw-reviewer
 ```
 
-- `team-lead` coordinates all agents, never writes code
-- `architect` talks directly to `developer` during design and implementation review
-- `developer` iterates with `architect` until approved, then with `qa` until tests pass
-- `sw-reviewer` and `qa` run in parallel after developer finishes
-- `sw-reviewer` reports only to `team-lead`
-- `qa` reports bugs directly to `developer`, final status to `team-lead`
+- `team-lead` coordinates all agents, never writes code.
+- `architect` talks directly to `developer` during design and implementation review.
+- `developer` iterates with `architect` until approved, then with `qa` and `aqa` until tests pass.
+- `sw-reviewer`, `qa`, and `aqa` run in parallel after developer finishes.
+- `sw-reviewer` reports only to `team-lead`.
+- `qa` and `aqa` report bugs directly to `developer`, final status to `team-lead`.
 
 ## Example: sw-architect → sw-developer review loop
 

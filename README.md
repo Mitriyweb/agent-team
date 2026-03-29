@@ -7,7 +7,7 @@ Drop this into any project, add your API key, and let the agents work through yo
 
 ```
 team-lead ──► architect ◄──► developer ◄──► qa
-                                  │
+                                  │             └──► aqa
                               reviewer
 ```
 
@@ -23,7 +23,7 @@ team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
 
 ```
 team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
-                                  │
+                                  │       └──► fe-aqa
                           fe-reviewer
 ```
 
@@ -157,7 +157,8 @@ agent-team validate NAME                             # Validate team structure
 | `architect` | claude-sonnet | Designs solution, reviews implementation, approves before QA |
 | `developer` | claude-sonnet | Writes code per spec, iterates on architect + QA feedback |
 | `reviewer` | claude-sonnet | Reviews style, security, best practices (parallel with QA) |
-| `qa` | claude-sonnet | Writes tests, reports bugs directly to developer, iterates to green |
+| `qa` | claude-sonnet | Manual verification of acceptance criteria |
+| `aqa` | claude-sonnet | Automated E2E, integration, and performance testing |
 
 ### Localization
 
@@ -177,7 +178,8 @@ agent-team validate NAME                             # Validate team structure
 | `fe-architect` | claude-sonnet | Defines component hierarchy, design tokens, and state management strategy |
 | `fe-dev` | claude-sonnet | Implements UI components and views per spec. Framework and styling aware |
 | `fe-reviewer` | claude-sonnet | Performs visual review for pixel-perfection and WCAG 2.1 AA accessibility |
-| `fe-qa` | claude-sonnet | Writes and executes E2E tests, visual regression, and performance monitoring |
+| `fe-qa` | claude-sonnet | Manual UI/UX testing and accessibility verification |
+| `fe-aqa` | claude-sonnet | Automated E2E tests, visual regression, and performance monitoring |
 
 ## Running Modes
 

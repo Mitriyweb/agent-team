@@ -574,6 +574,17 @@ main() {
 
   configure_provider
 
+  # Switch to team-specific configuration if available
+  if [[ -f "agents/${TEAM}/claude/settings.json" ]]; then
+    log "Applying team-specific settings for ${BLUE}${TEAM}${NC}..."
+    mkdir -p .claude
+    cp "agents/${TEAM}/claude/settings.json" ".claude/settings.json"
+  elif [[ -f "claude/settings.json" ]]; then
+    # Fallback to general settings if team-specific not found
+    mkdir -p .claude
+    cp "claude/settings.json" ".claude/settings.json"
+  fi
+
   AGENTS_DIR="./agents/${TEAM}"
   if [[ ! -d "$AGENTS_DIR" ]]; then
     echo "Unknown team: $TEAM"
