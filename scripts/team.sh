@@ -143,6 +143,16 @@ init_project() {
         fi
     fi
 
+    # 7. Setup Claude settings
+    mkdir -p .claude
+    if [[ -n "$team_name" ]] && [[ -f "${src_dir}/agents/${team_name}/claude/settings.json" ]]; then
+        cp "${src_dir}/agents/${team_name}/claude/settings.json" ".claude/settings.json"
+        ok "Applied team-specific Claude settings for ${team_name}"
+    elif [[ -f "${src_dir}/claude/settings.json" ]]; then
+        cp "${src_dir}/claude/settings.json" ".claude/settings.json"
+        ok "Applied default Claude settings"
+    fi
+
     ok "Project initialized successfully."
     log "Run ${BLUE}./scripts/run.sh --plan --all${NC} to start."
 }
