@@ -153,6 +153,17 @@ init_project() {
         ok "Applied default Claude settings"
     fi
 
+    # 8. Set autoMode if human review is disabled
+    if ! $human_review; then
+        if command -v jq >/dev/null 2>&1; then
+            local tmp_settings=$(mktemp)
+            jq '.permissions.defaultMode = "auto"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+            ok "Auto mode: ${GREEN}enabled${NC} (--no-human-review)"
+        else
+            warn "jq not found; skipping automatic autoMode configuration"
+        fi
+    fi
+
     ok "Project initialized successfully."
     log "Run ${BLUE}./scripts/run.sh --plan --all${NC} to start."
 }
