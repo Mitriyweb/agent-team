@@ -5,6 +5,7 @@
   },
   "plugins": ["playwright@claude-plugins-official"],
   "permissions": {
+    "defaultMode": "manual",
     "allow": ["Bash(npx playwright*)"],
     "deny": [
       "Bash(rm -rf*)",
