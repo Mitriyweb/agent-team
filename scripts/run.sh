@@ -479,6 +479,7 @@ EOF
         return 0
       elif echo "$result" | grep -q "TASK_STATUS: PENDING_APPROVAL"; then
         stop_progress_bar
+        notify_review
         echo -e "\n${YELLOW}══ PLAN PENDING APPROVAL ══════════════════════════════════════${NC}"
         echo -e "Task #${task_id} plan is ready for review."
         echo -e "Check the logs/output above."
@@ -495,6 +496,7 @@ EOF
         fi
       elif echo "$result" | grep -q "TASK_STATUS: HUMAN_REVIEW_NEEDED"; then
         stop_progress_bar
+        notify_review
         echo -e "\n${YELLOW}══ HUMAN REVIEW NEEDED ════════════════════════════════════════${NC}"
         echo -e "Task #${task_id} requested a human review."
         echo -e "Check the logs/output or specific review files mentioned."
@@ -583,6 +585,21 @@ main() {
     # Fallback to general settings if team-specific not found
     mkdir -p .claude
     cp "claude/settings.json" ".claude/settings.json"
+  fi
+
+  # Automatically enable autoMode if human review (plan approval) is not required
+  if command -v jq >/dev/null 2>&1; then
+    local tmp_settings
+    tmp_settings=$(mktemp)
+    if [[ "$APPROVE_PLAN" == "false" ]]; then
+      log "Auto mode: ${GREEN}enabled${NC} (no plan approval requested)"
+      jq '.permissions.defaultMode = "auto"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+    else
+      log "Auto mode: ${YELLOW}manual${NC} (plan approval requested)"
+      jq '.permissions.defaultMode = "manual"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+    fi
+  else
+    warn "jq not found; skipping automatic autoMode configuration"
   fi
 
   AGENTS_DIR="./agents/${TEAM}"

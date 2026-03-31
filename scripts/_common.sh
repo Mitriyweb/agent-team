@@ -20,6 +20,17 @@ ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
 err()  { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
+notify_review() {
+  local msg="Review required"
+  if command -v spd-say >/dev/null 2>&1; then
+    spd-say "$msg"
+  elif command -v say >/dev/null 2>&1; then
+    say "$msg"
+  else
+    printf "\a" # Terminal bell fallback
+  fi
+}
+
 load_env() {
   local env_file="${1:-.env}"
   if [[ -f "$env_file" ]]; then
