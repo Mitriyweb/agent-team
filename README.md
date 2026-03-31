@@ -232,10 +232,12 @@ Every task execution produces:
 
 By default, the agent team pauses for human review before executing a plan or when an agent explicitly requests it.
 When a review is needed:
-1.  **Audio Notification**: The system will announce "Review required" in English using `spd-say` (Linux) or `say` (macOS).
-2.  **Visual Prompt**: A high-visibility banner will appear in the terminal.
 
-You can disable plan approval by running `scripts/run.sh` without the `--approve-plan` flag (or by initializing with `--no-human-review`). In this mode, `autoMode` is enabled to reduce prompts.
+1. **Audio Notification**: The system will announce "Review required" in English using `spd-say` (Linux) or `say` (macOS).
+2. **Visual Prompt**: A high-visibility banner will appear in the terminal.
+
+You can disable plan approval by running `scripts/run.sh` without the `--approve-plan` flag (or by initializing with `--no-human-review`).
+In this mode, `autoMode` is enabled to reduce prompts.
 
 ## Security Permissions
 
