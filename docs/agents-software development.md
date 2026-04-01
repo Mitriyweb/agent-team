@@ -60,7 +60,7 @@ team-lead ──► architect ◄──► developer ◄──► qa
 ## Task Flow
 
 ```
-1. team-lead receives task from run.sh
+1. team-lead receives task from the task runner
 2. team-lead → architect: "Design this"
 3. architect → developer: "Questions about codebase?"
 4. developer → architect: "Here's what you need to know"

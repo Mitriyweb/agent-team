@@ -132,7 +132,9 @@ Pin versions for reproducibility: `bunx @biomejs/biome@1.9.4 check .`
 
 ### Software Development Team
 
-| Script | Description |
-|--------|-------------|
-| `scripts/lint.sh` | Run Biome + markdownlint; supports `--fix` |
-| `scripts/validate-spec.sh` | Validate SPEC.md required sections |
+| Command | Description |
+|---------|-------------|
+| `bun run lint` | Run markdownlint |
+| `bun run check` | Run Biome linter and formatter |
+| `bun run validate` | Run lint, check, typecheck, and tests |
+| `bun run fix` | Auto-fix lint and format errors |

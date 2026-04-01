@@ -19,6 +19,12 @@ repos:
         entry: bun audit --audit-level=high
         pass_filenames: false
         always_run: true
+      - id: typecheck
+        name: typecheck
+        language: system
+        entry: bun run typecheck
+        pass_filenames: false
+        always_run: true
       - id: validate
         name: validate
         language: system

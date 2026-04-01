@@ -107,7 +107,6 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 |------|----------|---------|
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` or [claude.ai/download](https://claude.ai/download) |
 | API key | **yes** | Anthropic key or Azure APIM subscription key (see `.env.example`) |
-| yq | **yes** | `brew install yq` or `apt install yq` *(required for model/pricing config)* |
 | Docker | no | [docker.com](https://docker.com) *(for local model via Ollama)* |
 | tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
 | Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |
@@ -115,9 +114,12 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 ## CLI Commands
 
 ```bash
-agent-team init [--team NAME] [--no-human-review]   # Initialize project
-agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2  # Create custom team
-agent-team validate NAME                             # Validate team structure
+agent-team init [--team NAME] [--no-human-review]                      # Initialize project
+agent-team run [--all] [--dry-run] [--team NAME] [--budget N]          # Execute tasks
+agent-team plan [ROADMAP.md]                                           # Decompose roadmap
+agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2 # Create custom team
+agent-team validate NAME                                               # Validate team structure
+agent-team -v, --version                                               # Show version
 ```
 
 ## Repository Structure
@@ -125,24 +127,29 @@ agent-team validate NAME                             # Validate team structure
 ```
 .
 ├── agents/                     # Agent team definitions
-│   ├── software development/   # Software dev team (sw-*)
+│   ├── software development/   # Software dev team
 │   ├── frontend/               # Frontend team (fe-*)
-│   └── localization/           # Localization team (loc-*)
+│   └── localization/           # Localization team
 ├── .agents/
 │   └── workflows/              # Workflow definitions (human-review, new-team, etc.)
 ├── bin/
-│   └── init.js                 # CLI entry point
-├── scripts/
-│   ├── run.sh                  # Main autonomous loop
-│   ├── team.sh                 # Team management (init, create, validate)
-│   ├── plan.sh                 # Planning phase
-│   ├── _common.sh              # Shared helpers
+│   └── init.ts                 # CLI entry point
+├── lib/
+│   ├── assets.ts               # Asset extraction (review sound)
+│   ├── common.ts               # Shared helpers, logging, provider config
+│   ├── git.ts                  # Git branch, commit, push, PR helpers
+│   ├── plan.ts                 # Roadmap planning / decomposition
+│   ├── run.ts                  # Main autonomous task runner loop
+│   ├── team.ts                 # Team management (init, create, validate)
+│   ├── ui.ts                   # Terminal UI / progress bar
 │   └── templates/              # Templates for new teams
+├── tests/lib/                  # Unit tests (Bun test runner)
 ├── .github/workflows/
-│   ├── lint.yml                # CI — lint, check, test, build
+│   ├── lint.yml                # CI — lint, check, typecheck, test, build
 │   └── release.yml             # Release — build binary on tag push
 ├── package.json
 ├── biome.json
+├── tsconfig.json
 ├── .pre-commit-config.yaml
 ├── install.sh                  # Standalone installer
 ├── README.md
@@ -205,16 +212,15 @@ Uses Ollama with qwen3-coder:30b. No API costs.
 
 ```bash
 docker compose -f config/docker-compose.yml up -d
-./scripts/agents.sh local
 ```
 
 ### Hybrid (recommended)
 
 team-lead + architect on cloud, developer + qa on local model.
+Routes through LiteLLM proxy.
 
 ```bash
 docker compose -f config/docker-compose.yml up -d
-./scripts/agents.sh both
 ```
 
 ## Logs and Reports

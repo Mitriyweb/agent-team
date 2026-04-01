@@ -14,10 +14,20 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "style": {
+        "noNonNullAssertion": "warn",
+        "noUnusedTemplateLiteral": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error"
+      }
     }
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/.git", "!**/dist", "!**/bin"]
+    "includes": ["**", "!**/node_modules", "!**/.git", "!**/dist"]
   }
 }
