@@ -18,6 +18,43 @@
       "Bash(parted*)",
       "Bash(shred*)",
       "Bash(find * -delete*)"
-    ]
+    ],
+    "hooks": {
+      "PreToolUse": "bash scripts/audit-hook.sh",
+      "PostToolUse": "bash scripts/audit-hook.sh"
+    },
+    "profiles": {
+      "team-lead": {
+        "mode": "default",
+        "deny": []
+      },
+      "architect": {
+        "mode": "default",
+        "deny": [
+          "Write(*)",
+          "Edit(*)",
+          "Bash(*)"
+        ]
+      },
+      "developer": {
+        "mode": "acceptEdits",
+        "deny": []
+      },
+      "reviewer": {
+        "mode": "default",
+        "deny": [
+          "Write(*)",
+          "Edit(*)",
+          "Bash(*)"
+        ]
+      },
+      "qa": {
+        "mode": "acceptEdits",
+        "deny": [
+          "Write(src/*)",
+          "Edit(src/*)"
+        ]
+      }
+    }
   }
 }
