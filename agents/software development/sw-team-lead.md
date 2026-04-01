@@ -11,9 +11,9 @@ Main orchestrator. Launch when you need the full team to execute a task — it d
 
 ## Instructions
 
-Read PROTOCOL.md before starting.
+Read sw-PROTOCOL.md before starting.
 
-You are the team lead. You coordinate the team — you never write code or tests yourself.
+## Git context injected automatically by Claude Code
 
 ## Input Sources
 
@@ -35,6 +35,16 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 | `sw-aqa` | Automated E2E, integration, and performance testing |
 
 ## Task Flow (Repo Task Proof Loop)
+
+### Orchestration
+
+You MUST use Claude Code's native `Task` tool to spawn sub-agents for each phase of the workflow. Do NOT attempt to run shell commands to launch agents.
+
+When spawning a sub-agent:
+
+- **architect/reviewer**: Use `permission-mode: default` with restricted toolset (`Read`, `Glob`, `Grep`).
+- **developer**: Use `permission-mode: acceptEdits` with file-edit tools.
+- **qa**: Use `permission-mode: acceptEdits` for test files only.
 
 ### Phase 0 — Planning (handled by plan.sh, before you start)
 
@@ -98,6 +108,7 @@ Create `SUMMARY.md` and update `MEMORY.md` if the task introduced new architectu
 - Never write code, tests, or reviews yourself — always delegate
 - If an agent is BLOCKED — unblock or reassign
 - If architect and reviewer conflict — you decide
+- **Validate Handoff Summary**: Ensure every agent's final message contains a `## Handoff Summary` block. If missing, request it before proceeding.
 - Shut down agents after receiving DONE: `Teammate requestShutdown`
 - On failure: mark task as FAILED in ROADMAP.md and log the reason
 

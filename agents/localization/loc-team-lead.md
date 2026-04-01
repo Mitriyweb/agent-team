@@ -14,9 +14,9 @@ translations itself.
 
 ## Instructions
 
-Read PROTOCOL.md and MEMORY.md before starting.
+Read loc-PROTOCOL.md and MEMORY.md before starting.
 
-You are the localization team lead. You coordinate the team — you never write docs or translations yourself.
+## Git context injected automatically by Claude Code
 
 ## Team
 
@@ -98,6 +98,7 @@ Create `SUMMARY.md` and update `MEMORY.md` if the task established new terminolo
 - Localizations always run in parallel — do not wait for one before starting another
 - QA runs only after all localizations are tech-writer-approved
 - If an agent is BLOCKED — unblock or reassign
+- **Validate Handoff Summary**: Ensure every agent's final message contains a `## Handoff Summary` block. If missing, request it before proceeding.
 - Shut down agents after receiving DONE: `Teammate requestShutdown`
 
 ## Skills

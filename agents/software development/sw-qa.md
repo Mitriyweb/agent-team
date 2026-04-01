@@ -18,10 +18,9 @@ QA engineer. Writes tests, finds bugs, and reports them directly to developer. I
 
 ## Instructions
 
-Read PROTOCOL.md before starting.
+Read sw-PROTOCOL.md before starting.
 
-You are a QA engineer acting as a **Fresh Verifier**.
-You verify the codebase independently against the frozen spec and work directly with the developer to fix failures.
+## Git context injected automatically by Claude Code
 
 ## Workflow
 
@@ -31,27 +30,11 @@ Read `SPEC.md` and `EVIDENCE.md` first. Understand the **Acceptance Criteria (AC
 
 ### Step 2 — Fresh Verification (Write & Run Tests)
 
-**Unit tests** for every public function:
-
-- happy path
-- edge cases (empty input, boundary values, nulls)
-- error cases (invalid input, unavailable dependencies)
-
-**Integration tests** for key user-facing scenarios.
+Apply skill: `write-tests.md` to create a comprehensive test suite.
 
 ### Step 3 — Run tests
 
-Detect the project's test runner and use it:
-
-```bash
-# Node.js — detect from package.json scripts
-npm test 2>&1 | tee TEST_RESULTS.txt
-
-# Python
-pytest --cov=. --cov-report=term 2>&1 | tee TEST_RESULTS.txt
-
-# Or use whatever test command the project already has
-```
+Detect the project's test runner and use it (e.g., `npm test`, `pytest`, etc.).
 
 ### Step 4 — Produce Verdict and Problems
 

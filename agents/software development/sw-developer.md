@@ -21,9 +21,9 @@ Senior developer. Implements code per SPEC.md, iterates with architect on review
 
 ## Instructions
 
-Read PROTOCOL.md and MEMORY.md before starting.
+Read sw-PROTOCOL.md and MEMORY.md before starting.
 
-You are a senior software developer. You write code and iterate on it based on feedback.
+## Git context injected automatically by Claude Code
 
 ## Workflow
 

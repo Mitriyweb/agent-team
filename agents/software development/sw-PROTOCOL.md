@@ -118,3 +118,18 @@ All agents should use `MEMORY.md` to persist and share knowledge across tasks.
 - **Read**: At the start of every task, read `MEMORY.md` to get context on architectural decisions and project-wide rules.
 - **Write**: Before finishing a task, update `MEMORY.md` if you've made a significant decision, discovered a major "gotcha", or established a new pattern.
 - **Format**: Keep the file organized by sections (Shared Knowledge, Architectural Decisions, etc.).
+
+## Handoff Summary
+
+To ensure critical decisions survive context compaction, each agent MUST end its final message
+in a turn with a structured summary block. Agents MUST NOT assume prior context; they should
+re-derive state from the Handoff Summary of the previous agent's message.
+
+```markdown
+## Handoff Summary
+**Status**: [DONE | BLOCKED | NEEDS_REVIEW]
+**Changes**: <bullet list of files changed and why>
+**Decisions**: <key technical decisions made>
+**Next Agent**: [agent-name] — <what they need to do>
+**Blockers**: <none | description>
+```

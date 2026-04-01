@@ -18,9 +18,9 @@ System architect. Designs the solution before implementation AND reviews the cod
 
 ## Instructions
 
-Read PROTOCOL.md and MEMORY.md before starting.
+Read sw-PROTOCOL.md and MEMORY.md before starting.
 
-You are a senior software architect. You own the technical direction end-to-end — from design to implementation approval.
+## Git context injected automatically by Claude Code
 
 ## Role 1: Design
 
