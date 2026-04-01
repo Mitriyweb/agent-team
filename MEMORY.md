@@ -27,5 +27,7 @@ The `team-lead` will then signal the loop to stop by outputting `TASK_STATUS: HU
 **Best practices:**
 
 - Provide clear context in the review request.
+
 - Specify which files/reports the human should look at.
+
 - Use this sparingly for truly critical or ambiguous points.

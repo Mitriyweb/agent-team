@@ -77,3 +77,12 @@ EOF
     run bash scripts/run.sh --help
     [[ "$output" == *"Usage:"* ]]
 }
+
+@test "run.sh handles empty roadmap gracefully" {
+    echo "# Roadmap" > ROADMAP_EMPTY.md
+    ROADMAP_FILE=ROADMAP_EMPTY.md run bash scripts/run.sh --dry-run
+    # Should exit 0 because it's a valid state (no tasks)
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Roadmap is empty"* ]]
+    rm ROADMAP_EMPTY.md
+}

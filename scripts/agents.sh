@@ -20,13 +20,13 @@ start_local() {
   log "Starting agent [LOCAL: qwen3-coder] → ${host}"
   ANTHROPIC_BASE_URL="$host" \
   ANTHROPIC_API_KEY="local-key" \
-  run_claude --model qwen3-coder
+  run_claude --model qwen3-coder --permission-mode default
 }
 
 start_cloud() {
   configure_provider
   log "Starting agent [CLOUD: claude-sonnet]"
-  run_claude --model claude-sonnet
+  run_claude --model claude-sonnet --permission-mode team-lead
 }
 
 start_both() {
@@ -40,14 +40,14 @@ start_both() {
 
   # Left pane: local model via LiteLLM
   tmux send-keys -t claude-agents \
-    "ANTHROPIC_BASE_URL=$host ANTHROPIC_API_KEY=local-key run_claude --model qwen3-coder" Enter
+    "ANTHROPIC_BASE_URL=$host ANTHROPIC_API_KEY=local-key run_claude --model qwen3-coder --permission-mode default" Enter
 
   # Right pane: cloud model via configured provider
   tmux split-window -h -t claude-agents
   local cloud_env="ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
   [[ -n "${ANTHROPIC_BASE_URL:-}" ]] && cloud_env="ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL $cloud_env"
   tmux send-keys -t claude-agents \
-    "$cloud_env run_claude --model claude-sonnet" Enter
+    "$cloud_env run_claude --model claude-sonnet --permission-mode team-lead" Enter
 
   tmux select-layout -t claude-agents even-horizontal
   tmux attach -t claude-agents

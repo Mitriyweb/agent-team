@@ -1,28 +1,33 @@
 #!/bin/bash
-# ─────────────────────────────────────────────────────────────────
-#  audit-hook.sh — Claude Code hook to log structured tool calls
+# audit-hook.sh — Log Claude Code tool calls to a unified JSONL file
 #
-#  Usage:
-#    Input: JSON from Claude Code (PreToolUse/PostToolUse)
-#    Output: Appends to .claude-loop/audit/audit.jsonl
-# ─────────────────────────────────────────────────────────────────
+# Usage:
+#   echo '{"tool": "Read", "input": {...}}' | bash scripts/audit-hook.sh PRE
+#   echo '{"tool": "Read", "status": "success"}' | bash scripts/audit-hook.sh POST
 
 set -euo pipefail
 
-LOG_FILE=".claude-loop/audit/audit.jsonl"
-mkdir -p "$(dirname "$LOG_FILE")"
+LOG_DIR=".claude-loop/audit"
+mkdir -p "$LOG_DIR"
 
-# Read JSON from stdin
-DATA=$(cat)
+PHASE="${1:-PRE}"
+INPUT=$(cat)
 
-# Extract basic info
-TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-TOOL=$(echo "$DATA" | jq -r '.tool // "unknown"')
-AGENT=${AGENT_ROLE:-"unknown"}
-PHASE=$(echo "$DATA" | jq -r '.hook // "unknown"')
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ROLE="${ROLE:-unknown}"
+AGENT="${AGENT:-unknown}"
 
-# Construct log entry
-ENTRY=$(echo "$DATA" | jq -c --arg ts "$TS" --arg agent "$AGENT" --arg phase "$PHASE" \
-  '. + {ts: $ts, agent: $agent, phase: $phase}')
+# Use a simpler append-only strategy to avoid race conditions with sed
+# Each tool call gets two lines: one PRE and one POST, linked by a call_id if available,
+# or just logged sequentially.
+# For simplicity and reliability in shell, we log each phase as a discrete entry.
 
-echo "$ENTRY" >> "$LOG_FILE"
+if [[ "$PHASE" == "PRE" ]]; then
+  TOOL=$(echo "$INPUT" | jq -r '.tool // "unknown"')
+  echo "{\"ts\": \"$TIMESTAMP\", \"role\": \"$ROLE\", \"agent\": \"$AGENT\", \"tool\": \"$TOOL\", \"phase\": \"PRE\"}" >> "${LOG_DIR}/audit.jsonl"
+else
+  TOOL=$(echo "$INPUT" | jq -r '.tool // "unknown"')
+  STATUS=$(echo "$INPUT" | jq -r '.status // "success"')
+  DURATION=$(echo "$INPUT" | jq -r '.duration_ms // 0')
+  echo "{\"ts\": \"$TIMESTAMP\", \"role\": \"$ROLE\", \"agent\": \"$AGENT\", \"tool\": \"$TOOL\", \"phase\": \"POST\", \"status\": \"$STATUS\", \"duration_ms\": $DURATION}" >> "${LOG_DIR}/audit.jsonl"
+fi

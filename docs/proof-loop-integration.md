@@ -20,6 +20,7 @@ and how they are integrated into the `agent-team` workflow.
 
 | proof-loop Role | agent-team Role | Primary Responsibility in Proof-Loop |
 | :--- | :--- | :--- |
+
 | `task-spec-freezer` | `sw-architect` | Creates and freezes `SPEC.md` |
 | `task-builder` | `sw-developer` | Implements changes and packs `EVIDENCE.md` |
 | `task-verifier` | `sw-qa` | Performs fresh verification, produces `VERDICT.json` |
@@ -28,7 +29,8 @@ and how they are integrated into the `agent-team` workflow.
 
 ## Integration Steps
 
-1. **Update `sw-team-lead`**: Orchestrate the strict phases: Design (Spec Freeze) -> Implementation (Build + Evidence) -> Verification (Fresh Verify) -> Fix loop.
+1. **Update `sw-team-lead`**: Orchestrate the strict phases: Design (Spec Freeze) -> Implementation (Build + Evidence) -> Verification (Fresh Verify)
+-> Fix loop.
 2. **Update `sw-architect`**: Explicitly "freeze" the spec. Ensure it contains clear Acceptance Criteria (AC1, AC2, etc.).
 3. **Update `sw-developer`**: Require `EVIDENCE.md` with proof for every AC before moving to review.
 4. **Update `sw-qa`**: Require `VERDICT.json` and `PROBLEMS.md` based on independent verification.

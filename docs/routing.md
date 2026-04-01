@@ -52,6 +52,7 @@ Tune for your machine in `config/docker-compose.yml`:
 ```yaml
 environment:
   - OLLAMA_NUM_THREAD=16   # set to your vCPU count
+
 deploy:
   resources:
     limits:

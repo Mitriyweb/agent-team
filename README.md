@@ -72,18 +72,21 @@ agent-team init --team frontend --no-human-review
 This will:
 
 - Copy agent definitions to `agents/<team>/`
-- Copy orchestration scripts to `scripts/`
+
 - Copy workflows to `.agents/workflows/`
+
 - Create a template `ROADMAP.md` and `MEMORY.md`
+
+- Configure `autoMode` in `.claude/settings.json`
 
 > **Tip:** If `--no-human-review` is used, Claude's `autoMode` will be enabled by default for the project.
 
 Then run:
 
 ```bash
-./scripts/run.sh          # execute one task (highest priority)
-./scripts/run.sh --all    # execute all tasks in sequence
-./scripts/run.sh --dry-run  # preview without running
+agent-team run          # execute one task (highest priority)
+agent-team run --all    # execute all tasks in sequence
+agent-team run --dry-run  # preview without running
 ```
 
 ## Planning
@@ -91,12 +94,14 @@ Then run:
 The autonomous work of the agent team is driven by the `ROADMAP.md` file located in the root of your project.
 
 1. **Define Tasks**: Create a `ROADMAP.md` and add tasks using markdown checklists (`- [ ]`).
+
 2. **Orchestration**: The `team-lead` agent parses the roadmap, selects the highest priority
    pending task, decomposes it into subtasks, and assigns them to the appropriate agents.
 3. **Dependencies**: You can specify dependencies (`depends:001`) to ensure tasks are executed in strict order.
 
    ```markdown
    - [ ] id:001 priority:high type:feature agents:architect,developer Implement login API
+
    ```
 
 4. **Reference**: For a complete reference on task fields and statuses, see [docs/task-format.md](docs/task-format.md).
@@ -196,7 +201,7 @@ Set `PROVIDER` in `.env` (see `.env.example`):
 | LiteLLM proxy | `litellm` | `LITELLM_HOST` |
 
 ```bash
-./scripts/run.sh --all
+agent-team run --all
 ```
 
 ### Local model only
@@ -236,7 +241,7 @@ When a review is needed:
 1. **Audio Notification**: The system will announce "Review required" in English using `spd-say` (Linux) or `say` (macOS).
 2. **Visual Prompt**: A high-visibility banner will appear in the terminal.
 
-You can disable plan approval by running `scripts/run.sh` without the `--approve-plan` flag (or by initializing with `--no-human-review`).
+You can disable plan approval by running `agent-team run` without the `--approve-plan` flag (or by initializing with `--no-human-review`).
 In this mode, `autoMode` is enabled to reduce prompts.
 
 ## Security Permissions
@@ -251,6 +256,20 @@ The following destructive operations are blocked by default via `permissions.den
 | Disk operations | `mkfs`, `fdisk`, `parted` |
 
 To allow a specific command, remove its entry from `permissions.deny` in `claude/settings.json`.
+
+### Per-Role Permissions
+
+Claude Code Agent Team enforces granular permissions per agent role:
+
+| Role | Default Mode | Read-Only Tools | Write/Bash Tools |
+|------|--------------|----------------|------------------|
+| `team-lead` | `manual` | Approved | **Prompts** |
+| `architect` | `manual` | Approved | **Denied** |
+| `developer` | `acceptEdits`| Approved | **Edits auto-approved**, Bash prompts |
+| `reviewer` | `manual` | Approved | **Denied** |
+| `qa` | `acceptEdits`| Approved | **Edits to tests auto-approved**, src/ denied |
+
+These are configured in `claude/settings.json` and passed via `--permission-mode`.
 
 ## Creating Custom Teams
 

@@ -5,7 +5,9 @@ Full reference for all fields in `ROADMAP.md`.
 ## Format
 
 ```
+
 - [ ] id:NNN priority:LEVEL type:TYPE depends:NNN,NNN agents:AGENT,AGENT  Description
+
 ```
 
 ---
@@ -21,7 +23,9 @@ id:001  id:042  id:100
 Used in:
 
 - `depends` references from other tasks
+
 - Log filenames: `.claude-loop/logs/task-001.log`
+
 - Report filenames: `.claude-loop/reports/task-001.md`
 
 ---
@@ -85,13 +89,57 @@ If omitted, `team-lead` decides based on `type`.
 
 ---
 
+## `max_files`
+
+Optional field to enforce task size limits.
+
+```
+max_files:5
+```
+
+If a task is expected to touch more files than this limit, `run.sh` will warn or split the task (depending on configuration).
+
+---
+
+## Task Sizing
+
+To prevent context-window overflow and ensure high-quality output, tasks should be well-scoped.
+
+### Sizing Limits
+
+| Limit | Action |
+|-------|--------|
+| **Description** | `run.sh` warns if description > 500 words |
+| **Scope** | `run.sh` warns if no `agents:` are specified |
+| **Output** | QA agent output is capped at 4096 tokens via `--max-output-tokens` |
+
+### Splitting Over-scoped Tasks
+
+If a task is too broad, split it into smaller, manageable sub-tasks.
+
+**Over-scoped Task:**
+
+- `[ ] id:001 type:feature agents:architect,developer Implement full e-commerce backend including products, cart, checkout, and admin dashboard.`
+
+**Well-scoped Tasks:**
+
+- `[ ] id:001 type:feature agents:architect,developer Implement product catalog API and storage`
+
+- `[ ] id:002 depends:001 type:feature agents:architect,developer Implement shopping cart logic and persistent storage`
+
+- `[ ] id:003 depends:002 type:feature agents:architect,developer Implement checkout workflow and payment integration`
+
+---
+
 ## Description
 
 Write **what** to achieve, not **how** to implement it.
 Include: endpoints, file paths, expected behavior, edge cases.
 
 ```diff
+
 - Use jsonwebtoken library to generate tokens
+
 + POST /auth/login returns { access_token, refresh_token }
 + POST /auth/refresh accepts refresh_token and returns a new pair
 + authGuard middleware rejects requests without a valid access_token
@@ -104,6 +152,9 @@ Include: endpoints, file paths, expected behavior, edge cases.
 | Symbol | Meaning |
 |--------|---------|
 | `- [ ]` | Pending |
+
 | `- [~]` | In progress |
+
 | `- [x]` | Done |
+
 | `- [!]` | Failed |

@@ -1,21 +1,21 @@
 ## Purpose
 
-Guidelines for writing effective tests, ensuring coverage, and maintaining assertion style.
+Ensuring high code coverage and deterministic tests for all code changes.
 
 ## When to Apply
 
-Apply when tasked with creating or updating unit, integration, or E2E tests.
+Apply during the fresh verification phase by QA or any developer-led testing.
 
 ## Steps
 
-1. Detect project test runner and framework (Jest, Pytest, Playwright, etc.).
-2. Identify testable components and their public APIs.
-3. Write happy path, edge case, and error case tests.
-4. Ensure all external dependencies are mocked where appropriate.
-5. Verify tests are deterministic and pass locally.
+1. Detect project test runner and dependencies (e.g., jest, pytest).
+2. Write unit tests for all business logic and edge cases in the spec.
+3. Use mocks or stubs for all external dependencies (DB, APIs).
+4. Run tests and verify coverage (target: 80% minimum).
+5. Document all failing tests in PROBLEMS.md and VERDICT.json.
 
 ## Output Format
 
 - Clean, maintainable test files.
-- Test execution logs.
-- Coverage reports.
+
+- VERDICT.json and QA_REPORT.md for every task.

@@ -34,7 +34,9 @@ Your goal is to deliver "Staff Engineer" level documentation that is clear, accu
 ## Gotchas
 
 - **Ambiguity**: Avoid idioms and culture-specific metaphors that are difficult to translate.
+
 - **Tone Drift**: Maintain a consistent voice throughout the entire document.
+
 - **Formatting**: Strictly follow Markdown best practices. Use bold for UI elements and code blocks for commands.
 
 ## Validation Loop

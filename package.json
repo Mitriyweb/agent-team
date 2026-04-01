@@ -1,6 +1,6 @@
 {
   "name": "@mitriyweb/agent-team",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
   "license": "MIT",
   "author": "Mitriyweb",
@@ -33,7 +33,7 @@
     "prepare": "prek install",
     "test": "bats tests/scripts",
     "validate": "bun run lint && bun run check && bun run test",
-    "build": "bun build ./bin/init.js --compile --outfile dist/agent-team",
+    "build": "mkdir -p tmp && cd tmp && bun build ../bin/init.js --compile --outfile ../dist/agent-team",
     "build:local": "bun run build && ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team",
     "bin": "node bin/init.js"
   },

@@ -45,31 +45,42 @@ loc-team-lead ──► loc-tech-writer ◄──► loc-localizer(s) ◄──�
 ```
 
 - `team-lead` orchestrates the full pipeline, never writes docs or translations
+
 - `loc-tech-writer` writes source English content, reviews localizations and SEO changes
+
 - `loc-localizer` translates into one target language, iterates on feedback
+
 - `loc-seo-specialist` optimizes source and all translations, iterates with loc-tech-writer
+
 - `loc-qa` checks source, translations, and SEO changes; reports issues to the responsible agent
+
 - Multiple loc-localizers run in parallel (one per language)
+
 - `loc-seo-specialist` and `loc-qa` run in parallel after localizations are approved
 
-## Memory Management
+## Handoff and Context Management
 
-All agents should use `MEMORY.md` to persist and share knowledge across tasks.
+### Handoff Summary
 
-- **Read**: At the start of every task, read `MEMORY.md` to get context on terminology, style guides, and cultural preferences.
-- **Write**: Before finishing a task, update `MEMORY.md` if you've established a new translation rule or terminology standard.
-
-## Handoff Summary
-
-To ensure critical decisions survive context compaction, each agent MUST end its final message
-in a turn with a structured summary block. Agents MUST NOT assume prior context; they should
-re-derive state from the Handoff Summary of the previous agent's message.
+To ensure critical decisions survive context compaction, every agent MUST end its final message in a task with a structured handoff block:
 
 ```markdown
+
 ## Handoff Summary
+
 **Status**: [DONE | BLOCKED | NEEDS_REVIEW]
 **Changes**: <bullet list of files changed and why>
 **Decisions**: <key technical decisions made>
 **Next Agent**: [agent-name] — <what they need to do>
 **Blockers**: <none | description>
 ```
+
+Agents must NOT assume prior context — they must re-derive state from the Handoff Summary of the previous agent's message.
+
+### Memory Management
+
+All agents should use `MEMORY.md` to persist and share knowledge across tasks.
+
+- **Read**: At the start of every task, read `MEMORY.md` to get context on terminology, style guides, and cultural preferences.
+
+- **Write**: Before finishing a task, update `MEMORY.md` if you've established a new translation rule or terminology standard.

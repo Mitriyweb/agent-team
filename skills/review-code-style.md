@@ -17,4 +17,5 @@ Apply during any code review or development phase to maintain a high bar for cod
 ## Output Format
 
 - Categorized style findings in REVIEW.md.
+
 - Specific refactoring suggestions.

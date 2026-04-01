@@ -2,6 +2,10 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
+  "hooks": {
+    "PreToolUse": "bash scripts/audit-hook.sh PRE",
+    "PostToolUse": "bash scripts/audit-hook.sh POST"
+  },
   "permissions": {
     "defaultMode": "manual",
     "deny": [
@@ -18,42 +22,35 @@
       "Bash(parted*)",
       "Bash(shred*)",
       "Bash(find * -delete*)"
-    ],
-    "hooks": {
-      "PreToolUse": "bash scripts/audit-hook.sh",
-      "PostToolUse": "bash scripts/audit-hook.sh"
+    ]
+  },
+  "roles": {
+    "team-lead": {
+      "permissions": {
+        "defaultMode": "manual"
+      }
     },
-    "profiles": {
-      "team-lead": {
-        "mode": "default",
-        "deny": []
-      },
-      "architect": {
-        "mode": "default",
-        "deny": [
-          "Write(*)",
-          "Edit(*)",
-          "Bash(*)"
-        ]
-      },
-      "developer": {
-        "mode": "acceptEdits",
-        "deny": []
-      },
-      "reviewer": {
-        "mode": "default",
-        "deny": [
-          "Write(*)",
-          "Edit(*)",
-          "Bash(*)"
-        ]
-      },
-      "qa": {
-        "mode": "acceptEdits",
-        "deny": [
-          "Write(src/*)",
-          "Edit(src/*)"
-        ]
+    "architect": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"]
+      }
+    },
+    "developer": {
+      "permissions": {
+        "defaultMode": "acceptEdits"
+      }
+    },
+    "reviewer": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"]
+      }
+    },
+    "qa": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "deny": ["Write(src/*)", "Edit(src/*)"]
       }
     }
   }

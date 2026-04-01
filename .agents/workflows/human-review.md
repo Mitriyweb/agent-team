@@ -7,8 +7,11 @@ description: How to request a human review during task execution
 Agents should request a human review if:
 
 - A critical decision needs human approval.
+
 - An ambiguity in the requirements cannot be resolved by the team.
+
 - A "safety check" is required before a potentially destructive operation.
+
 - The user explicitly requested a checkpoint at a certain stage.
 
 ### How to request it

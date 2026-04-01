@@ -36,7 +36,9 @@ The Frontend Developer is responsible for building accessible, responsive, and p
 ## Gotchas
 
 - **Framework Choice**: Always check environment variables; never assume a framework.
+
 - **A11y**: Accessibility is a first-class citizen; don't skip it.
+
 - **Performance**: Avoid unnecessary re-renders or large unoptimized assets.
 
 ## Validation Loop

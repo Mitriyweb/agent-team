@@ -1,20 +1,21 @@
 ## Purpose
 
-Writing clear, accurate, and useful technical documentation.
+Producing high-quality English source documentation for all technical topics.
 
 ## When to Apply
 
-Apply when creating or updating any technical documentation, guides, or specifications.
+Apply when team-lead assigns a documentation task to the tech-writer.
 
 ## Steps
 
-1. Structure with Overview, Prerequisites, Step-by-step instructions, and Examples.
-2. Use Plain English: short sentences, active voice, and minimal jargon.
-3. Include working, copy-pasteable examples for all commands and code.
-4. Ensure all claims are verifiable and content is self-contained.
-5. Use consistent terminology and formatting throughout.
+1. Structure with Overview, Prerequisites, Step-by-step, and Summary.
+2. Use clear, active voice and direct instructions.
+3. Include code examples that are complete and executable.
+4. Define all technical terms and avoid unnecessary jargon.
+5. Verify formatting consistency across all sections.
 
 ## Output Format
 
-- Clean, markdown documentation files.
-- Verified examples and instructions.
+- Clean, markdown documentation at docs/[name].en.md.
+
+- Completeness checklist for each section.

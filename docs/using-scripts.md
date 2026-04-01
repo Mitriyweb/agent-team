@@ -29,9 +29,11 @@ model: claude-sonnet-4-5
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 scripts:
   - name: lint
+
     run: bash scripts/lint.sh
     description: Run project linters
   - name: format
+
     run: bunx @biomejs/biome check --write .
     description: Auto-format code with Biome
 ---
@@ -42,9 +44,11 @@ scripts:
 Add an **Available Scripts** section at the end of the role file:
 
 ```markdown
+
 ## Available Scripts
 
 - **`scripts/lint.sh`** — Run project linters
+
 - **`scripts/lint.sh --fix`** — Auto-fix lint errors
 
 ### One-off commands
@@ -59,6 +63,7 @@ Run any script with `--help` for full usage details.
 Reference scripts in the role's workflow steps:
 
 ```markdown
+
 ### Step 3 — Validate the spec
 
 \```bash
@@ -136,3 +141,20 @@ Pin versions for reproducibility: `bunx @biomejs/biome@1.9.4 check .`
 |--------|-------------|
 | `scripts/lint.sh` | Run Biome + markdownlint; supports `--fix` |
 | `scripts/validate-spec.sh` | Validate SPEC.md required sections |
+
+### Orchestration Scripts
+
+| Script | Description |
+|--------|-------------|
+| `scripts/run.sh` | Autonomous roadmap execution loop. Supports `--resume <id>`, `--force-restart`, and budget limits. |
+| `scripts/agents.sh` | Manual agent launcher (local/cloud/both modes). |
+
+## Session Resumption
+
+`scripts/run.sh` automatically resumes interrupted tasks by checking for session IDs in `.claude-loop/sessions/task-NNN.session`.
+
+- **Automatic**: If a session file exists and the task is not yet completed/failed, `run.sh` will pass `--resume <session-id>` to Claude.
+
+- **Manual Restart**: Use `--force-restart` to ignore existing sessions and start fresh.
+
+- **Graceful Fallback**: If a session is expired or invalid, the script will log a warning and automatically fall back to a new session.

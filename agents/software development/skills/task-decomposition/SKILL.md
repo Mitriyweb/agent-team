@@ -18,6 +18,7 @@ metadata:
 ## Gotchas
 
 - `ROADMAP.md` must pass pre-flight validation before execution.
+
 - The `--team` flag controls which `agents/` directory is used; default is "software development" (always quote the path as it contains a space).
 
 ## Validation loop

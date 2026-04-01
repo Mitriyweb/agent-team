@@ -39,13 +39,14 @@ SESSIONS_DIR=".claude-loop/sessions"
 MAX_TURNS="${MAX_TURNS:-20}"
 RUN_ALL=false
 DRY_RUN=false
+FORCE_RESTART=false
 RESUME_ID=""
 RETRY_LIMIT=0
 BUDGET=0
 APPROVE_PLAN=false
 STOP_REQUESTED=false
 TEAM="software development"
-USE_BRANCH=true
+USE_BRANCH=false
 PLAN_FIRST=false
 
 count_tasks() {
@@ -168,7 +169,8 @@ validate_roadmap() {
   local tasks
   tasks=$(get_roadmap_tasks | grep '.' || true)
   if [[ -z "$tasks" ]]; then
-    err "No valid tasks found in ${ROADMAP}. Ensure they match '- [ ] id:NNN priority:LEVEL type:TYPE ...'"
+    ok "Roadmap is empty. Add tasks to ${BLUE}${ROADMAP}${NC} to start."
+    exit 0
   fi
   local ids
   ids=$(echo "$tasks" | grep -oE 'id:[0-9]+' | sed 's/id://' | sort)
@@ -205,6 +207,20 @@ validate_roadmap() {
   if [[ $errors -gt 0 ]]; then
     err "Roadmap validation failed with ${errors} error(s)"
   fi
+
+  # Task size validation
+  while IFS= read -r line; do
+    local tid desc
+    tid=$(get_task_id "$line")
+    desc=$(get_desc "$line")
+    if (( $(echo "$desc" | wc -w) > 500 )); then
+      warn "Task #${tid} description is too long (>500 words). Consider splitting it."
+    fi
+    if ! echo "$line" | grep -qE 'agents:'; then
+      warn "Task #${tid} has no explicit scope (agents). This may lead to an over-broad task."
+    fi
+  done <<< "$tasks"
+
   ok "Roadmap valid"
 }
 
@@ -320,6 +336,19 @@ run_task() {
   task_type=$(get_task_type "$task_line")
   agents=$(get_agents "$task_line")
   task_desc=$(get_desc "$task_line")
+
+  # Task chunking logic
+  local max_files
+  max_files=$(echo "$task_line" | grep -oE 'max_files:[0-9]+' | sed 's/max_files://' || echo "0")
+  if [[ "$max_files" -gt 0 ]]; then
+    log "Task #${task_id} exceeds file limit of ${max_files}. Splitting into sub-tasks..."
+    # Automatic chunking implementation:
+    # Instead of one large task, we'll spawn multiple sub-agents in sequence
+    # to handle parts of the file set. This is reflected in the team-lead's prompt.
+    agents_instruction="${agents_instruction:-}
+IMPORTANT: This is a large task. Split it into at least $(( (max_files / 5) + 1 )) sub-tasks,
+handling no more than 5 files per sub-agent turn."
+  fi
   log_file="${LOG_DIR}/task-${task_id}.log"
   log "Starting task ${BLUE}#${task_id}${NC} [${task_type}]: ${task_desc}"
   [[ -n "$agents" ]] && log "  Agents: ${agents}"
@@ -427,16 +456,52 @@ EOF
       warn "Retrying task #${task_id} in ${backoff}s (attempt ${attempt}/${RETRY_LIMIT})..."
       sleep $backoff
     fi
-    local claude_args=(-p "$prompt" --max-turns "$MAX_TURNS" --output-format json --allowedTools "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate")
+    local perm_mode="default"
+    if [[ "$TEAM" == "software development" || "$TEAM" == "localization" ]]; then
+      perm_mode="team-lead"
+    fi
+    local claude_args=(-p "$prompt" --max-turns "$MAX_TURNS" --output-format json --allowedTools "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate" --permission-mode "$perm_mode")
+    if [[ "$agents" == *"qa"* ]]; then
+      claude_args+=(--max-output-tokens 4096)
+    fi
+    # Export for audit hooks
+    export ROLE="team-lead"
+    export AGENT="${TEAM}-lead"
     local current_session
     current_session=$(cat "${SESSIONS_DIR}/task-${task_id}.session" 2>/dev/null || echo "")
-    if [[ -n "$current_session" && "$prompt" == "User has approved"* ]]; then
-      claude_args+=(--resume "$current_session")
+    local resuming=false
+    if [[ -n "$current_session" ]] && ! $FORCE_RESTART; then
+      # Only resume if task is not done/failed
+      local task_status
+      task_status=$(grep "id:${task_id} " "$ROADMAP" | grep -oE '\[.\]' | tr -d '[]' || echo " ")
+      if [[ "$task_status" != "x" && "$task_status" != "!" ]]; then
+        log "Resuming session ${BLUE}${current_session}${NC} for task #${task_id}..."
+        claude_args+=(--resume "$current_session")
+        resuming=true
+      fi
     fi
+
     if [[ -z "$SPINNER_PID" ]]; then
        show_progress_bar "$task_id" "$task_desc" "${CURRENT_TASK_NUM:-1}" "${TOTAL_TASKS:-?}"
     fi
-    if response=$(claude "${claude_args[@]}" 2>"$log_file"); then
+
+    # Run claude, catching potential session errors if resuming
+    local run_status=0
+    response=$(run_claude "${claude_args[@]}" 2>"$log_file") || run_status=$?
+
+    if [[ $run_status -ne 0 ]] && $resuming; then
+      warn "Session ${current_session} is invalid or expired. Falling back to a new session."
+      # Remove invalid session arg and try again once
+      local new_args=()
+      for arg in "${claude_args[@]}"; do
+        if [[ "$arg" == "--resume" ]] || [[ "$arg" == "$current_session" ]]; then continue; fi
+        new_args+=("$arg")
+      done
+      response=$(run_claude "${new_args[@]}" 2>"$log_file") || run_status=$?
+      rm -f "${SESSIONS_DIR}/task-${task_id}.session"
+    fi
+
+    if [[ $run_status -eq 0 ]]; then
       local result
       result=$(echo "$response" | jq -r '.result // empty' 2>/dev/null || echo "$response")
       echo "$response" | jq -r '.session_id // empty' 2>/dev/null > "${SESSIONS_DIR}/task-${task_id}.session"
@@ -554,11 +619,12 @@ main() {
         echo "  --all            Run all tasks in sequence"
         echo "  --dry-run        Preview without executing"
         echo "  --resume ID      Resume from task ID"
+        echo "  --force-restart  Ignore existing sessions and start fresh"
         echo "  --budget USD     Set budget limit"
         echo "  --retry-limit N  Retry failed tasks N times"
         echo "  --approve-plan   Wait for human approval of plans"
         echo "  --team NAME      Specify team name (default: software development)"
-        echo "  --no-branch      Skip feature-branch workflow"
+        echo "  --branch         Enable feature-branch & PR workflow (requires GH_TOKEN)"
         exit 0
         ;;
       --all)          RUN_ALL=true; shift ;;
@@ -568,7 +634,9 @@ main() {
       --budget)       BUDGET="$2"; shift 2 ;;
       --approve-plan) APPROVE_PLAN=true; shift ;;
       --team)         TEAM="$2"; shift 2 ;;
+      --branch)       USE_BRANCH=true; shift ;;
       --no-branch)    USE_BRANCH=false; shift ;;
+      --force-restart) FORCE_RESTART=true; shift ;;
       --plan)         PLAN_FIRST=true; shift ;;
       *) err "Unknown option: $1" ;;
     esac
@@ -604,9 +672,21 @@ main() {
 
   AGENTS_DIR="./agents/${TEAM}"
   if [[ ! -d "$AGENTS_DIR" ]]; then
-    echo "Unknown team: $TEAM"
-    echo "Available: $(ls ./agents/)"
-    exit 1
+    # Auto-detect team if only one exists in agents/
+    local available_teams
+    available_teams=$(ls -1 ./agents/ 2>/dev/null | grep -v "^\." || true)
+    local team_count
+    team_count=$(echo "$available_teams" | grep -c "." || echo 0)
+
+    if [[ "$team_count" -eq 1 ]]; then
+      TEAM=$(echo "$available_teams" | xargs)
+      AGENTS_DIR="./agents/${TEAM}"
+      log "Auto-detected team: ${BLUE}${TEAM}${NC}"
+    else
+      echo "Unknown team: $TEAM"
+      echo "Available: $(ls ./agents/ 2>/dev/null | xargs || echo "none")"
+      exit 1
+    fi
   fi
 
   MODE=""

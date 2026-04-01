@@ -18,6 +18,7 @@ metadata:
 ## Gotchas
 
 - Refer to `references/wcag-checklist.md` for the accessibility baseline.
+
 - WCAG 2.1 AA is the project's baseline.
 
 ## Validation loop
