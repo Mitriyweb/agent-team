@@ -20,6 +20,32 @@ ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
 err()  { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
+notify_review() {
+  local sound_file="$HOME/.agent-team/assets/review.m4a"
+  local played=false
+
+  if [[ -f "$sound_file" ]]; then
+    if [[ "$(uname)" == "Darwin" ]] && command -v afplay >/dev/null 2>&1; then
+      afplay "$sound_file" && played=true
+    elif command -v paplay >/dev/null 2>&1; then
+      paplay "$sound_file" && played=true
+    elif command -v aplay >/dev/null 2>&1; then
+      aplay "$sound_file" && played=true
+    fi
+  fi
+
+  if ! $played; then
+    local msg="Review required"
+    if command -v spd-say >/dev/null 2>&1; then
+      spd-say "$msg"
+    elif command -v say >/dev/null 2>&1; then
+      say "$msg"
+    else
+      printf "\a" # Terminal bell fallback
+    fi
+  fi
+}
+
 load_env() {
   local env_file="${1:-.env}"
   if [[ -f "$env_file" ]]; then

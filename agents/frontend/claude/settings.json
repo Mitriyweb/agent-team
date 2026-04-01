@@ -1,9 +1,12 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1"
   },
+  "plugins": ["playwright@claude-plugins-official"],
   "permissions": {
     "defaultMode": "manual",
+    "allow": ["Bash(npx playwright*)"],
     "deny": [
       "Bash(rm -rf*)",
       "Bash(printenv*)",

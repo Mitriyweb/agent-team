@@ -45,7 +45,7 @@ BUDGET=0
 APPROVE_PLAN=false
 STOP_REQUESTED=false
 TEAM="software development"
-USE_BRANCH=true
+USE_BRANCH=false
 PLAN_FIRST=false
 
 count_tasks() {
@@ -168,7 +168,8 @@ validate_roadmap() {
   local tasks
   tasks=$(get_roadmap_tasks | grep '.' || true)
   if [[ -z "$tasks" ]]; then
-    err "No valid tasks found in ${ROADMAP}. Ensure they match '- [ ] id:NNN priority:LEVEL type:TYPE ...'"
+    ok "Roadmap is empty. Add tasks to ${BLUE}${ROADMAP}${NC} to start."
+    exit 0
   fi
   local ids
   ids=$(echo "$tasks" | grep -oE 'id:[0-9]+' | sed 's/id://' | sort)
@@ -479,6 +480,7 @@ EOF
         return 0
       elif echo "$result" | grep -q "TASK_STATUS: PENDING_APPROVAL"; then
         stop_progress_bar
+        notify_review
         echo -e "\n${YELLOW}══ PLAN PENDING APPROVAL ══════════════════════════════════════${NC}"
         echo -e "Task #${task_id} plan is ready for review."
         echo -e "Check the logs/output above."
@@ -495,6 +497,7 @@ EOF
         fi
       elif echo "$result" | grep -q "TASK_STATUS: HUMAN_REVIEW_NEEDED"; then
         stop_progress_bar
+        notify_review
         echo -e "\n${YELLOW}══ HUMAN REVIEW NEEDED ════════════════════════════════════════${NC}"
         echo -e "Task #${task_id} requested a human review."
         echo -e "Check the logs/output or specific review files mentioned."
@@ -556,7 +559,7 @@ main() {
         echo "  --retry-limit N  Retry failed tasks N times"
         echo "  --approve-plan   Wait for human approval of plans"
         echo "  --team NAME      Specify team name (default: software development)"
-        echo "  --no-branch      Skip feature-branch workflow"
+        echo "  --branch         Enable feature-branch & PR workflow (requires GH_TOKEN)"
         exit 0
         ;;
       --all)          RUN_ALL=true; shift ;;
@@ -566,6 +569,7 @@ main() {
       --budget)       BUDGET="$2"; shift 2 ;;
       --approve-plan) APPROVE_PLAN=true; shift ;;
       --team)         TEAM="$2"; shift 2 ;;
+      --branch)       USE_BRANCH=true; shift ;;
       --no-branch)    USE_BRANCH=false; shift ;;
       --plan)         PLAN_FIRST=true; shift ;;
       *) err "Unknown option: $1" ;;
@@ -574,11 +578,49 @@ main() {
 
   configure_provider
 
+  # Switch to team-specific configuration if available
+  if [[ -f "agents/${TEAM}/claude/settings.json" ]]; then
+    log "Applying team-specific settings for ${BLUE}${TEAM}${NC}..."
+    mkdir -p .claude
+    cp "agents/${TEAM}/claude/settings.json" ".claude/settings.json"
+  elif [[ -f "claude/settings.json" ]]; then
+    # Fallback to general settings if team-specific not found
+    mkdir -p .claude
+    cp "claude/settings.json" ".claude/settings.json"
+  fi
+
+  # Automatically enable autoMode if human review (plan approval) is not required
+  if command -v jq >/dev/null 2>&1; then
+    local tmp_settings
+    tmp_settings=$(mktemp)
+    if [[ "$APPROVE_PLAN" == "false" ]]; then
+      log "Auto mode: ${GREEN}enabled${NC} (no plan approval requested)"
+      jq '.permissions.defaultMode = "auto"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+    else
+      log "Auto mode: ${YELLOW}manual${NC} (plan approval requested)"
+      jq '.permissions.defaultMode = "manual"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+    fi
+  else
+    warn "jq not found; skipping automatic autoMode configuration"
+  fi
+
   AGENTS_DIR="./agents/${TEAM}"
   if [[ ! -d "$AGENTS_DIR" ]]; then
-    echo "Unknown team: $TEAM"
-    echo "Available: $(ls ./agents/)"
-    exit 1
+    # Auto-detect team if only one exists in agents/
+    local available_teams
+    available_teams=$(ls -1 ./agents/ 2>/dev/null | grep -v "^\." || true)
+    local team_count
+    team_count=$(echo "$available_teams" | grep -c "." || echo 0)
+
+    if [[ "$team_count" -eq 1 ]]; then
+      TEAM=$(echo "$available_teams" | xargs)
+      AGENTS_DIR="./agents/${TEAM}"
+      log "Auto-detected team: ${BLUE}${TEAM}${NC}"
+    else
+      echo "Unknown team: $TEAM"
+      echo "Available: $(ls ./agents/ 2>/dev/null | xargs || echo "none")"
+      exit 1
+    fi
   fi
 
   MODE=""

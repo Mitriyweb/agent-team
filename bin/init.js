@@ -6,6 +6,10 @@
 
 const { spawn } = require("node:child_process");
 const path = require("node:path");
+const { extractReviewSound } = require("./assets");
+
+// Extract assets on startup
+extractReviewSound();
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -25,6 +29,10 @@ if (command === "init") {
     "init",
     ...args.slice(1),
   ]);
+} else if (command === "run") {
+  runScript(path.join(sourceDir, "scripts/run.sh"), args.slice(1));
+} else if (command === "plan") {
+  runScript(path.join(sourceDir, "scripts/plan.sh"), args.slice(1));
 } else if (command === "new-team") {
   runScript(path.join(sourceDir, "scripts/team.sh"), [
     "create",
@@ -38,12 +46,11 @@ if (command === "init") {
 } else {
   console.log("Claude Code Agent Team");
   console.log("Usage:");
-  console.log(
-    "  npx @mitriyweb/agent-team init [--team NAME] [--no-human-review]",
-  );
-  console.log(
-    "  npx @mitriyweb/agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2 [--no-human-review]",
-  );
-  console.log("  npx @mitriyweb/agent-team validate NAME");
+  console.log("  agent-team init [--team NAME] [--no-human-review]   # Initialize project");
+  console.log("  agent-team run [--all] [--dry-run] [--team NAME]    # Execute tasks");
+  console.log("  agent-team plan [ROADMAP.md]                        # Decompose roadmap");
+  console.log("  agent-team new-team --name NAME --description DESC  # Create custom team");
+  console.log("  agent-team validate NAME                             # Validate team structure");
+  console.log("  agent-team -h, --help                               # Show this help");
   process.exit(0);
 }

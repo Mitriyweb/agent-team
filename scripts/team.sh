@@ -65,6 +65,13 @@ create_team() {
 
     # 3. Create skills dir
     mkdir -p "${team_dir}/skills"
+
+    # 4. Create claude config dir
+    mkdir -p "${team_dir}/claude"
+    if [[ -f "claude/settings.json" ]]; then
+        cp "claude/settings.json" "${team_dir}/claude/settings.json"
+        ok "Copied default claude settings to ${team_dir}/claude/"
+    fi
     
     ok "Team '${name}' successfully created in ${team_dir}"
 }
@@ -91,21 +98,15 @@ init_project() {
     log "Initializing agent-team project..."
 
     # 1. Create directory structure
-    mkdir -p agents scripts tasks .agents/workflows
+    mkdir -p agents tasks .agents/workflows
 
     # 2. Copy core scripts (from SOURCE_DIR)
+    # DEPRECATED: We no longer copy bash scripts to the local project.
+    # The agent-team CLI handles execution from the package directory.
     local src_dir="${SOURCE_DIR:-.}"
-    local scripts=(run.sh plan.sh _common.sh bash_coverage.sh team.sh)
-    for script in "${scripts[@]}"; do
-        cp "${src_dir}/scripts/${script}" "scripts/"
-        chmod +x "scripts/${script}"
-    done
-    ok "Copied core scripts to scripts/"
 
     # 3. Copy templates
-    mkdir -p scripts/templates
-    cp "${src_dir}/scripts/templates/"* "scripts/templates/"
-    ok "Copied templates to scripts/templates/"
+    # DEPRECATED: Templates are now used directly from the package directory.
 
     # 4. Copy workflows
     cp -r "${src_dir}/.agents/workflows/"* ".agents/workflows/"
@@ -118,11 +119,7 @@ init_project() {
     fi
     if [[ ! -f "ROADMAP.md" ]]; then
         echo "# Project Roadmap" > "ROADMAP.md"
-        echo "" >> "ROADMAP.md"
-        echo "\` \` \`markdown" >> "ROADMAP.md"
-        echo "- [ ] id:1 priority:high type:feature Initialize project agents:100" >> "ROADMAP.md"
-        echo "\` \` \`" >> "ROADMAP.md"
-        ok "Created default ROADMAP.md"
+        ok "Created empty ROADMAP.md"
     fi
 
     # 6. Copy specified team if requested
@@ -136,8 +133,45 @@ init_project() {
         fi
     fi
 
+    # 7. Setup Claude settings
+    mkdir -p .claude
+    if [[ -n "$team_name" ]] && [[ -f "${src_dir}/agents/${team_name}/claude/settings.json" ]]; then
+        cp "${src_dir}/agents/${team_name}/claude/settings.json" ".claude/settings.json"
+        ok "Applied team-specific Claude settings for ${team_name}"
+    elif [[ -f "${src_dir}/claude/settings.json" ]]; then
+        cp "${src_dir}/claude/settings.json" ".claude/settings.json"
+        ok "Applied default Claude settings"
+    fi
+
+    # 8. Set autoMode if human review is disabled
+    if ! $human_review; then
+        if command -v jq >/dev/null 2>&1; then
+            local tmp_settings=$(mktemp)
+            jq '.permissions.defaultMode = "auto"' ".claude/settings.json" > "$tmp_settings" && mv "$tmp_settings" ".claude/settings.json"
+            ok "Auto mode: ${GREEN}enabled${NC} (--no-human-review)"
+        else
+            warn "jq not found; skipping automatic autoMode configuration"
+        fi
+    fi
+
+    # 9. Post-process: Replace script references with CLI commands in all project documentation
+    # This ensures that while the repository uses ./scripts/*.sh, the initialized project uses agent-team commands.
+    log "Finalizing project documentation for CLI..."
+    find . -maxdepth 3 -type f -name "*.md" | while read -r file; do
+        # Only process files in relevant directories to be safe/efficient
+        if [[ "$file" == "./agents/"* ]] || [[ "$file" == "./.agents/workflows/"* ]]; then
+            sed_inplace -e 's/\.\/scripts\/run\.sh/agent-team run/g' \
+                        -e 's/\.\/scripts\/plan\.sh/agent-team plan/g' \
+                        -e 's/plan\.sh /agent-team plan /g' \
+                        -e 's/run\.sh /agent-team run /g' \
+                        -e 's/\`plan\.sh\`/\`agent-team plan\`/g' \
+                        -e 's/\`run\.sh\`/\`agent-team run\`/g' \
+                        "$file"
+        fi
+    done
+
     ok "Project initialized successfully."
-    log "Run ${BLUE}./scripts/run.sh --plan --all${NC} to start."
+    log "Run ${BLUE}agent-team run --plan --all${NC} to start."
 }
 
 validate_team() {

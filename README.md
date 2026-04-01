@@ -7,7 +7,7 @@ Drop this into any project, add your API key, and let the agents work through yo
 
 ```
 team-lead ──► architect ◄──► developer ◄──► qa
-                                  │
+                                  │             └──► aqa
                               reviewer
 ```
 
@@ -23,7 +23,7 @@ team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
 
 ```
 team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
-                                  │
+                                  │       └──► fe-aqa
                           fe-reviewer
 ```
 
@@ -72,16 +72,18 @@ agent-team init --team frontend --no-human-review
 This will:
 
 - Copy agent definitions to `agents/<team>/`
-- Copy orchestration scripts to `scripts/`
 - Copy workflows to `.agents/workflows/`
 - Create a template `ROADMAP.md` and `MEMORY.md`
+- Configure `autoMode` in `.claude/settings.json`
+
+> **Tip:** If `--no-human-review` is used, Claude's `autoMode` will be enabled by default for the project.
 
 Then run:
 
 ```bash
-./scripts/run.sh          # execute one task (highest priority)
-./scripts/run.sh --all    # execute all tasks in sequence
-./scripts/run.sh --dry-run  # preview without running
+agent-team run          # execute one task (highest priority)
+agent-team run --all    # execute all tasks in sequence
+agent-team run --dry-run  # preview without running
 ```
 
 ## Planning
@@ -157,7 +159,8 @@ agent-team validate NAME                             # Validate team structure
 | `architect` | claude-sonnet | Designs solution, reviews implementation, approves before QA |
 | `developer` | claude-sonnet | Writes code per spec, iterates on architect + QA feedback |
 | `reviewer` | claude-sonnet | Reviews style, security, best practices (parallel with QA) |
-| `qa` | claude-sonnet | Writes tests, reports bugs directly to developer, iterates to green |
+| `qa` | claude-sonnet | Manual verification of acceptance criteria |
+| `aqa` | claude-sonnet | Automated E2E, integration, and performance testing |
 
 ### Localization
 
@@ -177,7 +180,8 @@ agent-team validate NAME                             # Validate team structure
 | `fe-architect` | claude-sonnet | Defines component hierarchy, design tokens, and state management strategy |
 | `fe-dev` | claude-sonnet | Implements UI components and views per spec. Framework and styling aware |
 | `fe-reviewer` | claude-sonnet | Performs visual review for pixel-perfection and WCAG 2.1 AA accessibility |
-| `fe-qa` | claude-sonnet | Writes and executes E2E tests, visual regression, and performance monitoring |
+| `fe-qa` | claude-sonnet | Manual UI/UX testing and accessibility verification |
+| `fe-aqa` | claude-sonnet | Automated E2E tests, visual regression, and performance monitoring |
 
 ## Running Modes
 
@@ -192,7 +196,7 @@ Set `PROVIDER` in `.env` (see `.env.example`):
 | LiteLLM proxy | `litellm` | `LITELLM_HOST` |
 
 ```bash
-./scripts/run.sh --all
+agent-team run --all
 ```
 
 ### Local model only
@@ -223,6 +227,17 @@ Every task execution produces:
 ├── reports/task-001.md        # What was done, files changed, decisions made
 └── sessions/task-001.session  # Session ID for resuming
 ```
+
+## Human Review and Notifications
+
+By default, the agent team pauses for human review before executing a plan or when an agent explicitly requests it.
+When a review is needed:
+
+1. **Audio Notification**: The system will announce "Review required" in English using `spd-say` (Linux) or `say` (macOS).
+2. **Visual Prompt**: A high-visibility banner will appear in the terminal.
+
+You can disable plan approval by running `agent-team run` without the `--approve-plan` flag (or by initializing with `--no-human-review`).
+In this mode, `autoMode` is enabled to reduce prompts.
 
 ## Security Permissions
 

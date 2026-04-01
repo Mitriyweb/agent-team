@@ -11,7 +11,7 @@ and standard agent profiles with H1 titles and `## Instructions`), use the
 #### Example
 
 ```bash
-npx @mitriyweb/agent-team validate security-audit
+agent-team validate security-audit
 ```
 
 ### Validation Rules

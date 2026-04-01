@@ -14,6 +14,17 @@ set -euo pipefail
 source "$(dirname "$0")/_common.sh"
 configure_provider
 
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Usage: ./scripts/plan.sh [INPUT_FILE]"
+    echo ""
+    echo "Options:"
+    echo "  --help    Show this message"
+    echo ""
+    echo "Arguments:"
+    echo "  INPUT_FILE    Path to the roadmap file (default: ROADMAP.md)"
+    exit 0
+fi
+
 INPUT_FILE="${1:-ROADMAP.md}"
 TASKS_DIR="tasks"
 PLAN_FILE="${TASKS_DIR}/plan.md"
