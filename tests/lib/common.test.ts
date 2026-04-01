@@ -1,5 +1,7 @@
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import fs from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import os from "node:os";
+import path from "node:path";
 import { calculateCost, loadEnv } from "../../lib/common.ts";
 
 describe("common.ts", () => {
@@ -16,12 +18,23 @@ describe("common.ts", () => {
   });
 
   describe("loadEnv", () => {
-    it("loads environment variables from file", () => {
-      const envContent = 'TEST_VAR=hello\n# comment\nOTHER_VAR="world"';
-      vi.spyOn(fs, "existsSync").mockReturnValue(true);
-      vi.spyOn(fs, "readFileSync").mockReturnValue(envContent);
+    let tmpDir: string;
 
-      loadEnv(".env.test");
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "common-test-"));
+    });
+
+    afterEach(() => {
+      delete process.env.TEST_VAR;
+      delete process.env.OTHER_VAR;
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it("loads environment variables from file", () => {
+      const envFile = path.join(tmpDir, ".env.test");
+      fs.writeFileSync(envFile, 'TEST_VAR=hello\n# comment\nOTHER_VAR="world"');
+
+      loadEnv(envFile);
 
       expect(process.env.TEST_VAR).toBe("hello");
       expect(process.env.OTHER_VAR).toBe("world");

@@ -8,6 +8,7 @@ import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
  */
 // @ts-expect-error
 import PROTOCOL_TEMPLATE from "./templates/PROTOCOL.md" with { type: "text" };
+import DEFAULT_SETTINGS from "./templates/settings.json" with { type: "json" };
 
 const AGENTS_ROOT = "agents";
 
@@ -66,14 +67,11 @@ export async function createTeam(options: CreateTeamOptions) {
   const claudeDir = path.join(teamDir, "claude");
   if (!fs.existsSync(claudeDir)) fs.mkdirSync(claudeDir, { recursive: true });
 
-  const globalClaudeSettings = path.join(".claude", "settings.json");
-  if (fs.existsSync(globalClaudeSettings)) {
-    fs.copyFileSync(
-      globalClaudeSettings,
-      path.join(claudeDir, "settings.json"),
-    );
-    ok(`Copied default claude settings to ${claudeDir}/`);
-  }
+  fs.writeFileSync(
+    path.join(claudeDir, "settings.json"),
+    JSON.stringify(DEFAULT_SETTINGS, null, 2),
+  );
+  ok(`Copied default claude settings to ${claudeDir}/`);
 
   ok(`Team '${name}' successfully created in ${teamDir}`);
 }
@@ -150,13 +148,13 @@ export async function initProject(options: InitProjectOptions) {
       "claude/settings.json",
     );
     ok(`Applying team-specific Claude settings for ${teamName}`);
-  } else if (fs.existsSync(path.join(sourceDir, "claude/settings.json"))) {
-    settingsSource = path.join(sourceDir, "claude/settings.json");
-    ok("Applying default Claude settings");
   }
 
   if (settingsSource) {
     fs.copyFileSync(settingsSource, targetSettings);
+  } else {
+    fs.writeFileSync(targetSettings, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+    ok("Applying default Claude settings");
   }
 
   if (!humanReview && fs.existsSync(targetSettings)) {

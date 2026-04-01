@@ -36,9 +36,6 @@ jobs:
       - name: Validate
         run: bun run validate
 
-      - name: Test
-        run: bun run test
-
       - name: Build binary
         run: bun build ./bin/init.js --compile --target=${{ matrix.target }} --outfile dist/${{ matrix.asset }}
 

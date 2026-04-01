@@ -22,6 +22,20 @@ vi.mock("node:fs", () => ({
   statSync: vi.fn(),
 }));
 
+vi.mock("../../lib/common.ts", () => ({
+  log: vi.fn(),
+  ok: vi.fn(),
+  warn: vi.fn(),
+  err: vi.fn(),
+  BLUE: "",
+  NC: "",
+  GREEN: "",
+  YELLOW: "",
+  RED: "",
+  configureProvider: vi.fn(),
+  calculateCost: vi.fn(),
+}));
+
 vi.mock("node:path", () => ({
   default: {
     join: vi.fn((...args: string[]) => args.join("/")),

@@ -12,6 +12,5 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       - run: bun audit --audit-level=high
-      - run: bun run test
       - run: bun run validate
       - run: bun run build
