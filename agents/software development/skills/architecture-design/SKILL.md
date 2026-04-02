@@ -31,14 +31,19 @@ Your goal is to deliver a "Staff Engineer" level specification that ensures scal
 1. **Detailed Deliverable**: Produce a comprehensive specification for the Developer.
 2. **Quality Checklist**: Ensure the spec mandates:
    - [ ] Strict TypeScript Type definitions (Interfaces/Types).
+
    - [ ] Error handling strategy (Standard codes/wrappers).
+
    - [ ] Logging & Observability requirements.
+
    - [ ] Testing Strategy (Unit, Integration, E2E).
 
 ## Gotchas
 
 - **Over-engineering**: Avoid complex service buses or microservices for simple monolith tasks (KISS).
+
 - **Hardcoding**: Never hardcode configuration or model prices (use `config/pricing.yaml`).
+
 - **Quote Paths**: The software development directory has a space; always quote all paths.
 
 ## Validation Loop

@@ -34,7 +34,9 @@ Your goal is to deliver a "Native-level" experience that feels natural, accurate
 ## Gotchas
 
 - **Placeholder Corruption**: Never modify or translate variable keys inside placeholders.
+
 - **Literal Translation**: Avoid translating literally word-for-word if it results in unnatural phrasing.
+
 - **Tone Drift**: Ensure the voice (e.g., Professional vs. Friendly) matches the English source.
 
 ## Validation Loop

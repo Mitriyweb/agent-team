@@ -19,5 +19,52 @@
       "Bash(shred*)",
       "Bash(find * -delete*)"
     ]
+  },
+  "profiles": {
+    "team-lead": {
+      "permissions": {
+        "defaultMode": "default",
+        "allow": ["Bash(agent-team *)", "Bash(git *)"]
+      }
+    },
+    "architect": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
+        "allow": ["Bash(agent-team plan *)"]
+      }
+    },
+    "developer": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "allow": [
+          "Bash(agent-team run *)",
+          "Bash(git add *)",
+          "Bash(git commit *)"
+        ]
+      }
+    },
+    "reviewer": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
+        "allow": [
+          "Bash(agent-team validate *)",
+          "Bash(git diff *)",
+          "Bash(git log *)"
+        ]
+      }
+    },
+    "qa": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "deny": ["Write(src/*)", "Edit(src/*)"],
+        "allow": [
+          "Bash(agent-team run --dry-run*)",
+          "Bash(bun test*)",
+          "Bash(npm test*)"
+        ]
+      }
+    }
   }
 }

@@ -149,6 +149,7 @@ agent-team run [--all] [--dry-run] [--team NAME] [--budget N]
 agent-team plan [ROADMAP.md]
 agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2
 agent-team validate NAME
+agent-team audit
 agent-team -v, --version
 ```
 
@@ -164,6 +165,7 @@ agent-team -v, --version
 │   └── init.ts                 # CLI entry point
 ├── lib/
 │   ├── assets.ts               # Asset extraction (review sound)
+│   ├── audit-hook.ts           # Audit hook for tool call logging
 │   ├── common.ts               # Shared helpers, logging, provider config
 │   ├── git.ts                  # Git branch, commit, push, PR helpers
 │   ├── plan.ts                 # Roadmap planning / decomposition
@@ -292,6 +294,30 @@ The following destructive operations are blocked by default via `permissions.den
 | Disk operations | `mkfs`, `fdisk`, `parted` |
 
 To allow a specific command, remove its entry from `permissions.deny` in `claude/settings.json`.
+
+## Role-Based Profiles
+
+Each team's `claude/settings.json` defines permission profiles per agent role. Profiles control which tools and commands each agent can use:
+
+| Profile | Mode | Allowed Commands | Restrictions |
+|---------|------|-----------------|--------------|
+| `team-lead` | default | `agent-team *`, `git *` | Full access |
+| `architect` | manual | `agent-team plan` | No Write, Edit, or Bash |
+| `developer` | acceptEdits | `agent-team run`, `git add/commit` | — |
+| `reviewer` | manual | `agent-team validate`, `git diff/log` | No Write, Edit, or Bash |
+| `qa` | acceptEdits | `agent-team run --dry-run`, `bun test` | No writes to `src/` |
+
+Team-specific profiles may differ (e.g., localization has `localizer`, `tech-writer`, `seo-specialist`; frontend adds `npx playwright` access).
+
+## Audit Logging
+
+Tool calls are logged to `.claude-loop/audit/audit.jsonl` via hooks in each team's `claude/settings.json`.
+Each entry records the timestamp, agent role, tool name, phase (PRE/POST), status, and duration.
+
+```bash
+# Generate a summary report from audit logs
+agent-team audit
+```
 
 ## Creating Custom Teams
 

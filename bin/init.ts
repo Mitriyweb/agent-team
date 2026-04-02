@@ -6,6 +6,7 @@
 
 import path from "node:path";
 import { extractReviewSound } from "../lib/assets.ts";
+import { auditReport } from "../lib/audit.ts";
 import { err } from "../lib/common.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
@@ -88,6 +89,8 @@ async function main() {
     const name = args[1];
     if (!name) err("Usage: agent-team validate NAME");
     validateTeam(name);
+  } else if (command === "audit") {
+    auditReport();
   } else {
     console.log("Claude Code Agent Team (Self-Contained TS Architecture)");
     console.log("Usage:");
@@ -105,6 +108,9 @@ async function main() {
     );
     console.log(
       "  agent-team validate NAME                             # Validate team structure",
+    );
+    console.log(
+      "  agent-team audit                                     # Show audit report",
     );
     console.log(
       "  agent-team -h, --help                               # Show this help",

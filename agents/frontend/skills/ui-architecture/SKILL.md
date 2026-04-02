@@ -39,13 +39,17 @@ Your goal is to deliver a "Staff Engineer" level specification that ensures a st
 1. **Deliverable**: Produce a detailed Markdown specification for the Developer.
 2. **Quality Checklist**: Ensure the spec mandates:
    - [ ] Strict TypeScript interfaces (No `any`).
+
    - [ ] SOLID component boundaries.
+
    - [ ] Pixel-perfect aesthetic tokens.
 
 ## Gotchas
 
 - **Accessibility vs. Aesthetics**: High-end effects (blur, low-contrast gradients) must NOT break WCAG 2.1 AA. Always provide fallback states.
+
 - **Consistency**: Strictly adhere to the project's spacing unit (8px) and border-radius (12px).
+
 - **Elegance**: Avoid "noisy" UI; prioritize negative space and clear focus.
 
 ## Validation Loop

@@ -40,7 +40,9 @@ Your goal is to implement solutions that feel fluid, responsive, and extremely p
 ## Gotchas
 
 - **Animation Noise**: Too many entrance animations can be jarring. Use staggered delays (50ms) for lists.
+
 - **Glassmorphism Performance**: Overusing `backdrop-filter` in large areas can impact performance on low-end devices. Use strategically.
+
 - **Interactivity**: Never leave a state transition un-animated. Even a simple color change should have a transition.
 
 ## Validation Loop

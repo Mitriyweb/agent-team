@@ -9,7 +9,7 @@ How to run agents on local models, cloud API, or a mix of both.
 All agents use Anthropic API. Requires `ANTHROPIC_API_KEY`.
 
 ```bash
-agent-team run --all
+./scripts/run.sh --all
 ```
 
 ### Local only
@@ -21,7 +21,7 @@ docker compose -f config/docker-compose.yml up -d
 # Wait for model to download (~18GB)
 docker logs ollama-pull -f
 
-agent-team run --all
+./scripts/agents.sh local
 ```
 
 ### Hybrid (recommended)
@@ -32,7 +32,7 @@ Routes through LiteLLM proxy.
 
 ```bash
 docker compose -f config/docker-compose.yml up -d
-agent-team run --all
+./scripts/agents.sh both   # opens split view in tmux
 ```
 
 ---
@@ -52,6 +52,7 @@ Tune for your machine in `config/docker-compose.yml`:
 ```yaml
 environment:
   - OLLAMA_NUM_THREAD=16   # set to your vCPU count
+
 deploy:
   resources:
     limits:

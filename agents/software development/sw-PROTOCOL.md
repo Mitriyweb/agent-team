@@ -5,15 +5,15 @@ All agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```
-ROADMAP.md → agetn-team plan (team-lead creates tasks/plan.md)
+ROADMAP.md → plan.sh (team-lead creates tasks/plan.md)
                          ↓
-tasks/plan.md → agetn-team run (executes tasks one by one)
+tasks/plan.md → run.sh (executes tasks one by one)
                          ↓
            sw-team-lead → sw-agents (per task spec)
 ```
 
-1. **Planning**: `agetn-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `agetn-team run` picks tasks from `tasks/plan.md` by priority and dependencies
+1. **Planning**: `plan.sh` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
+2. **Execution**: `run.sh` picks tasks from `tasks/plan.md` by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format
@@ -57,10 +57,15 @@ sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-qa
 ```
 
 - `team-lead` coordinates all agents, never writes code.
+
 - `architect` talks directly to `developer` during design and implementation review.
+
 - `developer` iterates with `architect` until approved, then with `qa` and `aqa` until tests pass.
+
 - `sw-reviewer`, `qa`, and `aqa` run in parallel after developer finishes.
+
 - `sw-reviewer` reports only to `team-lead`.
+
 - `qa` and `aqa` report bugs directly to `developer`, final status to `team-lead`.
 
 ## Example: sw-architect → sw-developer review loop
@@ -111,10 +116,31 @@ sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-qa
 }
 ```
 
-## Memory Management
+## Handoff and Context Management
+
+### Handoff Summary
+
+To ensure critical decisions survive context compaction, every agent MUST end its final message in a task with a structured handoff block:
+
+```markdown
+
+## Handoff Summary
+
+**Status**: [DONE | BLOCKED | NEEDS_REVIEW]
+**Changes**: <bullet list of files changed and why>
+**Decisions**: <key technical decisions made>
+**Next Agent**: [agent-name] — <what they need to do>
+**Blockers**: <none | description>
+```
+
+Agents must NOT assume prior context — they must re-derive state from the Handoff Summary of the previous agent's message.
+
+### Memory Management
 
 All agents should use `MEMORY.md` to persist and share knowledge across tasks.
 
 - **Read**: At the start of every task, read `MEMORY.md` to get context on architectural decisions and project-wide rules.
+
 - **Write**: Before finishing a task, update `MEMORY.md` if you've made a significant decision, discovered a major "gotcha", or established a new pattern.
+
 - **Format**: Keep the file organized by sections (Shared Knowledge, Architectural Decisions, etc.).

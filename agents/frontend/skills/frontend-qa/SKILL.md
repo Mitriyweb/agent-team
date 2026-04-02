@@ -23,7 +23,9 @@ The Frontend QA (Automated) is responsible for ensuring the reliability and qual
 ## Gotchas
 
 - **Headless Environment**: Ensure all E2E tests are passing in a headless environment for CI/CD compatibility.
+
 - **Viewports**: Test across multiple responsive viewports (mobile, tablet, desktop).
+
 - **Flakiness**: Use stable selectors (e.g., `data-testid`) to minimize test flakiness.
 
 ## Validation loop

@@ -5,9 +5,9 @@ All frontend agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```
-ROADMAP.md → agetn-team plan (fe-team-lead creates tasks/plan.md)
+ROADMAP.md → plan.sh (fe-team-lead creates tasks/plan.md)
                          ↓
-tasks/plan.md → agetn-team run (executes tasks one by one)
+tasks/plan.md → run.sh (executes tasks one by one)
                          ↓
            fe-team-lead → fe-agents (per task spec)
 ```
@@ -54,10 +54,15 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 ```
 
 - `fe-team-lead` coordinates all frontend agents, never writes UI code.
+
 - `fe-architect` talks directly to `fe-dev` during design and architectural review.
+
 - `fe-dev` iterates with `fe-architect` until approved, then with `fe-reviewer`, `fe-qa`, and `fe-aqa`.
+
 - `fe-reviewer`, `fe-qa`, and `fe-aqa` run in parallel after developer finishes implementation.
+
 - `fe-reviewer` reports visual issues directly to `fe-dev`, final status to `fe-team-lead`.
+
 - `fe-qa` and `fe-aqa` report bugs directly to `fe-dev`, final status to `fe-team-lead`.
 
 ## Memory Management
@@ -65,4 +70,5 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 All agents should use `MEMORY.md` to persist and share knowledge across tasks.
 
 - **Read**: At the start of every task, read `MEMORY.md` to get context on design tokens, component standards, and project-wide rules.
+
 - **Write**: Before finishing a task, update `MEMORY.md` if you've made a significant design decision or established a new component pattern.

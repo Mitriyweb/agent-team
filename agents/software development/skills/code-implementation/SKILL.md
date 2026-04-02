@@ -38,7 +38,9 @@ Your goal is to implement solutions that are robust, efficient, and follow stric
 ## Gotchas
 
 - **Quote Paths**: The software development directory has a space; always quote all paths.
+
 - **Model Prices**: Use `config/pricing.yaml` for all pricing logic; no hardcoding.
+
 - **Observability**: Every significant operation should be logged or instrumented as specified.
 
 ## Validation Loop
