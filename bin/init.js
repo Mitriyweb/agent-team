@@ -6,10 +6,6 @@
 
 const { spawn } = require("node:child_process");
 const path = require("node:path");
-const { extractReviewSound } = require("./assets");
-
-// Extract assets on startup
-extractReviewSound();
 
 const args = process.argv.slice(2);
 const command = args[0];

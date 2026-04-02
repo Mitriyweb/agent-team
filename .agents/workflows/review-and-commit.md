@@ -16,17 +16,13 @@ git diff --name-only
 git diff --stat
 ```
 
-1. Identify all changed files (`.md`, `.js`, `.sh`, `.bats`, `.yaml`)
+1. Identify all changed files (`.md`, `.js`, `.sh`, `.bats`, `.yaml`, `.ts`)
 2. Read full content of each changed file
 3. Categorize by type and apply matching rules:
    - `.md` files -> markdownlint-cli2 rules
-
    - `.js` files -> Biome lint + format
-
    - `.sh` / `.bats` files -> shell correctness, proper shebang (`#!/usr/bin/env bash`)
-
    - Agent definitions (`.md` in `agents/`) -> valid YAML frontmatter, H1 title, `## Instructions` section
-
    - All files -> no hardcoded secrets or credentials
 
 ## Phase 1: Code Review
@@ -34,9 +30,7 @@ git diff --stat
 For each changed file, check for violations and categorize:
 
 - **Critical** - must fix before commit (broken syntax, secrets, missing required sections)
-
 - **High** - should fix before commit (lint errors, missing shebang, bad frontmatter)
-
 - **Medium** - nice to fix (style, naming)
 
 If critical/high issues found -> fix them before proceeding.
@@ -60,11 +54,8 @@ All must pass before proceeding.
 type: brief description
 
 Optional body with details
-
 - Bullet point 1
-
 - Bullet point 2
-
 ```
 
 **Types:** `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `chore`, `perf`
@@ -72,9 +63,7 @@ Optional body with details
 **Rules:**
 
 - Subject line: lowercase `type:` prefix, max 72 chars
-
 - No period at the end of subject line
-
 - Body wrapped at 72 chars (optional, for complex changes)
 
 ## Phase 3: Stage & Commit
@@ -88,7 +77,6 @@ git diff --cached
 Verify:
 
 - All intended files are staged
-
 - No accidental files included (`node_modules/`, `dist/`, `trace.log`, `.env`)
 
 ### Create Commit
@@ -108,11 +96,8 @@ If hooks fail:
 1. Read the error output
 2. Fix the issue:
    - Markdown errors: `bun run lint:fix`
-
    - Biome errors: `bun run check:fix`
-
    - Test failures: fix the test or code, then `bun run test`
-
 3. Stage fixed files: `git add [fixed-files]`
 4. Create a **new** commit (never `--amend` unless explicitly asked)
 

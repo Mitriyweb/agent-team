@@ -41,7 +41,11 @@ Read `MEMORY.md` to understand terminology, style guides, and cultural preferenc
 
 Spawn a `loc-tech-writer` via the `Task` tool.
 
+- **Working Directory**: `agents/localization/tech-writer`
+
 - **Instruction**: "Write docs for [topic]. Output: docs/[name].en.md"
+
+- **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Glob`, `Grep`
 
@@ -49,7 +53,11 @@ Spawn a `loc-tech-writer` via the `Task` tool.
 
 Launch one `loc-localizer` per target language simultaneously using the `Task` tool.
 
+- **Working Directory**: `agents/localization/localizer`
+
 - **Instruction**: "Translate docs/[name].en.md to [target-language]. Output: docs/[name].[lang].md"
+
+- **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Glob`, `Grep`
 
@@ -61,13 +69,21 @@ After all localizations are approved, launch `loc-seo-specialist` and `loc-qa` s
 
 **SEO Specialist**:
 
+- **Working Directory**: `agents/localization/seo-specialist`
+
 - **Instruction**: "Optimize: docs/[name].en.md + all translations. Output: SEO_REPORT.md"
+
+- **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Glob`, `Grep`
 
 **QA**:
 
+- **Working Directory**: `agents/localization/qa`
+
 - **Instruction**: "Review all: docs/[name].en.md + all translations. Output: QA_REPORT.md"
+
+- **Permission Mode**: `readOnly`
 
 - **Allowed Tools**: `Read`, `Glob`, `Grep`
 

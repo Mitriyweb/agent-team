@@ -15,7 +15,5 @@ agent-team new-team --name "security-audit" --description "Security and vulnerab
 ### Protocol and Agents
 
 - Each team will have a `<prefix>-PROTOCOL.md` file describing how they communicate.
-
 - Each role will have a `<prefix>-<role>.md` file with instructions.
-
 - A `skills/` directory will be created for the team's specialized capabilities.

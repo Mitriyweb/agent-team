@@ -24,30 +24,24 @@
       "Bash(find * -delete*)"
     ]
   },
-  "roles": {
-    "team-lead": {
+  "profiles": {
+    "manual": {
       "permissions": {
         "defaultMode": "manual"
       }
     },
-    "architect": {
-      "permissions": {
-        "defaultMode": "manual",
-        "deny": ["Write(*)", "Edit(*)", "Bash(*)"]
-      }
-    },
-    "developer": {
+    "acceptEdits": {
       "permissions": {
         "defaultMode": "acceptEdits"
       }
     },
-    "reviewer": {
+    "readOnly": {
       "permissions": {
         "defaultMode": "manual",
         "deny": ["Write(*)", "Edit(*)", "Bash(*)"]
       }
     },
-    "qa": {
+    "testOnly": {
       "permissions": {
         "defaultMode": "acceptEdits",
         "deny": ["Write(src/*)", "Edit(src/*)"]

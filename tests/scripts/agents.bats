@@ -15,15 +15,15 @@ teardown() {
 @test "agents.sh local launches local agent" {
     # We only test if it correctly calls start_local which logs a message
     run bash scripts/agents.sh local
-    [[ "$output" == *"Starting agent [LOCAL: qwen3-coder]"* ]]
+    [[ "$output" == *"Starting lead agent [LOCAL: qwen3-coder]"* ]]
 }
 
 @test "agents.sh cloud launches cloud agent" {
     # Provide .env and mock log so it matches exactly
     echo "PROVIDER=oauth" > .env
-    run bash scripts/agents.sh cloud
+    run bash scripts/agents.sh start
     [[ "$output" == *"OAuth"* ]]
-    [[ "$output" == *"Starting agent [CLOUD: claude-sonnet]"* ]]
+    [[ "$output" == *"Starting lead agent [CLOUD: claude-sonnet]"* ]]
     rm -f .env
 }
 

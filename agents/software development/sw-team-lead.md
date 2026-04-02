@@ -54,7 +54,11 @@ Read `MEMORY.md` to understand the current context, architectural decisions, and
 
 Spawn a `sw-architect` via the `Task` tool.
 
+- **Working Directory**: `agents/software development/architect`
+
 - **Instruction**: "Design [task] and freeze SPEC.md. It must include explicit Acceptance Criteria (AC1, AC2, etc.). Output: SPEC.md"
+
+- **Permission Mode**: `readOnly`
 
 - **Allowed Tools**: `Read`, `Glob`, `Grep`, `Task` (for consulting the developer)
 
@@ -62,7 +66,11 @@ Spawn a `sw-architect` via the `Task` tool.
 
 Spawn a `sw-developer` via the `Task` tool.
 
+- **Working Directory**: `agents/software development/developer`
+
 - **Instruction**: "Implement per SPEC.md. You must provide concrete proof for every AC in EVIDENCE.md before requesting review."
+
+- **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Task` (for consulting the architect)
 
@@ -74,13 +82,21 @@ Spawn a `sw-reviewer` and `sw-qa` via the `Task` tool.
 
 **Reviewer**:
 
+- **Working Directory**: `agents/software development/reviewer`
+
 - **Instruction**: "Review the code style and security per SPEC.md. Output: REVIEW.md"
+
+- **Permission Mode**: `readOnly`
 
 - **Allowed Tools**: `Read`, `Glob`, `Grep`
 
 **QA**:
 
+- **Working Directory**: `agents/software development/qa`
+
 - **Instruction**: "Perform fresh verification of the codebase. Output: VERDICT.json and QA_REPORT.md"
+
+- **Permission Mode**: `testOnly`
 
 - **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
 

@@ -46,7 +46,7 @@ BUDGET=0
 APPROVE_PLAN=false
 STOP_REQUESTED=false
 TEAM="software development"
-USE_BRANCH=false
+USE_BRANCH=true
 PLAN_FIRST=false
 
 count_tasks() {
@@ -361,9 +361,9 @@ handling no more than 5 files per sub-agent turn."
   fi
   mark_status "$task_id" " " "~"
   TASK_START_TIME=$(date +%s)
-  local agents_instruction=""
+  # Accumulate agents instruction with potential chunking logic from above
   if [[ -n "$agents" ]]; then
-    agents_instruction="
+    agents_instruction="${agents_instruction:-}
 Agents for this task (in order): ${agents}
 Spawn and coordinate only the agents listed above."
   fi
@@ -456,10 +456,7 @@ EOF
       warn "Retrying task #${task_id} in ${backoff}s (attempt ${attempt}/${RETRY_LIMIT})..."
       sleep $backoff
     fi
-    local perm_mode="default"
-    if [[ "$TEAM" == "software development" || "$TEAM" == "localization" ]]; then
-      perm_mode="team-lead"
-    fi
+    local perm_mode="manual"
     local claude_args=(-p "$prompt" --max-turns "$MAX_TURNS" --output-format json --allowedTools "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate" --permission-mode "$perm_mode")
     if [[ "$agents" == *"qa"* ]]; then
       claude_args+=(--max-output-tokens 4096)

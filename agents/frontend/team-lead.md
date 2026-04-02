@@ -36,7 +36,11 @@ Read `MEMORY.md` to understand design tokens, component hierarchy, and project-w
 
 Spawn a `fe-architect` via the `Task` tool.
 
+- **Working Directory**: `agents/frontend/ui-architect`
+
 - **Instruction**: "Design [task] UI and architecture. It must include design tokens and state management strategy. Output: UI_SPEC.md"
+
+- **Permission Mode**: `readOnly`
 
 - **Allowed Tools**: `Read`, `Glob`, `Grep`, `Task` (for consulting the developer)
 
@@ -44,7 +48,11 @@ Spawn a `fe-architect` via the `Task` tool.
 
 Spawn a `fe-dev` via the `Task` tool.
 
+- **Working Directory**: `agents/frontend/frontend-dev`
+
 - **Instruction**: "Implement per UI_SPEC.md using the specified framework and styling approach. Output: component and view files"
+
+- **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Task` (for consulting the architect)
 
@@ -56,19 +64,31 @@ Spawn `fe-reviewer`, `fe-qa`, and `fe-aqa` via the `Task` tool.
 
 **Reviewer**:
 
+- **Working Directory**: `agents/frontend/design-reviewer`
+
 - **Instruction**: "Perform visual review for consistency, responsiveness, and WCAG 2.1 AA compliance. Output: VISUAL_REVIEW.md"
+
+- **Permission Mode**: `readOnly`
 
 - **Allowed Tools**: `Read`, `Glob`, `Grep`
 
 **QA**:
 
+- **Working Directory**: `agents/frontend/fe-qa`
+
 - **Instruction**: "Run manual UI/UX and functional tests. Output: QA_REPORT.md"
+
+- **Permission Mode**: `testOnly`
 
 - **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
 
 **AQA**:
 
+- **Working Directory**: `agents/frontend/fe-aqa`
+
 - **Instruction**: "Run automated E2E, visual regression, and performance audits. Output: AQA_REPORT.md"
+
+- **Permission Mode**: `testOnly`
 
 - **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
 
