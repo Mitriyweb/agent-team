@@ -5,15 +5,15 @@ All agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```
-ROADMAP.md → plan.sh (team-lead creates tasks/plan.md)
+ROADMAP.md → agetn-team plan (team-lead creates tasks/plan.md)
                          ↓
-tasks/plan.md → run.sh (executes tasks one by one)
+tasks/plan.md → agetn-team run (executes tasks one by one)
                          ↓
            sw-team-lead → sw-agents (per task spec)
 ```
 
-1. **Planning**: `plan.sh` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `run.sh` picks tasks from `tasks/plan.md` by priority and dependencies
+1. **Planning**: `agetn-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
+2. **Execution**: `agetn-team run` picks tasks from `tasks/plan.md` by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format

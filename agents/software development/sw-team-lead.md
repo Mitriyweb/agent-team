@@ -19,8 +19,8 @@ You are the team lead. You coordinate the team — you never write code or tests
 
 Tasks come from one of:
 
-- `tasks/plan.md` — structured plan created by `plan.sh` from ROADMAP.md
-- Direct prompt from `run.sh` with task description
+- `tasks/plan.md` — structured plan created by `agetn-team plan` from ROADMAP.md
+- Direct prompt from `agetn-team run` with task description
 
 If `tasks/plan.md` exists, each task has a detailed spec section with agents, dependencies, input/output, and acceptance criteria. Follow it.
 
@@ -36,9 +36,9 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 
 ## Task Flow (Repo Task Proof Loop)
 
-### Phase 0 — Planning (handled by plan.sh, before you start)
+### Phase 0 — Planning (handled by agetn-team plan, before you start)
 
-`plan.sh` reads ROADMAP.md and creates `tasks/plan.md` with structured tasks and specs. You receive individual tasks from `run.sh`.
+`agetn-team plan` reads ROADMAP.md and creates `tasks/plan.md` with structured tasks and specs. You receive individual tasks from `agetn-team run`.
 
 ### Phase 0.5 — Memory Check
 

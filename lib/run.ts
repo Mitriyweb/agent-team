@@ -1,13 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 import {
   BLUE,
   calculateCost,
   configureProvider,
   err,
+  GREEN,
   log,
   NC,
+  notifyReview,
   ok,
+  RED,
   warn,
   YELLOW,
 } from "./common.ts";
@@ -328,25 +332,33 @@ export class TaskRunner {
         clearInterval(timer);
         this.ui.stopProgressBar();
 
-        if (exitCode === 0 && stdoutBuffer.includes("TASK_STATUS: SUCCESS")) {
-          // Track cost
-          try {
-            const resp = JSON.parse(stdoutBuffer);
-            if (resp.usage) {
-              const cost = parseFloat(
-                calculateCost(
-                  resp.model || "",
-                  resp.usage.input_tokens,
-                  resp.usage.output_tokens,
-                ),
-              );
-              this.saveCost(taskId, cost);
-              log(
-                `Task cost: ${YELLOW}$${cost.toFixed(4)}${NC} (Total: ${YELLOW}$${this.cumulativeCost.toFixed(4)}${NC})`,
-              );
-            }
-          } catch (_e: unknown) {}
+        this.trackCost(taskId, stdoutBuffer);
 
+        if (
+          exitCode === 0 &&
+          stdoutBuffer.includes("TASK_STATUS: HUMAN_REVIEW_NEEDED")
+        ) {
+          const approved = await this.promptHumanReview(taskId, desc);
+          if (approved) {
+            ok(`Task #${taskId} review approved — continuing.`);
+            this.markStatus(taskId, "~", "x");
+            if (this.options.branch) {
+              commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
+              createPR(
+                `feat: #${taskId} - ${desc}`,
+                `Automated PR for task #${taskId}`,
+              );
+              checkout(originalBranch);
+            }
+            return true;
+          }
+          warn(`Task #${taskId} review rejected.`);
+          this.markStatus(taskId, "~", "!", "human review rejected");
+          if (this.options.branch && originalBranch) checkout(originalBranch);
+          return false;
+        }
+
+        if (exitCode === 0 && stdoutBuffer.includes("TASK_STATUS: SUCCESS")) {
           ok(`Task #${taskId} completed.`);
           this.markStatus(taskId, "~", "x");
 
@@ -374,6 +386,65 @@ export class TaskRunner {
     return false;
   }
 
+  private trackCost(taskId: string, stdoutBuffer: string) {
+    try {
+      const resp = JSON.parse(stdoutBuffer);
+      if (resp.usage) {
+        const cost = parseFloat(
+          calculateCost(
+            resp.model || "",
+            resp.usage.input_tokens,
+            resp.usage.output_tokens,
+          ),
+        );
+        this.saveCost(taskId, cost);
+        log(
+          `Task cost: ${YELLOW}$${cost.toFixed(4)}${NC} (Total: ${YELLOW}$${this.cumulativeCost.toFixed(4)}${NC})`,
+        );
+      }
+    } catch (_e: unknown) {}
+  }
+
+  private async promptHumanReview(
+    taskId: string,
+    desc: string,
+  ): Promise<boolean> {
+    notifyReview();
+
+    console.log("");
+    console.log(
+      `  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}`,
+    );
+    console.log(
+      `  ${RED}║${NC}  ${YELLOW}HUMAN REVIEW NEEDED${NC}                                       ${RED}║${NC}`,
+    );
+    console.log(
+      `  ${RED}║${NC}  Task ${BLUE}#${taskId}${NC}: ${desc.slice(0, 44).padEnd(44)} ${RED}║${NC}`,
+    );
+    console.log(
+      `  ${RED}╚══════════════════════════════════════════════════════════════╝${NC}`,
+    );
+    console.log(
+      `  Check reports in ${BLUE}.claude-loop/reports/task-${taskId}.md${NC}`,
+    );
+    console.log("");
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    return new Promise((resolve) => {
+      rl.question(
+        `  ${GREEN}Approve and continue?${NC} (y/n): `,
+        (answer: string) => {
+          rl.close();
+          resolve(answer.trim().toLowerCase() === "y");
+        },
+      );
+    });
+  }
+
   private buildPrompt(taskId: string, desc: string, spec: string): string {
     const team = this.options.team || "software development";
     const REPORTS_DIR_VAL = REPORTS_DIR;
@@ -393,8 +464,15 @@ Instructions:
 5. Produce the EXACT deliverables.
 6. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md.
 
-On your VERY LAST LINE of output, write:
-TASK_STATUS: SUCCESS
+On your VERY LAST LINE of output, write one of:
+- TASK_STATUS: SUCCESS — task completed successfully
+- TASK_STATUS: HUMAN_REVIEW_NEEDED — request human review before proceeding
+
+Use HUMAN_REVIEW_NEEDED when:
+- A critical decision needs human approval
+- Requirements are ambiguous and cannot be resolved by the team
+- A potentially destructive or irreversible operation requires a safety check
+- The task specification explicitly requests a review checkpoint
     `.trim();
   }
 }

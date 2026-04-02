@@ -36,7 +36,7 @@ Read the task description below and create a structured execution plan.
 ## Output format
 Write the plan in TWO sections:
 
-### Section 1: Structured tasks for run.sh
+### Section 1: Structured tasks for agetn-team run
 Each task on one line inside a code block, format:
 \`\`\`
 - [ ] id:N priority:high|medium|low type:feature|research|refactor agents:agent1,agent2 Description of what to do

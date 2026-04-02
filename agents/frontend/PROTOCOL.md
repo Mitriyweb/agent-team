@@ -5,9 +5,9 @@ All frontend agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```
-ROADMAP.md → plan.sh (fe-team-lead creates tasks/plan.md)
+ROADMAP.md → agetn-team plan (fe-team-lead creates tasks/plan.md)
                          ↓
-tasks/plan.md → run.sh (executes tasks one by one)
+tasks/plan.md → agetn-team run (executes tasks one by one)
                          ↓
            fe-team-lead → fe-agents (per task spec)
 ```

@@ -16,7 +16,7 @@ git diff --name-only
 git diff --stat
 ```
 
-1. Identify all changed files (`.md`, `.js`, `.sh`, `.bats`, `.yaml`)
+1. Identify all changed files (`.md`, `.js`, `.sh`, `.bats`, `.yaml`, `.ts`)
 2. Read full content of each changed file
 3. Categorize by type and apply matching rules:
    - `.md` files -> markdownlint-cli2 rules
