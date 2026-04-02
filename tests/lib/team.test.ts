@@ -8,6 +8,7 @@ vi.mock("node:fs", () => ({
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
+    appendFileSync: vi.fn(),
     readFileSync: vi.fn(),
     readdirSync: vi.fn(),
     copyFileSync: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("node:fs", () => ({
   existsSync: vi.fn(),
   mkdirSync: vi.fn(),
   writeFileSync: vi.fn(),
+  appendFileSync: vi.fn(),
   readFileSync: vi.fn(),
   readdirSync: vi.fn(),
   copyFileSync: vi.fn(),
@@ -49,12 +51,18 @@ describe("team.ts", () => {
   });
 
   describe("initProject", () => {
-    it("creates necessary directories and copies templates", async () => {
+    it("creates necessary directories and updates .gitignore", async () => {
       const mockMkdirSync = vi.spyOn(fs, "mkdirSync");
       const mockWriteFileSync = vi.spyOn(fs, "writeFileSync");
       vi.spyOn(fs, "existsSync").mockReturnValue(false);
       vi.spyOn(fs, "readdirSync").mockReturnValue([]);
       vi.spyOn(fs, "readFileSync").mockReturnValue("");
+
+      // Mock appendFileSync for .gitignore
+      const mockAppendFileSync = vi.fn();
+      vi.spyOn(fs, "appendFileSync" as never).mockImplementation(
+        mockAppendFileSync as never,
+      );
 
       // Mock path.join to return predictable strings
       vi.spyOn(path, "join").mockImplementation((...args: string[]) =>
@@ -67,7 +75,7 @@ describe("team.ts", () => {
         sourceDir: "/src",
       });
 
-      expect(mockMkdirSync).toHaveBeenCalledWith(".agents/workflows", {
+      expect(mockMkdirSync).toHaveBeenCalledWith("agents", {
         recursive: true,
       });
       expect(mockMkdirSync).toHaveBeenCalledWith("tasks", { recursive: true });

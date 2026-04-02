@@ -9,7 +9,5 @@ dist/
 .bun-build.bun-build
 *.bun-build
 bin/claude
-test_install/
-target_dir/
 .claude/settings.json
 tmp/*

@@ -87,22 +87,33 @@ export async function initProject(options: InitProjectOptions) {
 
   log("Initializing agent-team project...");
 
-  const dirs = ["agents", "tasks", ".agents/workflows"];
+  const dirs = ["agents", "tasks"];
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
 
-  const srcWorkflows = path.join(sourceDir, ".agents/workflows");
-  if (fs.existsSync(srcWorkflows)) {
-    const files = fs.readdirSync(srcWorkflows);
-    for (const file of files) {
-      fs.copyFileSync(
-        path.join(srcWorkflows, file),
-        path.join(".agents/workflows", file),
-      );
-    }
-    ok("Copied workflows to .agents/workflows/");
+  // Update .gitignore with agent-team artifacts
+  const gitignoreEntries = [
+    "# Agent team artifacts",
+    ".claude-loop/",
+    "tasks/",
+    ".agents/",
+    "*.log",
+    ".DS_Store",
+    "settings.local.json",
+  ];
+  const gitignorePath = ".gitignore";
+  const existingGitignore = fs.existsSync(gitignorePath)
+    ? fs.readFileSync(gitignorePath, "utf-8")
+    : "";
+  const existingLines = new Set(existingGitignore.split("\n"));
+  const newEntries = gitignoreEntries.filter((e) => !existingLines.has(e));
+  if (newEntries.length > 0) {
+    const separator =
+      existingGitignore.endsWith("\n") || !existingGitignore ? "" : "\n";
+    fs.appendFileSync(gitignorePath, `${separator}${newEntries.join("\n")}\n`);
   }
+  ok("Updated .gitignore");
 
   if (!fs.existsSync("MEMORY.md")) {
     const srcMemory = path.join(sourceDir, "MEMORY.md");
@@ -174,10 +185,7 @@ export async function initProject(options: InitProjectOptions) {
   log("Finalizing project documentation for CLI...");
   const mdFiles = findFiles(".", 3, ".md");
   for (const file of mdFiles) {
-    if (
-      file.startsWith("./agents/") ||
-      file.startsWith("./.agents/workflows/")
-    ) {
+    if (file.startsWith("./agents/")) {
       const content = fs.readFileSync(file, "utf-8");
       const original = content;
       const newContent = content
