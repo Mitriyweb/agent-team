@@ -179,6 +179,28 @@ export function configureProvider() {
   }
 }
 
+const CONFIG_FILE = "agent-team.json";
+
+export interface ProjectConfig {
+  planner: "builtin" | "openspec";
+  [key: string]: unknown;
+}
+
+export function loadConfig(): ProjectConfig {
+  const defaults: ProjectConfig = { planner: "builtin" };
+  if (!fs.existsSync(CONFIG_FILE)) return defaults;
+  try {
+    const data = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+    return { ...defaults, ...data };
+  } catch {
+    return defaults;
+  }
+}
+
+export function saveConfig(config: ProjectConfig) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+}
+
 export function printHeader() {
   console.log(BLUE);
   console.log("  ╔══════════════════════════════════════╗");

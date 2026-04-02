@@ -31,11 +31,16 @@ async function main() {
     const teamIdx = args.indexOf("--team");
     const teamName = teamIdx !== -1 ? args[teamIdx + 1] : args[1];
     const noHumanReview = args.includes("--no-human-review");
+    const plannerIdx = args.indexOf("--planner");
+    const plannerArg = plannerIdx !== -1 ? args[plannerIdx + 1] : undefined;
+    const planner =
+      plannerArg === "openspec" ? "openspec" : ("builtin" as const);
 
     await initProject({
       teamName: teamName && !teamName.startsWith("-") ? teamName : undefined,
       humanReview: !noHumanReview,
       sourceDir,
+      planner,
     });
   } else if (command === "run") {
     const options: RunOptions = {
@@ -87,7 +92,7 @@ async function main() {
     console.log("Claude Code Agent Team (Self-Contained TS Architecture)");
     console.log("Usage:");
     console.log(
-      "  agent-team init [--team NAME] [--no-human-review]   # Initialize project",
+      "  agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]",
     );
     console.log(
       "  agent-team run [--all] [--dry-run] [--team NAME]    # Execute tasks",

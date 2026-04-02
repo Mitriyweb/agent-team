@@ -67,14 +67,19 @@ agent-team init --team "software development"
 
 # Initialize without human review checkpoints
 agent-team init --team frontend --no-human-review
+
+# Initialize with OpenSpec planner (default: builtin)
+agent-team init --team "software development" --planner openspec
 ```
 
 This will:
 
 - Copy agent definitions to `agents/<team>/`
-- Copy workflows to `.agents/workflows/`
 - Create a template `ROADMAP.md` and `MEMORY.md`
-- Configure `autoMode` in `.claude/settings.json`
+- Update `.gitignore` with agent-team artifacts
+- Configure `autoMode` in `.claude/settings.json` (with `--no-human-review`)
+- Save project config to `agent-team.json`
+- If `--planner openspec`: initialize OpenSpec in the project
 
 > **Tip:** If `--no-human-review` is used, Claude's `autoMode` will be enabled by default for the project.
 
@@ -87,6 +92,10 @@ agent-team run --dry-run  # preview without running
 ```
 
 ## Planning
+
+The agent team supports two planners, configured during `init` via `--planner`:
+
+### Built-in planner (default)
 
 The autonomous work of the agent team is driven by the `ROADMAP.md` file located in the root of your project.
 
@@ -101,6 +110,26 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 
 4. **Reference**: For a complete reference on task fields and statuses, see [docs/task-format.md](docs/task-format.md).
 
+### OpenSpec planner
+
+[OpenSpec](https://github.com/Fission-AI/OpenSpec) is a spec-driven development framework that separates planning from execution.
+
+```bash
+# Enable during init
+agent-team init --team "software development" --planner openspec
+
+# Plan creates an OpenSpec proposal instead of tasks/plan.md
+agent-team plan
+```
+
+When using OpenSpec, `agent-team plan` creates a structured proposal in `openspec/changes/` with:
+
+- `proposal.md` — what to build and why
+- `design.md` — architectural decisions
+- `tasks.md` — broken-down implementation tasks
+
+Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`). The planner choice is stored in `agent-team.json`.
+
 ## Requirements
 
 | Tool | Required | Install |
@@ -110,16 +139,17 @@ The autonomous work of the agent team is driven by the `ROADMAP.md` file located
 | Docker | no | [docker.com](https://docker.com) *(for local model via Ollama)* |
 | tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
 | Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |
+| OpenSpec | no | `npm i -g @fission-ai/openspec` *(only if `--planner openspec`)* |
 
 ## CLI Commands
 
 ```bash
-agent-team init [--team NAME] [--no-human-review]                      # Initialize project
-agent-team run [--all] [--dry-run] [--team NAME] [--budget N]          # Execute tasks
-agent-team plan [ROADMAP.md]                                           # Decompose roadmap
-agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2 # Create custom team
-agent-team validate NAME                                               # Validate team structure
-agent-team -v, --version                                               # Show version
+agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]
+agent-team run [--all] [--dry-run] [--team NAME] [--budget N]
+agent-team plan [ROADMAP.md]
+agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2
+agent-team validate NAME
+agent-team -v, --version
 ```
 
 ## Repository Structure
@@ -130,8 +160,6 @@ agent-team -v, --version                                               # Show ve
 │   ├── software development/   # Software dev team
 │   ├── frontend/               # Frontend team (fe-*)
 │   └── localization/           # Localization team
-├── .agents/
-│   └── workflows/              # Workflow definitions (human-review, new-team, etc.)
 ├── bin/
 │   └── init.ts                 # CLI entry point
 ├── lib/
@@ -236,14 +264,21 @@ Every task execution produces:
 
 ## Human Review and Notifications
 
-By default, the agent team pauses for human review before executing a plan or when an agent explicitly requests it.
-When a review is needed:
+During task execution, any agent can request a human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED` as the last line.
+When this happens:
 
-1. **Audio Notification**: The system will announce "Review required" in English using `spd-say` (Linux) or `say` (macOS).
-2. **Visual Prompt**: A high-visibility banner will appear in the terminal.
+1. **Audio Notification**: A review sound plays (custom `review.m4a` or fallback to `say`/`spd-say`/terminal bell).
+2. **Visual Banner**: A high-visibility banner appears with the task number and description.
+3. **Approval Prompt**: The user is asked to approve (`y`) or reject (`n`).
 
-You can disable plan approval by running `agent-team run` without the `--approve-plan` flag (or by initializing with `--no-human-review`).
-In this mode, `autoMode` is enabled to reduce prompts.
+Agents request a review when:
+
+- A critical decision needs human approval
+- Requirements are ambiguous and cannot be resolved by the team
+- A destructive or irreversible operation requires a safety check
+- The task specification explicitly requests a review checkpoint
+
+You can reduce review prompts by initializing with `--no-human-review`, which enables `autoMode`.
 
 ## Security Permissions
 

@@ -1,6 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
-import { BLUE, err, GREEN, log, NC, ok, warn } from "./common.ts";
+import {
+  BLUE,
+  err,
+  GREEN,
+  loadConfig,
+  log,
+  NC,
+  ok,
+  type ProjectConfig,
+  saveConfig,
+  warn,
+} from "./common.ts";
 // @ts-expect-error
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
@@ -80,10 +91,16 @@ interface InitProjectOptions {
   teamName?: string;
   humanReview?: boolean;
   sourceDir?: string;
+  planner?: "builtin" | "openspec";
 }
 
 export async function initProject(options: InitProjectOptions) {
-  const { teamName, humanReview = true, sourceDir = "." } = options;
+  const {
+    teamName,
+    humanReview = true,
+    sourceDir = ".",
+    planner = "builtin",
+  } = options;
 
   log("Initializing agent-team project...");
 
@@ -114,6 +131,32 @@ export async function initProject(options: InitProjectOptions) {
     fs.appendFileSync(gitignorePath, `${separator}${newEntries.join("\n")}\n`);
   }
   ok("Updated .gitignore");
+
+  // Save project config
+  const config: ProjectConfig = { ...loadConfig(), planner };
+  saveConfig(config);
+  ok(`Planner: ${planner === "openspec" ? "OpenSpec" : "built-in"}`);
+
+  // Initialize OpenSpec if selected
+  if (planner === "openspec") {
+    try {
+      const proc = Bun.spawnSync(
+        ["npx", "@fission-ai/openspec", "init", "--tools", "claude"],
+        {
+          stdio: ["inherit", "inherit", "inherit"],
+        },
+      );
+      if (proc.success) {
+        ok("OpenSpec initialized");
+      } else {
+        warn(
+          "OpenSpec init failed — install with: npm i -g @fission-ai/openspec",
+        );
+      }
+    } catch {
+      warn("OpenSpec not found — install with: npm i -g @fission-ai/openspec");
+    }
+  }
 
   if (!fs.existsSync("MEMORY.md")) {
     const srcMemory = path.join(sourceDir, "MEMORY.md");

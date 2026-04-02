@@ -5,6 +5,7 @@ import {
   CYAN,
   err,
   GREEN,
+  loadConfig,
   log,
   NC,
   ok,
@@ -59,6 +60,70 @@ Complete instructions for the agent.
 `;
 
 export async function planRoadmap(inputFile = "ROADMAP.md") {
+  const config = loadConfig();
+
+  if (config.planner === "openspec") {
+    await planWithOpenSpec(inputFile);
+  } else {
+    await planWithBuiltin(inputFile);
+  }
+}
+
+async function planWithOpenSpec(inputFile: string) {
+  if (!fs.existsSync(inputFile)) {
+    err(`Input file not found: ${inputFile}`);
+  }
+
+  log(`Planning with ${BLUE}OpenSpec${NC} from ${BLUE}${inputFile}${NC}...`);
+
+  const roadmapContent = fs.readFileSync(inputFile, "utf-8");
+  const changeName = `roadmap-${Date.now()}`;
+
+  // Create an OpenSpec proposal from the roadmap
+  const proposePrompt = `Read this roadmap and create an OpenSpec proposal using the /opsx:propose command pattern.
+
+Roadmap content:
+${roadmapContent}
+
+Steps:
+1. Run: npx @fission-ai/openspec propose "${changeName}"
+2. Write the roadmap content into the generated proposal.md
+3. Fill in the design.md with architectural decisions
+4. Break down into tasks in tasks.md
+5. Output PLAN_READY when done`;
+
+  const proc = Bun.spawn(
+    [
+      "claude",
+      "-p",
+      proposePrompt,
+      "--max-turns",
+      "30",
+      "--output-format",
+      "json",
+      "--allowedTools",
+      "Read,Write,Edit,Glob,Grep,Bash",
+    ],
+    { stderr: "inherit" },
+  );
+
+  const response = await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    err("OpenSpec planning failed.");
+  }
+
+  if (response.includes("PLAN_READY")) {
+    ok(`OpenSpec proposal created: openspec/changes/${changeName}/`);
+  } else {
+    warn(
+      "Planning finished but PLAN_READY not confirmed. Check openspec/changes/",
+    );
+  }
+}
+
+async function planWithBuiltin(inputFile: string) {
   if (!fs.existsSync(inputFile)) {
     err(`Input file not found: ${inputFile}`);
   }
