@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -81,10 +81,7 @@ describe("team.ts", () => {
 
       fs.writeFileSync(".gitignore", "# Initial gitignore\n");
       fs.mkdirSync("agents/test-team", { recursive: true });
-      fs.writeFileSync(
-        "agents/test-team/role.md",
-        "Run ./scripts/run.sh here",
-      );
+      fs.writeFileSync("agents/test-team/role.md", "Run ./scripts/run.sh here");
 
       await updateProject({ sourceDir: tmpDir });
 
@@ -100,16 +97,27 @@ describe("team.ts", () => {
     it("updates skills and workflows", async () => {
       const srcDir = path.join(tmpDir, "src");
       fs.mkdirSync(path.join(srcDir, ".agents/workflows"), { recursive: true });
-      fs.writeFileSync(path.join(srcDir, ".agents/workflows/test.md"), "New workflow");
-      fs.mkdirSync(path.join(srcDir, "agents/test-team/skills"), { recursive: true });
-      fs.writeFileSync(path.join(srcDir, "agents/test-team/skills/new.md"), "New skill");
+      fs.writeFileSync(
+        path.join(srcDir, ".agents/workflows/test.md"),
+        "New workflow",
+      );
+      fs.mkdirSync(path.join(srcDir, "agents/test-team/skills"), {
+        recursive: true,
+      });
+      fs.writeFileSync(
+        path.join(srcDir, "agents/test-team/skills/new.md"),
+        "New skill",
+      );
 
       const projectDir = path.join(tmpDir, "project-reconfig");
       fs.mkdirSync(projectDir, { recursive: true });
       process.chdir(projectDir);
 
       fs.mkdirSync("agents/test-team", { recursive: true });
-      fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test-team", planner: "builtin" }));
+      fs.writeFileSync(
+        "agent-team.json",
+        JSON.stringify({ team: "test-team", planner: "builtin" }),
+      );
 
       await reconfigureProject({ sourceDir: srcDir });
 

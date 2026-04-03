@@ -41,7 +41,7 @@ if (phase === "PRE") {
     tool,
     phase: "PRE",
   });
-  fs.appendFileSync(logFile, entry + "\n");
+  fs.appendFileSync(logFile, `${entry}\n`);
 } else {
   const status = (parsed.status as string) || "success";
   const durationMs = (parsed.duration_ms as number) || 0;
@@ -54,5 +54,5 @@ if (phase === "PRE") {
     status,
     duration_ms: durationMs,
   });
-  fs.appendFileSync(logFile, entry + "\n");
+  fs.appendFileSync(logFile, `${entry}\n`);
 }

@@ -22,7 +22,7 @@ interface AggregatedStats {
 
 export function auditReport() {
   if (!fs.existsSync(LOG_FILE)) {
-    warn("No audit log found at " + LOG_FILE);
+    warn(`No audit log found at ${LOG_FILE}`);
     return;
   }
 

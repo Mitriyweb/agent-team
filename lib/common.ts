@@ -199,7 +199,7 @@ export function loadConfig(): ProjectConfig {
 }
 
 export function saveConfig(config: ProjectConfig) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  fs.writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`);
 }
 
 export function printHeader() {
