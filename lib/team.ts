@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 import {
   BLUE,
   err,
@@ -11,7 +12,9 @@ import {
   type ProjectConfig,
   saveConfig,
   warn,
+  YELLOW,
 } from "./common.ts";
+import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
 // @ts-expect-error
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
@@ -21,7 +24,7 @@ import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 import PROTOCOL_TEMPLATE from "./templates/PROTOCOL.md" with { type: "text" };
 import DEFAULT_SETTINGS from "./templates/settings.json" with { type: "json" };
 
-const AGENTS_ROOT = "agents";
+const CLAUDE_AGENTS_DIR = path.join(".claude", "agents");
 
 interface CreateTeamOptions {
   name: string;
@@ -37,15 +40,14 @@ export async function createTeam(options: CreateTeamOptions) {
   if (!description) err("Team description is required (--description)");
   if (!rolesStr) err("Roles are required (--roles)");
 
-  const teamDir = path.join(AGENTS_ROOT, name);
-  if (!fs.existsSync(teamDir)) {
-    fs.mkdirSync(teamDir, { recursive: true });
+  if (!fs.existsSync(CLAUDE_AGENTS_DIR)) {
+    fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
   }
 
   let prefix = name.substring(0, 2).toLowerCase();
   if (prefix) prefix = `${prefix}-`;
 
-  const protocolFile = path.join(teamDir, `${prefix}PROTOCOL.md`);
+  const protocolFile = path.join(CLAUDE_AGENTS_DIR, `${prefix}PROTOCOL.md`);
   let protocolContent = (PROTOCOL_TEMPLATE as string).replace(
     /{{TEAM_PREFIX}}/g,
     prefix,
@@ -62,7 +64,7 @@ export async function createTeam(options: CreateTeamOptions) {
   const roles = rolesStr.split(",").map((r) => r.trim());
   for (const role of roles) {
     const roleCap = role.charAt(0).toUpperCase() + role.slice(1);
-    const agentFile = path.join(teamDir, `${prefix}${role}.md`);
+    const agentFile = path.join(CLAUDE_AGENTS_DIR, `${prefix}${role}.md`);
     const agentContent = (AGENT_TEMPLATE as string)
       .replace(/{{AGENT_ROLE}}/g, roleCap)
       .replace(/{{AGENT_DESCRIPTION}}/g, description)
@@ -72,19 +74,10 @@ export async function createTeam(options: CreateTeamOptions) {
     ok(`Created ${agentFile}`);
   }
 
-  const skillsDir = path.join(teamDir, "skills");
+  const skillsDir = path.join(CLAUDE_AGENTS_DIR, "skills");
   if (!fs.existsSync(skillsDir)) fs.mkdirSync(skillsDir, { recursive: true });
 
-  const claudeDir = path.join(teamDir, "claude");
-  if (!fs.existsSync(claudeDir)) fs.mkdirSync(claudeDir, { recursive: true });
-
-  fs.writeFileSync(
-    path.join(claudeDir, "settings.json"),
-    JSON.stringify(DEFAULT_SETTINGS, null, 2),
-  );
-  ok(`Copied default claude settings to ${claudeDir}/`);
-
-  ok(`Team '${name}' successfully created in ${teamDir}`);
+  ok(`Team '${name}' created in ${CLAUDE_AGENTS_DIR}`);
 }
 
 interface InitProjectOptions {
@@ -104,7 +97,7 @@ export async function initProject(options: InitProjectOptions) {
 
   log("Initializing agent-team project...");
 
-  const dirs = ["agents", "tasks"];
+  const dirs = [CLAUDE_AGENTS_DIR, "tasks"];
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   }
@@ -132,8 +125,9 @@ export async function initProject(options: InitProjectOptions) {
   }
   ok("Updated .gitignore");
 
-  // Save project config
+  // Save project config (including team name for detection on re-init)
   const config: ProjectConfig = { ...loadConfig(), planner };
+  if (teamName) config.team = teamName;
   saveConfig(config);
   ok(`Planner: ${planner === "openspec" ? "OpenSpec" : "built-in"}`);
 
@@ -172,36 +166,68 @@ export async function initProject(options: InitProjectOptions) {
     ok("Created empty ROADMAP.md");
   }
 
+  // Detect existing team and ask for confirmation before overwriting
+  if (teamName && fs.existsSync(CLAUDE_AGENTS_DIR)) {
+    const existingTeam = getInstalledTeam();
+    if (existingTeam && existingTeam !== teamName) {
+      log(`${YELLOW}Existing team detected:${NC} ${BLUE}${existingTeam}${NC}`);
+      const confirmed = await confirmPrompt(
+        `Replace with ${GREEN}${teamName}${NC}? (y/n): `,
+      );
+      if (!confirmed) {
+        warn("Init cancelled by user.");
+        return;
+      }
+      // Clean .claude/agents/ completely
+      fs.rmSync(CLAUDE_AGENTS_DIR, { recursive: true, force: true });
+      fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+      ok(`Removed team: ${existingTeam}`);
+    }
+  }
+
   if (teamName) {
+    if (!fs.existsSync(CLAUDE_AGENTS_DIR))
+      fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+
     const srcTeamDir = path.join(sourceDir, "agents", teamName);
+
     if (fs.existsSync(srcTeamDir)) {
-      const targetTeamDir = path.join("agents", teamName);
-      if (!fs.existsSync(targetTeamDir))
-        fs.mkdirSync(targetTeamDir, { recursive: true });
-      copyRecursiveSync(srcTeamDir, targetTeamDir);
+      // Copy from source directory (dev mode / bun run) — flat into .claude/agents/
+      copyTeamFlat(srcTeamDir, CLAUDE_AGENTS_DIR);
+      ok(`Initialized team: ${teamName}`);
+    } else if (EMBEDDED_TEAMS[teamName]) {
+      // Extract from embedded bundle (compiled binary) — flat into .claude/agents/
+      extractEmbeddedTeam(teamName, CLAUDE_AGENTS_DIR);
       ok(`Initialized team: ${teamName}`);
     } else {
-      warn(`Team '${teamName}' not found in ${sourceDir}/agents/`);
+      const available = [
+        ...new Set([...listSourceTeams(sourceDir), ...EMBEDDED_TEAM_NAMES]),
+      ];
+      warn(`Team '${teamName}' not found. Available: ${available.join(", ")}`);
     }
   }
 
   if (!fs.existsSync(".claude")) fs.mkdirSync(".claude", { recursive: true });
   const targetSettings = path.join(".claude", "settings.json");
 
+  // Find settings.json — now lives flat in .claude/agents/ or source agents/
   let settingsSource = "";
-  if (
-    teamName &&
-    fs.existsSync(
-      path.join(sourceDir, "agents", teamName, "claude/settings.json"),
-    )
-  ) {
-    settingsSource = path.join(
+  if (teamName) {
+    const agentSettings = path.join(CLAUDE_AGENTS_DIR, "settings.json");
+    const srcSettings = path.join(
       sourceDir,
       "agents",
       teamName,
-      "claude/settings.json",
+      "settings.json",
     );
-    ok(`Applying team-specific Claude settings for ${teamName}`);
+    if (fs.existsSync(agentSettings)) {
+      settingsSource = agentSettings;
+    } else if (fs.existsSync(srcSettings)) {
+      settingsSource = srcSettings;
+    }
+    if (settingsSource) {
+      ok(`Applying team-specific Claude settings for ${teamName}`);
+    }
   }
 
   if (settingsSource) {
@@ -211,11 +237,22 @@ export async function initProject(options: InitProjectOptions) {
     ok("Applying default Claude settings");
   }
 
+  // Clean up: settings.json should only live in .claude/, not in .claude/agents/
+  const leftoverSettings = path.join(CLAUDE_AGENTS_DIR, "settings.json");
+  if (fs.existsSync(leftoverSettings)) fs.rmSync(leftoverSettings);
+
   if (!humanReview && fs.existsSync(targetSettings)) {
     try {
       const settings = JSON.parse(fs.readFileSync(targetSettings, "utf-8"));
       if (!settings.permissions) settings.permissions = {};
       settings.permissions.defaultMode = "auto";
+      // Set auto mode for all agent profiles too
+      if (settings.profiles) {
+        for (const profile of Object.values(settings.profiles)) {
+          const p = profile as { permissions?: { defaultMode?: string } };
+          if (p.permissions) p.permissions.defaultMode = "auto";
+        }
+      }
       fs.writeFileSync(targetSettings, JSON.stringify(settings, null, 2));
       ok(`Auto mode: ${GREEN}enabled${NC} (--no-human-review)`);
     } catch (e: unknown) {
@@ -226,9 +263,9 @@ export async function initProject(options: InitProjectOptions) {
   }
 
   log("Finalizing project documentation for CLI...");
-  const mdFiles = findFiles(".", 3, ".md");
+  const mdFiles = findFiles(".claude/agents", 4, ".md");
   for (const file of mdFiles) {
-    if (file.startsWith("./agents/")) {
+    if (file.startsWith(".claude/agents/")) {
       const content = fs.readFileSync(file, "utf-8");
       const original = content;
       const newContent = content
@@ -250,20 +287,19 @@ export async function initProject(options: InitProjectOptions) {
   log(`Run ${BLUE}agent-team run --plan --all${NC} to start.`);
 }
 
-export function validateTeam(name: string) {
-  const teamDir = path.join(AGENTS_ROOT, name);
-
-  if (!fs.existsSync(teamDir)) {
-    err(`Team '${name}' not found at ${teamDir}`);
+export function validateTeam(_name: string) {
+  if (!fs.existsSync(CLAUDE_AGENTS_DIR)) {
+    err(`Agents directory not found: ${CLAUDE_AGENTS_DIR}`);
   }
 
-  log(`Validating team: ${BLUE}${name}${NC}`);
+  const installed = getInstalledTeam() || _name;
+  log(`Validating team: ${BLUE}${installed}${NC}`);
   let errors = 0;
 
-  const files = fs.readdirSync(teamDir);
+  const files = fs.readdirSync(CLAUDE_AGENTS_DIR);
   const protocolExists = files.some((f) => f.endsWith("PROTOCOL.md"));
   if (!protocolExists) {
-    warn(`Missing PROTOCOL.md in ${teamDir}`);
+    warn(`Missing PROTOCOL.md in ${CLAUDE_AGENTS_DIR}`);
     errors++;
   }
 
@@ -271,12 +307,12 @@ export function validateTeam(name: string) {
     (f) => f.endsWith(".md") && !f.endsWith("PROTOCOL.md"),
   );
   if (agentProfiles.length === 0) {
-    warn(`No agent profiles found in ${teamDir}`);
+    warn(`No agent profiles found in ${CLAUDE_AGENTS_DIR}`);
     errors++;
   }
 
   for (const agentFile of agentProfiles) {
-    const fullPath = path.join(teamDir, agentFile);
+    const fullPath = path.join(CLAUDE_AGENTS_DIR, agentFile);
     const content = fs.readFileSync(fullPath, "utf-8");
     if (!content.match(/^# /m)) {
       warn(`Agent file ${agentFile} missing H1 title`);
@@ -291,8 +327,42 @@ export function validateTeam(name: string) {
   if (errors > 0) {
     err(`Team validation failed with ${errors} error(s)`);
   } else {
-    ok(`Team '${name}' is valid`);
+    ok(`Team '${installed}' is valid`);
   }
+}
+
+function confirmPrompt(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(`  ${question}`, (answer: string) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === "y");
+    });
+  });
+}
+
+/**
+ * Detect installed team by reading the project config.
+ */
+function getInstalledTeam(): string | undefined {
+  try {
+    const configFile = "agent-team.json";
+    if (!fs.existsSync(configFile)) return undefined;
+    const data = JSON.parse(fs.readFileSync(configFile, "utf-8"));
+    return data.team || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Copy team source dir contents flat into target (no team subfolder).
+ */
+function copyTeamFlat(srcTeamDir: string, targetDir: string) {
+  copyRecursiveSync(srcTeamDir, targetDir);
 }
 
 function copyRecursiveSync(src: string, dest: string) {
@@ -309,6 +379,35 @@ function copyRecursiveSync(src: string, dest: string) {
   } else {
     fs.copyFileSync(src, dest);
   }
+}
+
+function extractEmbeddedTeam(teamName: string, targetDir: string) {
+  const files = EMBEDDED_TEAMS[teamName];
+  if (!files) return;
+  const prefix = `${teamName}/`;
+  for (const [relPath, file] of Object.entries(files)) {
+    // Strip team name prefix — files go flat into targetDir
+    const stripped = relPath.startsWith(prefix)
+      ? relPath.slice(prefix.length)
+      : relPath;
+    const fullPath = path.join(targetDir, stripped);
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (file.isBinary) {
+      fs.writeFileSync(fullPath, Buffer.from(file.content, "base64"));
+    } else {
+      fs.writeFileSync(fullPath, file.content);
+    }
+  }
+}
+
+function listSourceTeams(sourceDir: string): string[] {
+  const agentsDir = path.join(sourceDir, "agents");
+  if (!fs.existsSync(agentsDir)) return [];
+  return fs
+    .readdirSync(agentsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
 }
 
 function findFiles(

@@ -3,11 +3,11 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
-    "PreToolUse": "bun lib/audit-hook.ts PRE",
-    "PostToolUse": "bun lib/audit-hook.ts POST"
+    "PreToolUse": "agent-team audit-hook PRE",
+    "PostToolUse": "agent-team audit-hook POST"
   },
   "permissions": {
-    "defaultMode": "manual",
+    "defaultMode": "auto",
     "deny": [
       "Bash(rm -rf*)",
       "Bash(printenv*)",
@@ -35,25 +35,33 @@
         ]
       }
     },
-    "localizer": {
+    "architect": {
       "permissions": {
-        "defaultMode": "acceptEdits",
-        "allow": ["Bash(agent-team run *)", "Bash(bun bin/init.ts run *)"]
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
+        "allow": ["Bash(agent-team plan *)", "Bash(bun bin/init.ts plan *)"]
       }
     },
-    "tech-writer": {
+    "developer": {
       "permissions": {
         "defaultMode": "acceptEdits",
-        "allow": ["Bash(agent-team run *)", "Bash(bun bin/init.ts run *)"]
+        "allow": [
+          "Bash(agent-team run *)",
+          "Bash(bun bin/init.ts run *)",
+          "Bash(git add *)",
+          "Bash(git commit *)"
+        ]
       }
     },
-    "seo-specialist": {
+    "reviewer": {
       "permissions": {
-        "defaultMode": "acceptEdits",
-        "deny": ["Bash(*)"],
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
         "allow": [
           "Bash(agent-team validate *)",
-          "Bash(bun bin/init.ts validate *)"
+          "Bash(bun bin/init.ts validate *)",
+          "Bash(git diff *)",
+          "Bash(git log *)"
         ]
       }
     },

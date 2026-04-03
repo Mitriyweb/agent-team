@@ -198,7 +198,24 @@ export function loadConfig(): ProjectConfig {
 }
 
 export function saveConfig(config: ProjectConfig) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  fs.writeFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+/**
+ * Normalize frontmatter model names (e.g. `claude-opus`) to CLI-compatible
+ * model aliases accepted by `claude --model`.
+ */
+const MODEL_ALIASES: Record<string, string> = {
+  "claude-opus": "opus",
+  "claude-opus-4-6": "opus",
+  "claude-sonnet": "sonnet",
+  "claude-sonnet-4-6": "sonnet",
+  "claude-haiku": "haiku",
+  "claude-haiku-4-5": "haiku",
+};
+
+export function resolveModelAlias(model: string): string {
+  return MODEL_ALIASES[model] || model;
 }
 
 export function printHeader() {

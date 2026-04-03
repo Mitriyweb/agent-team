@@ -75,7 +75,7 @@ describe("team.ts", () => {
         sourceDir: "/src",
       });
 
-      expect(mockMkdirSync).toHaveBeenCalledWith("agents", {
+      expect(mockMkdirSync).toHaveBeenCalledWith(".claude/agents", {
         recursive: true,
       });
       expect(mockMkdirSync).toHaveBeenCalledWith("tasks", { recursive: true });
@@ -95,7 +95,7 @@ describe("team.ts", () => {
         humanReview: true,
       });
 
-      expect(mockMkdirSync).toHaveBeenCalledWith("agents/test-team", {
+      expect(mockMkdirSync).toHaveBeenCalledWith(".claude/agents", {
         recursive: true,
       });
       expect(mockWriteFileSync).toHaveBeenCalled();

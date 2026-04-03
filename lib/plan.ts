@@ -10,9 +10,40 @@ import {
   NC,
   ok,
   RED,
+  resolveModelAlias,
   warn,
   YELLOW,
 } from "./common.ts";
+
+const AGENTS_DIR = path.join(".claude", "agents");
+
+function findTeamLeadModel(): string | undefined {
+  if (!fs.existsSync(AGENTS_DIR)) return undefined;
+  const files = findMdFiles(AGENTS_DIR);
+  for (const file of files) {
+    const content = fs.readFileSync(file, "utf-8");
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    if (!fmMatch?.[1]) continue;
+    const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+    if (!nameMatch?.[1]?.includes("team-lead")) continue;
+    const modelMatch = fmMatch[1].match(/^model:\s*(.+)$/m);
+    if (modelMatch?.[1]) return modelMatch[1].trim();
+  }
+  return undefined;
+}
+
+function findMdFiles(dir: string): string[] {
+  let results: string[] = [];
+  for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      results = results.concat(findMdFiles(full));
+    } else if (item.name.endsWith(".md")) {
+      results.push(full);
+    }
+  }
+  return results;
+}
 
 const PROMPT_DECOMPOSITION = `
 You are the team-lead of an autonomous development team.
@@ -59,13 +90,13 @@ Complete instructions for the agent.
 \`\`\`
 `;
 
-export async function planRoadmap(inputFile = "ROADMAP.md") {
+export async function planRoadmap(inputFile = "ROADMAP.md", model?: string) {
   const config = loadConfig();
 
   if (config.planner === "openspec") {
     await planWithOpenSpec(inputFile);
   } else {
-    await planWithBuiltin(inputFile);
+    await planWithBuiltin(inputFile, model);
   }
 }
 
@@ -123,7 +154,7 @@ Steps:
   }
 }
 
-async function planWithBuiltin(inputFile: string) {
+async function planWithBuiltin(inputFile: string, model?: string) {
   if (!fs.existsSync(inputFile)) {
     err(`Input file not found: ${inputFile}`);
   }
@@ -135,30 +166,64 @@ async function planWithBuiltin(inputFile: string) {
   const roadmapContent = fs.readFileSync(inputFile, "utf-8");
   const fullPrompt = `${PROMPT_DECOMPOSITION}\n\n## Task description\n\n${roadmapContent}\n\n---\n\nWrite the full plan to: ${planFile}\nAfter writing, output: PLAN_READY`;
 
-  log(`Team-lead analyzing ${BLUE}${inputFile}${NC}...`);
+  const rawModel = model || findTeamLeadModel() || "sonnet";
+  const resolvedModel = resolveModelAlias(rawModel);
+  log(
+    `Team-lead analyzing ${BLUE}${inputFile}${NC} (model: ${GREEN}${resolvedModel}${NC})...`,
+  );
   const startTime = Date.now();
 
-  const proc = Bun.spawn(
-    [
-      "claude",
-      "-p",
-      fullPrompt,
-      "--max-turns",
-      "30",
-      "--output-format",
-      "json",
-      "--allowedTools",
-      "Read,Write,Edit,Glob,Grep,Bash",
-    ],
-    {
-      stderr: "inherit",
-    },
-  );
+  const cliArgs = [
+    "claude",
+    "-p",
+    fullPrompt,
+    "--max-turns",
+    "25",
+    "--output-format",
+    "json",
+    "--model",
+    resolvedModel,
+    "--allowedTools",
+    "Read,Write,Edit,Glob,Grep,Bash",
+  ];
 
-  const response = await new Response(proc.stdout).text();
+  const proc = Bun.spawn(cliArgs, {
+    stderr: "pipe",
+  });
+
+  // Tee stderr: show in terminal + collect for logging
+  const stderrChunks: string[] = [];
+  const stderrReader = proc.stderr
+    ? (async () => {
+        const reader = proc.stderr?.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          stderrChunks.push(text);
+          process.stderr.write(text);
+        }
+      })()
+    : Promise.resolve();
+
+  const [response] = await Promise.all([
+    new Response(proc.stdout).text(),
+    stderrReader,
+  ]);
+  const stderrText = stderrChunks.join("");
   const exitCode = await proc.exited;
 
   if (exitCode !== 0) {
+    // Save log for debugging
+    const logDir = ".claude-loop/logs";
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const logFile = path.join(logDir, "plan-error.log");
+    fs.writeFileSync(
+      logFile,
+      `# Plan failed — exit code: ${exitCode}\n# ${new Date().toISOString()}\n\n## STDERR\n${stderrText}\n\n## STDOUT\n${response}\n`,
+    );
+    warn(`Error log saved to ${logFile}`);
     err("Planning failed via Claude CLI.");
   }
 

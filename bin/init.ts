@@ -7,6 +7,7 @@
 import path from "node:path";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
+import { runAuditHook } from "../lib/audit-hook.ts";
 import { err } from "../lib/common.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
@@ -49,6 +50,7 @@ async function main() {
       dryRun: args.includes("--dry-run"),
       approvePlan: args.includes("--approve-plan"),
       branch: args.includes("--branch"),
+      planFirst: args.includes("--plan"),
     };
 
     const resumeIdx = args.indexOf("--resume");
@@ -61,12 +63,17 @@ async function main() {
     const teamIdx = args.indexOf("--team");
     if (teamIdx !== -1) options.team = args[teamIdx + 1] ?? "";
 
+    const modelIdx = args.indexOf("--model");
+    if (modelIdx !== -1) options.model = args[modelIdx + 1] ?? "";
+
     const runner = new TaskRunner(options);
     await runner.run();
   } else if (command === "plan") {
     const inputFile =
       args[1] && !args[1].startsWith("-") ? args[1] : "ROADMAP.md";
-    await planRoadmap(inputFile);
+    const modelIdx = args.indexOf("--model");
+    const planModel = modelIdx !== -1 ? args[modelIdx + 1] : undefined;
+    await planRoadmap(inputFile, planModel);
   } else if (command === "new-team") {
     const nameIdx = args.indexOf("--name");
     const descIdx = args.indexOf("--description");
@@ -89,6 +96,9 @@ async function main() {
     const name = args[1];
     if (!name) err("Usage: agent-team validate NAME");
     validateTeam(name);
+  } else if (command === "audit-hook") {
+    const phase = args[1] || "PRE";
+    await runAuditHook(phase);
   } else if (command === "audit") {
     auditReport();
   } else {
@@ -98,7 +108,7 @@ async function main() {
       "  agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]",
     );
     console.log(
-      "  agent-team run [--all] [--dry-run] [--team NAME]    # Execute tasks",
+      "  agent-team run [--all] [--plan] [--dry-run] [--team NAME] [--model MODEL]  # Execute tasks",
     );
     console.log(
       "  agent-team plan [ROADMAP.md]                        # Decompose roadmap",

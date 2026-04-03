@@ -28,6 +28,12 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/.git", "!**/dist"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.git",
+      "!**/dist",
+      "!**/lib/embedded-agents.ts"
+    ]
   }
 }

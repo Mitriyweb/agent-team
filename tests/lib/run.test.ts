@@ -64,16 +64,13 @@ const ROADMAP_2_TASKS = [
 ].join("\n");
 
 describe("TaskRunner", () => {
-  it("creates log/report/session directories on construction", async () => {
+  it("creates log/report directories on construction", async () => {
     writeRoadmap(ROADMAP_2_TASKS);
     const { TaskRunner } = await import("../../lib/run.ts");
     new TaskRunner({});
 
     expect(fs.existsSync(path.join(tmpDir, ".claude-loop/logs"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".claude-loop/reports"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, ".claude-loop/sessions"))).toBe(
-      true,
-    );
   });
 
   it("dry-run marks all tasks as done without spawning claude", async () => {

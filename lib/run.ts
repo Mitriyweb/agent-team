@@ -3,6 +3,7 @@ import path from "node:path";
 import readline from "node:readline";
 import {
   BLUE,
+  CYAN,
   calculateCost,
   configureProvider,
   err,
@@ -12,6 +13,7 @@ import {
   notifyReview,
   ok,
   RED,
+  resolveModelAlias,
   warn,
   YELLOW,
 } from "./common.ts";
@@ -22,11 +24,11 @@ import {
   createPR,
   getCurrentBranch,
 } from "./git.ts";
+import { planRoadmap } from "./plan.ts";
 import { TerminalUI } from "./ui.ts";
 
 const LOG_DIR = ".claude-loop/logs";
 const REPORTS_DIR = ".claude-loop/reports";
-const SESSIONS_DIR = ".claude-loop/sessions";
 
 export interface RunOptions {
   roadmapFile?: string;
@@ -39,6 +41,22 @@ export interface RunOptions {
   team?: string;
   branch?: boolean;
   planFirst?: boolean;
+  model?: string;
+}
+
+const AGENTS_DIR = path.join(".claude", "agents");
+
+function findMdFiles(dir: string): string[] {
+  let results: string[] = [];
+  for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      results = results.concat(findMdFiles(full));
+    } else if (item.name.endsWith(".md")) {
+      results.push(full);
+    }
+  }
+  return results;
 }
 
 export class TaskRunner {
@@ -48,6 +66,7 @@ export class TaskRunner {
   private currentTaskNum = 0;
   private totalTasks = 0;
   private cumulativeCost = 0;
+  private teamLeadModel: string | undefined;
 
   constructor(options: RunOptions) {
     this.options = options;
@@ -64,10 +83,9 @@ export class TaskRunner {
     if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
     if (!fs.existsSync(REPORTS_DIR))
       fs.mkdirSync(REPORTS_DIR, { recursive: true });
-    if (!fs.existsSync(SESSIONS_DIR))
-      fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
     this.loadCumulativeCost();
+    this.resolveTeamLeadModel();
   }
 
   private loadCumulativeCost() {
@@ -78,6 +96,30 @@ export class TaskRunner {
         this.cumulativeCost = data.total_cost || 0;
       } catch (_e) {
         this.cumulativeCost = 0;
+      }
+    }
+  }
+
+  private resolveTeamLeadModel() {
+    if (this.options.model) {
+      this.teamLeadModel = resolveModelAlias(this.options.model);
+      return;
+    }
+    // Find team-lead agent in .claude/agents/ and read model from frontmatter
+    const files = fs.existsSync(AGENTS_DIR) ? findMdFiles(AGENTS_DIR) : [];
+    for (const file of files) {
+      const content = fs.readFileSync(file, "utf-8");
+      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!fmMatch?.[1]) continue;
+      const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+      if (!nameMatch?.[1]?.includes("team-lead")) continue;
+      const modelMatch = fmMatch[1].match(/^model:\s*(.+)$/m);
+      if (modelMatch?.[1]) {
+        this.teamLeadModel = resolveModelAlias(modelMatch[1].trim());
+        log(
+          `Team-lead model: ${GREEN}${this.teamLeadModel}${NC} (from ${path.basename(file)})`,
+        );
+        return;
       }
     }
   }
@@ -207,7 +249,25 @@ export class TaskRunner {
 
     if (this.options.dryRun) warn(`${YELLOW}[DRY RUN MODE]${NC}`);
 
-    const allTasks = this.getRoadmapTasks();
+    let allTasks = this.getRoadmapTasks();
+
+    // Auto-plan if --plan flag is set or no structured tasks found
+    if (
+      allTasks.length === 0 &&
+      (this.options.planFirst || fs.existsSync("ROADMAP.md"))
+    ) {
+      const roadmapExists = fs.existsSync("ROADMAP.md");
+      if (roadmapExists) {
+        log("No structured tasks found. Running planner on ROADMAP.md...");
+        await planRoadmap("ROADMAP.md");
+        // Reload roadmap source after planning
+        if (fs.existsSync("tasks/plan.md")) {
+          this.roadmap = "tasks/plan.md";
+        }
+        allTasks = this.getRoadmapTasks();
+      }
+    }
+
     this.totalTasks = allTasks.length;
 
     if (this.totalTasks === 0) {
@@ -255,8 +315,14 @@ export class TaskRunner {
     log("Loop finished.");
   }
 
+  private getTaskAgents(line: string): string[] {
+    const match = line.match(/agents:([\w,-]+)/);
+    return match?.[1] ? match[1].split(",") : [];
+  }
+
   private async runTask(taskLine: string): Promise<boolean> {
     const taskId = this.getTaskId(taskLine);
+    const agents = this.getTaskAgents(taskLine);
     const desc = taskLine
       .replace(/^- \[.\] id:\d+\s+/, "")
       .replace(/priority:\w+\s+/, "")
@@ -264,6 +330,13 @@ export class TaskRunner {
       .replace(/depends:[\d,]+\s+/, "")
       .replace(/agents:[a-z,-]+\s+/, "")
       .trim();
+
+    const agentsLabel = agents.length > 0 ? agents.join(", ") : "team-lead";
+    const modelLabel = this.teamLeadModel || "default";
+
+    log(
+      `Task ${BLUE}#${taskId}${NC} → ${CYAN}${agentsLabel}${NC} (model: ${GREEN}${modelLabel}${NC}) — ${desc}`,
+    );
 
     if (this.options.budget && this.cumulativeCost >= this.options.budget) {
       err(
@@ -315,7 +388,7 @@ export class TaskRunner {
       }, 1000);
 
       try {
-        const proc = Bun.spawn([
+        const cliArgs = [
           "claude",
           "-p",
           prompt,
@@ -325,13 +398,41 @@ export class TaskRunner {
           "json",
           "--allowedTools",
           "Read,Write,Edit,Bash,Glob,Grep,Task,Teammate",
-        ]);
+        ];
+        if (this.teamLeadModel) {
+          cliArgs.push("--model", this.teamLeadModel);
+        }
+        const proc = Bun.spawn(cliArgs, {
+          stderr: "pipe",
+        });
 
-        const stdoutBuffer = await new Response(proc.stdout).text();
+        // Tee stderr: show in terminal + collect for logging
+        const stderrChunks: string[] = [];
+        const stderrReader = proc.stderr
+          ? (async () => {
+              const reader = proc.stderr?.getReader();
+              const decoder = new TextDecoder();
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const text = decoder.decode(value);
+                stderrChunks.push(text);
+                process.stderr.write(text);
+              }
+            })()
+          : Promise.resolve();
+
+        const [stdoutBuffer] = await Promise.all([
+          new Response(proc.stdout).text(),
+          stderrReader,
+        ]);
+        const stderrBuffer = stderrChunks.join("");
         const exitCode = await proc.exited;
         clearInterval(timer);
         this.ui.stopProgressBar();
 
+        // Save task log
+        this.saveTaskLog(taskId, exitCode, stdoutBuffer, stderrBuffer);
         this.trackCost(taskId, stdoutBuffer);
 
         if (
@@ -384,6 +485,37 @@ export class TaskRunner {
     this.markStatus(taskId, "~", "!");
     if (this.options.branch && originalBranch) checkout(originalBranch);
     return false;
+  }
+
+  private saveTaskLog(
+    taskId: string,
+    exitCode: number,
+    stdout: string,
+    stderr: string,
+  ) {
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const logFile = path.join(LOG_DIR, `task-${taskId}-${ts}.log`);
+    const header = `# Task #${taskId} — exit code: ${exitCode}\n# ${new Date().toISOString()}\n\n`;
+    let body = "";
+    if (stderr.trim()) {
+      body += `## STDERR\n${stderr}\n\n`;
+    }
+    // For JSON output, try to extract the text result
+    try {
+      const parsed = JSON.parse(stdout);
+      if (parsed.result) {
+        body += `## RESULT\n${typeof parsed.result === "string" ? parsed.result : JSON.stringify(parsed.result, null, 2)}\n`;
+      }
+      if (parsed.usage) {
+        body += `\n## USAGE\n${JSON.stringify(parsed.usage, null, 2)}\n`;
+      }
+      if (parsed.model) {
+        body += `\n## MODEL\n${parsed.model}\n`;
+      }
+    } catch {
+      body += `## STDOUT\n${stdout}\n`;
+    }
+    fs.writeFileSync(logFile, header + body);
   }
 
   private trackCost(taskId: string, stdoutBuffer: string) {
@@ -448,6 +580,16 @@ export class TaskRunner {
   private buildPrompt(taskId: string, desc: string, spec: string): string {
     const team = this.options.team || "software development";
     const REPORTS_DIR_VAL = REPORTS_DIR;
+
+    // Inject shared memory so each task sees what previous tasks learned
+    let memorySection = "";
+    if (fs.existsSync("MEMORY.md")) {
+      const memory = fs.readFileSync("MEMORY.md", "utf-8").trim();
+      if (memory && memory !== "# Project Memory") {
+        memorySection = `\n## Shared memory (from previous tasks)\n${memory}\n`;
+      }
+    }
+
     return `
 You are the ${team}-lead autonomous agent lead executing a task from the project roadmap.
 
@@ -455,12 +597,12 @@ TASK #${taskId}: ${desc}
 
 ## Detailed specification
 ${spec}
-
+${memorySection}
 Instructions:
 1. Read the specification carefully.
 2. Explore the codebase to understand the state.
 3. Coordinate as necessary per PROTOCOL.md.
-4. Update MEMORY.md with important shared knowledge.
+4. Update MEMORY.md with important shared knowledge for subsequent tasks.
 5. Produce the EXACT deliverables.
 6. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md.
 

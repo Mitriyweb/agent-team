@@ -1,13 +1,16 @@
 {
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1"
   },
+  "plugins": ["playwright@claude-plugins-official"],
   "hooks": {
-    "PreToolUse": "bun lib/audit-hook.ts PRE",
-    "PostToolUse": "bun lib/audit-hook.ts POST"
+    "PreToolUse": "agent-team audit-hook PRE",
+    "PostToolUse": "agent-team audit-hook POST"
   },
   "permissions": {
-    "defaultMode": "manual",
+    "defaultMode": "auto",
+    "allow": ["Bash(npx playwright*)"],
     "deny": [
       "Bash(rm -rf*)",
       "Bash(printenv*)",
@@ -31,6 +34,7 @@
         "allow": [
           "Bash(agent-team *)",
           "Bash(bun bin/init.ts *)",
+          "Bash(npx playwright*)",
           "Bash(git *)"
         ]
       }
@@ -48,6 +52,7 @@
         "allow": [
           "Bash(agent-team run *)",
           "Bash(bun bin/init.ts run *)",
+          "Bash(npx playwright*)",
           "Bash(git add *)",
           "Bash(git commit *)"
         ]
@@ -72,6 +77,7 @@
         "allow": [
           "Bash(agent-team run --dry-run*)",
           "Bash(bun bin/init.ts run --dry-run*)",
+          "Bash(npx playwright*)",
           "Bash(bun test*)",
           "Bash(npm test*)"
         ]
