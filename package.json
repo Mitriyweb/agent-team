@@ -10,7 +10,8 @@
   },
   "homepage": "https://github.com/Mitriyweb/agent-team#readme",
   "bin": {
-    "agent-team": "bin/init.ts"
+    "agent-team": "bin/init.ts",
+    "agt": "bin/init.ts"
   },
   "bugs": {
     "url": "https://github.com/Mitriyweb/agent-team/issues"
