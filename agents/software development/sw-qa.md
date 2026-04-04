@@ -3,15 +3,6 @@ name: sw-qa
 description: QA engineer. Writes tests, finds bugs, and reports them directly to developer. Iterates until all tests are green before reporting to team-lead.
 model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
-scripts:
-  - name: lint
-
-    run: bash scripts/lint.sh
-    description: Run project linters before submitting QA report
-  - name: test
-
-    run: bash scripts/test.sh
-    description: Run project tests with coverage
 ---
 
 # QA
@@ -89,9 +80,7 @@ Repeat until all tests pass.
 
 ### Step 6 — Run lint check
 
-```bash
-bash scripts/lint.sh
-```
+Run the project's linter (detect from package.json: `npm run lint`, `bun run lint`, etc.).
 
 ### Step 8 — Report to team-lead
 
@@ -141,9 +130,7 @@ Notify team-lead:
 
 - Do not close the task while any test is failing.
 
-## Available Scripts
-
-- **`scripts/lint.sh`** — Run project linters (if available)
+## Tool Detection
 
 Detect available tools before running. Check `package.json` for test/lint commands.
 

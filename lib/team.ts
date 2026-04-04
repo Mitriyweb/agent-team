@@ -161,7 +161,7 @@ export async function initProject(options: InitProjectOptions) {
     }
     ok("Created MEMORY.md");
   }
-  if (!fs.existsSync("ROADMAP.md")) {
+  if (planner !== "openspec" && !fs.existsSync("ROADMAP.md")) {
     fs.writeFileSync("ROADMAP.md", "# Project Roadmap\n");
     ok("Created empty ROADMAP.md");
   }
@@ -283,8 +283,147 @@ export async function initProject(options: InitProjectOptions) {
     }
   }
 
+  // Generate CLAUDE.md with agent-team context
+  generateClaudeMd(teamName);
+
   ok("Project initialized successfully.");
   log(`Run ${BLUE}agent-team run --plan --all${NC} to start.`);
+}
+
+const CLAUDE_MD_START = "<!-- agent-team:start -->";
+const CLAUDE_MD_END = "<!-- agent-team:end -->";
+
+function generateClaudeMd(teamName?: string) {
+  const claudeMdPath = "CLAUDE.md";
+
+  // Read installed agents and protocol
+  const agents: { name: string; description: string }[] = [];
+  let protocolContent = "";
+  if (fs.existsSync(CLAUDE_AGENTS_DIR)) {
+    for (const file of fs.readdirSync(CLAUDE_AGENTS_DIR)) {
+      if (!file.endsWith(".md")) continue;
+      const fullPath = path.join(CLAUDE_AGENTS_DIR, file);
+      const content = fs.readFileSync(fullPath, "utf-8");
+      if (file.endsWith("PROTOCOL.md")) {
+        protocolContent = content;
+        continue;
+      }
+      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!fmMatch?.[1]) continue;
+      const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+      const descMatch = fmMatch[1].match(/^description:\s*(.+)$/m);
+      if (nameMatch?.[1]) {
+        agents.push({
+          name: nameMatch[1].trim(),
+          description: descMatch?.[1]?.trim() || "",
+        });
+      }
+    }
+  }
+
+  const teamLabel = teamName || "development";
+  const agentList = agents
+    .map((a) => `- **${a.name}**: ${a.description}`)
+    .join("\n");
+
+  // Extract key sections from protocol
+  let protocolSection = "";
+  if (protocolContent) {
+    protocolSection = extractProtocolSections(protocolContent);
+  }
+
+  const block = `${CLAUDE_MD_START}
+# Agent Team: ${teamLabel}
+
+## Team agents
+
+${agentList || "No agents installed."}
+${protocolSection}
+## Shared memory
+
+Read MEMORY.md before starting any task — it contains decisions and context from previous tasks.
+After completing work, append findings to MEMORY.md using format: \`## Task #N: Title\`
+
+## Reports
+
+- Task reports: .claude-loop/reports/task-{id}.md
+- Task logs: .claude-loop/logs/
+- Audit trail: .claude-loop/audit/audit.jsonl
+
+## Commands
+
+- \`agent-team run --all\` — execute all pending tasks
+- \`agent-team plan [FILE]\` — decompose a roadmap into tasks
+- \`agent-team audit\` — show audit report
+${CLAUDE_MD_END}`;
+
+  function extractProtocolSections(protocol: string): string {
+    // Split protocol into sections by ## headers
+    const sections = new Map<string, string>();
+    const lines = protocol.split("\n");
+    let currentHeader = "";
+    let currentBody: string[] = [];
+
+    for (const line of lines) {
+      const headerMatch = line.match(/^## (.+)/);
+      if (headerMatch?.[1]) {
+        if (currentHeader) {
+          sections.set(currentHeader, currentBody.join("\n").trim());
+        }
+        currentHeader = headerMatch[1];
+        currentBody = [];
+      } else {
+        currentBody.push(line);
+      }
+    }
+    if (currentHeader) {
+      sections.set(currentHeader, currentBody.join("\n").trim());
+    }
+
+    let result = "";
+
+    // Include Communication Graph with bullet explanations
+    const graph = sections.get("Communication Graph");
+    if (graph) {
+      result += `\n## Communication Graph\n\n${graph}\n`;
+    }
+
+    // Include Message Types
+    const messages = sections.get("Message Types");
+    if (messages) {
+      result += `\n## Message Types\n\n${messages}\n`;
+    }
+
+    // Include Handoff Summary
+    const handoff = sections.get("Handoff Summary");
+    if (handoff) {
+      result += `\n## Handoff Summary\n\n${handoff}\n`;
+    }
+
+    // Include Tool Detection
+    const tools = sections.get("Tool Detection");
+    if (tools) {
+      result += `\n## Tool Detection\n\n${tools}\n`;
+    }
+
+    return result;
+  }
+
+  if (fs.existsSync(claudeMdPath)) {
+    const existing = fs.readFileSync(claudeMdPath, "utf-8");
+    if (existing.includes(CLAUDE_MD_START)) {
+      // Replace existing managed block
+      const regex = new RegExp(`${CLAUDE_MD_START}[\\s\\S]*?${CLAUDE_MD_END}`);
+      fs.writeFileSync(claudeMdPath, existing.replace(regex, block));
+    } else {
+      // Append managed block
+      const separator = existing.endsWith("\n") ? "\n" : "\n\n";
+      fs.appendFileSync(claudeMdPath, `${separator}${block}\n`);
+    }
+  } else {
+    fs.writeFileSync(claudeMdPath, `${block}\n`);
+  }
+  ok("Updated CLAUDE.md with agent-team context");
 }
 
 export function validateTeam(_name: string) {
@@ -367,132 +506,117 @@ function copyTeamFlat(srcTeamDir: string, targetDir: string) {
 
 export async function updateProject(options: { sourceDir?: string }) {
   const { sourceDir = "." } = options;
-  log("Updating agent-team project configuration...");
+  log("Updating agent-team project...");
 
-  // 1. Update .gitignore
-  const gitignoreEntries = [
-    "# Agent team artifacts",
-    ".claude-loop/",
-    "tasks/",
-    ".agents/",
-    "*.log",
-    ".DS_Store",
-    "settings.local.json",
-  ];
-  const gitignorePath = ".gitignore";
-  if (fs.existsSync(gitignorePath)) {
-    const existingGitignore = fs.readFileSync(gitignorePath, "utf-8");
-    const existingLines = new Set(existingGitignore.split("\n"));
-    const newEntries = gitignoreEntries.filter((e) => !existingLines.has(e));
-    if (newEntries.length > 0) {
-      fs.appendFileSync(gitignorePath, `\n${newEntries.join("\n")}\n`);
-      ok("Updated .gitignore");
+  const config = loadConfig();
+  const teamName = config.team;
+
+  // 1. Re-deploy team agents from source/embedded
+  if (teamName) {
+    if (!fs.existsSync(CLAUDE_AGENTS_DIR))
+      fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+
+    const srcTeamDir = path.join(sourceDir, "agents", teamName);
+    if (fs.existsSync(srcTeamDir)) {
+      copyTeamFlat(srcTeamDir, CLAUDE_AGENTS_DIR);
+      ok(`Updated agents from source: ${teamName}`);
+    } else if (EMBEDDED_TEAMS[teamName]) {
+      extractEmbeddedTeam(teamName, CLAUDE_AGENTS_DIR);
+      ok(`Updated agents from bundle: ${teamName}`);
     }
   }
 
   // 2. Refresh .claude/settings.json
-  const config = loadConfig();
-  const teamName = config.team;
   if (!fs.existsSync(".claude")) fs.mkdirSync(".claude", { recursive: true });
   const targetSettings = path.join(".claude", "settings.json");
-
-  let settingsSource = "";
-  if (
-    teamName &&
-    fs.existsSync(
-      path.join(sourceDir, "agents", teamName, "claude/settings.json"),
-    )
-  ) {
-    settingsSource = path.join(
-      sourceDir,
-      "agents",
-      teamName,
-      "claude/settings.json",
-    );
+  const agentSettings = path.join(CLAUDE_AGENTS_DIR, "settings.json");
+  if (fs.existsSync(agentSettings)) {
+    fs.copyFileSync(agentSettings, targetSettings);
+    fs.rmSync(agentSettings);
+    ok("Refreshed .claude/settings.json");
   }
 
-  if (settingsSource) {
-    fs.copyFileSync(settingsSource, targetSettings);
-    ok(`Refreshed team-specific Claude settings for ${teamName}`);
-  } else {
-    fs.writeFileSync(targetSettings, JSON.stringify(DEFAULT_SETTINGS, null, 2));
-    ok("Refreshed default Claude settings");
-  }
-
-  // 3. Re-apply documentation fixes
-  log("Refreshing project documentation...");
-  const mdFiles = findFiles(".", 3, ".md");
+  // 3. Fix legacy references in agent docs
+  const mdFiles = findFiles(CLAUDE_AGENTS_DIR, 4, ".md");
   for (const file of mdFiles) {
-    if (file.startsWith("agents/")) {
-      const content = fs.readFileSync(file, "utf-8");
-      const original = content;
-      const newContent = content
-        .replace(/\.\/scripts\/run\.sh/g, "agent-team run")
-        .replace(/\.\/scripts\/plan\.sh/g, "agent-team plan")
-        .replace(/plan\.sh /g, "agent-team plan ")
-        .replace(/run\.sh /g, "agent-team run ")
-        .replace(/`plan\.sh`/g, "`agent-team plan`")
-        .replace(/`run\.sh`/g, "`agent-team run`")
-        .replace(/_common\.sh/g, "lib/common.ts");
-
-      if (newContent !== original) {
-        fs.writeFileSync(file, newContent);
-      }
+    const content = fs.readFileSync(file, "utf-8");
+    const original = content;
+    const newContent = content
+      .replace(/\.\/scripts\/run\.sh/g, "agent-team run")
+      .replace(/\.\/scripts\/plan\.sh/g, "agent-team plan")
+      .replace(/plan\.sh /g, "agent-team plan ")
+      .replace(/run\.sh /g, "agent-team run ")
+      .replace(/`plan\.sh`/g, "`agent-team plan`")
+      .replace(/`run\.sh`/g, "`agent-team run`")
+      .replace(/_common\.sh/g, "lib/common.ts");
+    if (newContent !== original) {
+      fs.writeFileSync(file, newContent);
     }
   }
 
-  ok("Project configuration updated successfully.");
+  // 4. Regenerate CLAUDE.md
+  generateClaudeMd(teamName);
+
+  ok("Project updated successfully.");
 }
 
 export async function reconfigureProject(options: { sourceDir?: string }) {
   const { sourceDir = "." } = options;
-  log("Reconfiguring agent-team skills and workflows...");
+  log("Reconfiguring agent-team skills...");
 
-  // 1. Refresh global workflows
-  const srcWorkflowsDir = path.join(sourceDir, ".agents", "workflows");
-  if (fs.existsSync(srcWorkflowsDir)) {
-    const targetWorkflowsDir = path.join(".agents", "workflows");
-    if (!fs.existsSync(targetWorkflowsDir))
-      fs.mkdirSync(targetWorkflowsDir, { recursive: true });
-    copyRecursiveSync(srcWorkflowsDir, targetWorkflowsDir);
-    ok("Updated global workflows");
-  }
-
-  // 2. Identify teams and update skills/scripts
   const config = loadConfig();
-  const teams: string[] = [];
-
-  if (config.team) {
-    teams.push(config.team);
-  } else if (fs.existsSync("agents")) {
-    const entries = fs.readdirSync("agents", { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        teams.push(entry.name);
-      }
-    }
+  const teamName = config.team;
+  if (!teamName) {
+    warn("No team configured. Run agent-team init --team NAME first.");
+    return;
   }
 
-  for (const team of teams) {
-    const srcTeamDir = path.join(sourceDir, "agents", team);
-    const targetTeamDir = path.join("agents", team);
+  // Update skills and scripts from source
+  const srcTeamDir = path.join(sourceDir, "agents", teamName);
+  if (!fs.existsSync(srcTeamDir) && !EMBEDDED_TEAMS[teamName]) {
+    warn(`Team source not found: ${teamName}`);
+    return;
+  }
 
-    if (fs.existsSync(srcTeamDir) && fs.existsSync(targetTeamDir)) {
-      log(`Updating skills for team: ${team}`);
+  const targetSkills = path.join(CLAUDE_AGENTS_DIR, "skills");
+  const targetScripts = path.join(CLAUDE_AGENTS_DIR, "scripts");
 
-      const subdirs = ["skills", "scripts", "claude"];
-      for (const subdir of subdirs) {
-        const srcSubdir = path.join(srcTeamDir, subdir);
-        const targetSubdir = path.join(targetTeamDir, subdir);
-
-        if (fs.existsSync(srcSubdir)) {
-          if (!fs.existsSync(targetSubdir))
-            fs.mkdirSync(targetSubdir, { recursive: true });
-          copyRecursiveSync(srcSubdir, targetSubdir);
-          ok(`Updated ${team}/${subdir}`);
-        }
+  if (fs.existsSync(srcTeamDir)) {
+    // From source dir
+    const srcSkills = path.join(srcTeamDir, "skills");
+    const srcScripts = path.join(srcTeamDir, "scripts");
+    if (fs.existsSync(srcSkills)) {
+      if (!fs.existsSync(targetSkills))
+        fs.mkdirSync(targetSkills, { recursive: true });
+      copyRecursiveSync(srcSkills, targetSkills);
+      ok("Updated skills");
+    }
+    if (fs.existsSync(srcScripts)) {
+      if (!fs.existsSync(targetScripts))
+        fs.mkdirSync(targetScripts, { recursive: true });
+      copyRecursiveSync(srcScripts, targetScripts);
+      ok("Updated scripts");
+    }
+  } else if (EMBEDDED_TEAMS[teamName]) {
+    // From embedded bundle — extract only skills/ and scripts/
+    const prefix = `${teamName}/`;
+    const files = EMBEDDED_TEAMS[teamName];
+    for (const [relPath, file] of Object.entries(files)) {
+      const stripped = relPath.startsWith(prefix)
+        ? relPath.slice(prefix.length)
+        : relPath;
+      if (!stripped.startsWith("skills/") && !stripped.startsWith("scripts/"))
+        continue;
+      const fullPath = path.join(CLAUDE_AGENTS_DIR, stripped);
+      const dir = path.dirname(fullPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      if (file.isBinary) {
+        fs.writeFileSync(fullPath, Buffer.from(file.content, "base64"));
+      } else {
+        fs.writeFileSync(fullPath, file.content);
       }
     }
+    ok("Updated skills and scripts from bundle");
   }
 
   ok("Project reconfigured successfully.");

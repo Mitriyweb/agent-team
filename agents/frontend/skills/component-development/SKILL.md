@@ -33,7 +33,7 @@ Your goal is to implement solutions that feel fluid, responsive, and extremely p
 
 ## Phase 4: Quality & Delivery
 
-1. **Accessibility (WCAG 2.1 AA)**: Strictly verify that all aesthetic effects maintain accessibility using `scripts/validate_a11y.sh`.
+1. **Accessibility (WCAG 2.1 AA)**: Strictly verify that all aesthetic effects maintain accessibility (run axe-core or equivalent).
 2. **Performance**: Ensure animations are 60fps (GPU accelerated) and code is lean.
 3. **Validation**: Compare implementation visually against the Architect's spec for "WOW" factor.
 

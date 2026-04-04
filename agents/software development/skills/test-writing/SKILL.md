@@ -12,13 +12,13 @@ metadata:
 
 1. Receive the implementation from the developer.
 2. Write appropriate tests to verify the changes.
-3. Run the full test suite using `scripts/run_tests.sh`.
+3. Run the full test suite (detect from package.json: `npm test`, `bun test`, etc.).
 4. Report failures back to the developer with detailed logs.
 5. Iterate until all tests pass and the implementation is green.
 
 ## Gotchas
 
-- Bats tests in `tests/scripts/` must not require an API key or Docker.
+- Tests must not require an API key or Docker unless explicitly specified.
 
 ## Validation loop
 

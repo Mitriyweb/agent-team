@@ -9,6 +9,7 @@ import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
 import { err } from "../lib/common.ts";
+import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
 import {
@@ -98,9 +99,16 @@ async function main() {
       roles: args[rolesIdx + 1] ?? "",
       humanReview: !noHumanReview,
     });
+  } else if (command === "import") {
+    const source = args[1];
+    if (!source)
+      err(
+        "Usage: agent-team import <path>\n  e.g. agent-team import .windsurf",
+      );
+    await importConfig(source);
   } else if (command === "update") {
     await updateProject({ sourceDir });
-  } else if (command === "reconfigurate") {
+  } else if (command === "reconfigure") {
     await reconfigureProject({ sourceDir });
   } else if (command === "validate") {
     const name = args[1];
@@ -112,28 +120,52 @@ async function main() {
   } else if (command === "audit") {
     auditReport();
   } else {
-    console.log("Claude Code Agent Team (Self-Contained TS Architecture)");
+    console.log("Claude Code Agent Team");
+    console.log("");
     console.log("Usage:");
+    console.log("");
+    console.log("  Setup:");
     console.log(
-      "  agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]",
+      "    agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]",
     );
     console.log(
-      "  agent-team run [--all] [--plan] [--dry-run] [--team NAME] [--model MODEL]  # Execute tasks",
+      "    agent-team update                                    Update project configs",
     );
     console.log(
-      "  agent-team plan [ROADMAP.md]                        # Decompose roadmap",
+      "    agent-team reconfigure                               Update skills & workflows",
     );
     console.log(
-      "  agent-team new-team --name NAME --description DESC  # Create custom team",
+      "    agent-team import <path>                             Import rules from .windsurf, .cursor, .github",
+    );
+    console.log("");
+    console.log("  Execution:");
+    console.log(
+      "    agent-team run [--all] [--plan] [--dry-run]          Execute tasks",
+    );
+    console.log("                  [--team NAME] [--model MODEL]");
+    console.log("                  [--budget N] [--resume ID] [--branch]");
+    console.log(
+      "    agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks",
+    );
+    console.log("");
+    console.log("  Teams:");
+    console.log(
+      "    agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2",
     );
     console.log(
-      "  agent-team validate NAME                             # Validate team structure",
+      "    agent-team validate NAME                             Validate team structure",
+    );
+    console.log("");
+    console.log("  Monitoring:");
+    console.log(
+      "    agent-team audit                                     Show audit report",
+    );
+    console.log("");
+    console.log(
+      "    agent-team -v, --version                             Show version",
     );
     console.log(
-      "  agent-team audit                                     # Show audit report",
-    );
-    console.log(
-      "  agent-team -h, --help                               # Show this help",
+      "    agent-team -h, --help                                Show this help",
     );
     process.exit(0);
   }

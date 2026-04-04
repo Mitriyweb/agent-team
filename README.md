@@ -1,30 +1,30 @@
 # Claude Code Agent Team
 
 Autonomous development team powered by Claude Code.
-Drop this into any project, add your API key, and let the agents work through your roadmap.
+Drop this into any project and let the agents work through your roadmap.
 
 **Software Development**
 
-```
-team-lead ──► architect ◄──► developer ◄──► qa
-                                  │             └──► aqa
-                              reviewer
-```
-
-**Localization**
-
-```
-team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
-                  ▲                               │
-                  └────── seo-specialist ◄─────────┘
+```text
+team-lead ──► architect ◄──► developer ◄──► reviewer
+                                 ▲               │ approved
+                                 └── qa ◄──► aqa ◄┘
 ```
 
 **Frontend**
 
+```text
+team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-reviewer
+                                   ▲               │ approved
+                                   └── fe-qa ◄──► fe-aqa ◄┘
 ```
-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
-                                  │       └──► fe-aqa
-                          fe-reviewer
+
+**Localization**
+
+```text
+team-lead ──► tech-writer ◄──► localizer(s) ◄──► qa
+                  ▲                               │
+                  └────── seo-specialist ◄─────────┘
 ```
 
 ## Installation
@@ -48,7 +48,6 @@ npx @mitriyweb/agent-team init --team frontend
 ```bash
 git clone https://github.com/Mitriyweb/agent-team.git
 cd agent-team && bun install && bun run build
-# Link binary
 ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team
 ```
 
@@ -56,268 +55,223 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team
 
 ## Quickstart
 
-Initialize a project with a specific agent team:
-
 ```bash
-# Initialize with the frontend team
-agent-team init --team frontend
-
-# Initialize with the software development team
+# Initialize with a team
 agent-team init --team "software development"
+agent-team init --team frontend
+agent-team init --team localization
 
-# Initialize without human review checkpoints
+# Without human review checkpoints (auto mode)
 agent-team init --team frontend --no-human-review
 
-# Initialize with OpenSpec planner (default: builtin)
+# With OpenSpec planner
 agent-team init --team "software development" --planner openspec
+
+# Import rules from another tool
+agent-team import .windsurf
+agent-team import .cursor
+agent-team import .github
 ```
 
 This will:
 
-- Copy agent definitions to `agents/<team>/`
-- Create a template `ROADMAP.md` and `MEMORY.md`
-- Update `.gitignore` with agent-team artifacts
-- Configure `autoMode` in `.claude/settings.json` (with `--no-human-review`)
+- Deploy agent definitions to `.claude/agents/` (flat layout)
+- Generate `CLAUDE.md` with team context (managed block)
+- Create `MEMORY.md` for shared knowledge across tasks
+- Create `ROADMAP.md` (builtin planner) or init OpenSpec
+- Configure `.claude/settings.json` with team profiles
 - Save project config to `agent-team.json`
-- If `--planner openspec`: initialize OpenSpec in the project
-
-> **Tip:** If `--no-human-review` is used, Claude's `autoMode` will be enabled by default for the project.
 
 Then run:
 
 ```bash
-agent-team run          # execute one task (highest priority)
-agent-team run --all    # execute all tasks in sequence
-agent-team run --dry-run  # preview without running
+agent-team run --all     # execute all tasks in sequence
+agent-team run           # execute one task (highest priority)
+agent-team run --dry-run # preview without running
+```
+
+## CLI Commands
+
+```text
+Setup:
+  agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]
+  agent-team update                                    Update project configs
+  agent-team reconfigure                               Update skills & workflows
+  agent-team import <path>                             Import rules from .windsurf, .cursor, .github
+
+Execution:
+  agent-team run [--all] [--plan] [--dry-run]          Execute tasks
+                 [--team NAME] [--model MODEL]
+                 [--budget N] [--resume ID] [--branch]
+  agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks
+
+Teams:
+  agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2
+  agent-team validate NAME                             Validate team structure
+
+Monitoring:
+  agent-team audit                                     Show audit report
+
+  agent-team -v, --version                             Show version
+  agent-team -h, --help                                Show this help
 ```
 
 ## Planning
 
-The agent team supports two planners, configured during `init` via `--planner`:
-
 ### Built-in planner (default)
 
-The autonomous work of the agent team is driven by the `ROADMAP.md` file located in the root of your project.
+Driven by `ROADMAP.md` in the project root.
 
-1. **Define Tasks**: Create a `ROADMAP.md` and add tasks using markdown checklists (`- [ ]`).
-2. **Orchestration**: The `team-lead` agent parses the roadmap, selects the highest priority
-   pending task, decomposes it into subtasks, and assigns them to the appropriate agents.
-3. **Dependencies**: You can specify dependencies (`depends:001`) to ensure tasks are executed in strict order.
+1. Create a `ROADMAP.md` with your requirements
+2. Run `agent-team plan` — team-lead decomposes it into `tasks/plan.md`
+3. Run `agent-team run --all` — executes tasks by priority and dependencies
 
-   ```markdown
-   - [ ] id:001 priority:high type:feature agents:architect,developer Implement login API
-   ```
+Task format:
 
-4. **Reference**: For a complete reference on task fields and statuses, see [docs/task-format.md](docs/task-format.md).
+```markdown
+- [ ] id:1 priority:high type:feature agents:architect,developer Implement login API
+- [ ] id:2 priority:high type:feature agents:developer,qa depends:1 Write login tests
+```
 
 ### OpenSpec planner
 
-[OpenSpec](https://github.com/Fission-AI/OpenSpec) is a spec-driven development framework that separates planning from execution.
+[OpenSpec](https://github.com/Fission-AI/OpenSpec) separates planning from execution.
 
 ```bash
-# Enable during init
 agent-team init --team "software development" --planner openspec
-
-# Plan creates an OpenSpec proposal instead of tasks/plan.md
 agent-team plan
 ```
 
-When using OpenSpec, `agent-team plan` creates a structured proposal in `openspec/changes/` with:
+Creates a structured proposal in `openspec/changes/` with `proposal.md`, `design.md`, `tasks.md`.
+Tasks are automatically converted to agent-team format in `tasks/plan.md`.
 
-- `proposal.md` — what to build and why
-- `design.md` — architectural decisions
-- `tasks.md` — broken-down implementation tasks
+Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`).
 
-Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`). The planner choice is stored in `agent-team.json`.
+## Project Structure After Init
 
-## Requirements
+```text
+your-project/
+├── CLAUDE.md                    # Project instructions (with agent-team managed block)
+├── MEMORY.md                    # Shared knowledge across tasks
+├── ROADMAP.md                   # Task descriptions (builtin planner)
+├── agent-team.json              # Project config (planner, team name)
+├── .claude/
+│   ├── settings.json            # Permissions, profiles, hooks
+│   └── agents/
+│       ├── sw-team-lead.md      # Agent definitions (flat layout)
+│       ├── sw-architect.md
+│       ├── sw-developer.md
+│       ├── sw-reviewer.md
+│       ├── sw-qa.md
+│       ├── sw-PROTOCOL.md       # Communication protocol
+│       ├── team-lead/
+│       │   └── CLAUDE.md        # Subagent context
+│       ├── architect/
+│       │   └── CLAUDE.md
+│       └── skills/              # Agent skills and references
+├── tasks/
+│   └── plan.md                  # Decomposed task plan
+└── .claude-loop/
+    ├── logs/                    # Task execution logs
+    ├── reports/                 # Task completion reports
+    └── audit/                   # Tool call audit trail
+```
 
-| Tool | Required | Install |
-|------|----------|---------|
-| Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` or [claude.ai/download](https://claude.ai/download) |
-| API key | **yes** | Anthropic key or Azure APIM subscription key (see `.env.example`) |
-| Docker | no | [docker.com](https://docker.com) *(for local model via Ollama)* |
-| tmux | no | `brew install tmux` / `apt install tmux` *(for multi-agent view)* |
-| Bun / npm | no | [bun.sh](https://bun.sh) *(only for dev tooling: biome, markdownlint, pre-commit hooks)* |
-| OpenSpec | no | `npm i -g @fission-ai/openspec` *(only if `--planner openspec`)* |
+## Importing Rules
 
-## CLI Commands
+Import rules and workflows from other AI coding tools:
 
 ```bash
-agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]
-agent-team run [--all] [--dry-run] [--team NAME] [--budget N]
-agent-team plan [ROADMAP.md]
-agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2
-agent-team validate NAME
-agent-team audit
-agent-team -v, --version
+agent-team import .windsurf     # Windsurf rules (rules/*.md + .windsurfrules)
+agent-team import .cursor       # Cursor rules (rules/*.mdc + .cursorrules)
+agent-team import .github       # GitHub Copilot (copilot-instructions.md)
+agent-team import .claude       # Another Claude project (CLAUDE.md + rules/)
+agent-team import /path/to/project  # Auto-detect from project root
 ```
 
-## Repository Structure
+Always-on rules are added to `CLAUDE.md`. Glob/manual rules go to `.claude/rules/`.
 
-```
-.
-├── agents/                     # Agent team definitions
-│   ├── software development/   # Software dev team
-│   ├── frontend/               # Frontend team (fe-*)
-│   └── localization/           # Localization team
-├── bin/
-│   └── init.ts                 # CLI entry point
-├── lib/
-│   ├── assets.ts               # Asset extraction (review sound)
-│   ├── audit-hook.ts           # Audit hook for tool call logging
-│   ├── common.ts               # Shared helpers, logging, provider config
-│   ├── git.ts                  # Git branch, commit, push, PR helpers
-│   ├── plan.ts                 # Roadmap planning / decomposition
-│   ├── run.ts                  # Main autonomous task runner loop
-│   ├── team.ts                 # Team management (init, create, validate)
-│   ├── ui.ts                   # Terminal UI / progress bar
-│   └── templates/              # Templates for new teams
-├── tests/lib/                  # Unit tests (Bun test runner)
-├── .github/workflows/
-│   ├── lint.yml                # CI — lint, check, typecheck, test, build
-│   └── release.yml             # Release — build binary on tag push
-├── package.json
-├── biome.json
-├── tsconfig.json
-├── .pre-commit-config.yaml
-├── install.sh                  # Standalone installer
-├── README.md
-└── LICENSE
-```
+## How It Works
+
+### Model Resolution
+
+Each agent has a `model:` field in its frontmatter (e.g., `claude-opus`, `claude-sonnet`).
+
+- **Team-lead** model is read from frontmatter and passed to `claude --model`
+- **Subagents** (architect, developer, qa) use their own model from frontmatter when spawned via Teammate
+- Override with `--model` flag: `agent-team run --all --model sonnet`
+
+### Memory
+
+`MEMORY.md` is injected into every task prompt. Agents are required to:
+
+1. Read MEMORY.md before starting
+2. Append findings after completing (decisions, gotchas, patterns)
+
+This ensures knowledge transfers between sequential tasks.
+
+### Logging
+
+Every task produces:
+
+- `.claude-loop/logs/task-{id}-{timestamp}.log` — session ID, model, result, usage, cost
+- `.claude-loop/reports/task-{id}.md` — what was done, who did what, test results
+- `.claude-loop/audit/audit.jsonl` — tool call audit trail (via hooks)
+
+Plan failures are saved to `.claude-loop/logs/plan-error.log` with stderr and stdout.
 
 ## Agent Teams
 
 ### Software Development
 
-| Agent | Model | Responsibility |
-|-------|-------|----------------|
-| `team-lead` | claude-opus | Decomposes tasks, orchestrates agents, writes final summary |
-| `architect` | claude-sonnet | Designs solution, reviews implementation, approves before QA |
-| `developer` | claude-sonnet | Writes code per spec, iterates on architect + QA feedback |
-| `reviewer` | claude-sonnet | Reviews style, security, best practices (parallel with QA) |
-| `qa` | claude-sonnet | Manual verification of acceptance criteria |
-| `aqa` | claude-sonnet | Automated E2E, integration, and performance testing |
-
-### Localization
-
-| Agent | Model | Responsibility |
-|-------|-------|----------------|
-| `team-lead` | claude-opus | Orchestrates writing, translations, SEO, and QA |
-| `tech-writer` | claude-sonnet | Writes English source docs, reviews localizations and SEO changes |
-| `localizer` | claude-sonnet | Translates into one target language, iterates on tech-writer feedback |
-| `seo-specialist` | claude-sonnet | Optimizes source and all translations for search (metadata, keywords, structure) |
-| `qa` | claude-sonnet | Reviews source docs, translations, and SEO changes, reports issues to responsible agent |
+| Agent | Model | Role |
+|-------|-------|------|
+| `sw-team-lead` | opus | Orchestrates agents, never writes code |
+| `sw-architect` | opus | Designs solution, writes SPEC.md, reviews implementation |
+| `sw-developer` | sonnet | Implements code per spec, provides evidence |
+| `sw-reviewer` | opus | Reviews style, security, best practices |
+| `sw-qa` | sonnet | Writes tests, finds bugs, verifies fixes |
 
 ### Frontend
 
-| Agent | Model | Responsibility |
-|-------|-------|----------------|
-| `team-lead` | claude-opus | Orchestrates UI pipeline, decomposes frontend tasks, synthesizes results |
-| `fe-architect` | claude-sonnet | Defines component hierarchy, design tokens, and state management strategy |
-| `fe-dev` | claude-sonnet | Implements UI components and views per spec. Framework and styling aware |
-| `fe-reviewer` | claude-sonnet | Performs visual review for pixel-perfection and WCAG 2.1 AA accessibility |
-| `fe-qa` | claude-sonnet | Manual UI/UX testing and accessibility verification |
-| `fe-aqa` | claude-sonnet | Automated E2E tests, visual regression, and performance monitoring |
+| Agent | Model | Role |
+|-------|-------|------|
+| `fe-team-lead` | opus | Orchestrates UI pipeline |
+| `fe-architect` | sonnet | Component hierarchy, design tokens, state management |
+| `fe-dev` | sonnet | Implements UI components per spec |
+| `fe-reviewer` | sonnet | Visual review, WCAG 2.1 AA accessibility |
+| `fe-aqa` | sonnet | E2E tests, visual regression, performance |
 
-## Running Modes
+### Localization
 
-### Cloud only (default)
+| Agent | Model | Role |
+|-------|-------|------|
+| `loc-team-lead` | opus | Orchestrates writing, translations, SEO, QA |
+| `loc-tech-writer` | sonnet | Writes English source docs |
+| `loc-localizer` | sonnet | Translates into target language |
+| `loc-seo-specialist` | sonnet | Optimizes for search |
+| `loc-qa` | sonnet | Reviews source, translations, SEO |
 
-Set `PROVIDER` in `.env` (see `.env.example`):
+## Human Review
 
-| Provider | `PROVIDER=` | Keys in `.env` |
-|----------|-------------|----------------|
-| Anthropic (direct) | `anthropic` | `ANTHROPIC_API_KEY` |
-| Azure APIM | `azure-apim` | `AZURE_APIM_ENDPOINT` + `AZURE_APIM_KEY` |
-| LiteLLM proxy | `litellm` | `LITELLM_HOST` |
+Agents can request human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED`.
 
-```bash
-agent-team run --all
-```
+1. Audio notification plays
+2. Visual banner appears with task details
+3. User approves (`y`) or rejects (`n`)
 
-### Local model only
-
-Uses Ollama with qwen3-coder:30b. No API costs.
-
-```bash
-docker compose -f config/docker-compose.yml up -d
-```
-
-### Hybrid (recommended)
-
-team-lead + architect on cloud, developer + qa on local model.
-Routes through LiteLLM proxy.
-
-```bash
-docker compose -f config/docker-compose.yml up -d
-```
-
-## Logs and Reports
-
-Every task execution produces:
-
-```
-.claude-loop/
-├── logs/task-001.log          # Full Claude Code output
-├── reports/task-001.md        # What was done, files changed, decisions made
-└── sessions/task-001.session  # Session ID for resuming
-```
-
-## Human Review and Notifications
-
-During task execution, any agent can request a human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED` as the last line.
-When this happens:
-
-1. **Audio Notification**: A review sound plays (custom `review.m4a` or fallback to `say`/`spd-say`/terminal bell).
-2. **Visual Banner**: A high-visibility banner appears with the task number and description.
-3. **Approval Prompt**: The user is asked to approve (`y`) or reject (`n`).
-
-Agents request a review when:
-
-- A critical decision needs human approval
-- Requirements are ambiguous and cannot be resolved by the team
-- A destructive or irreversible operation requires a safety check
-- The task specification explicitly requests a review checkpoint
-
-You can reduce review prompts by initializing with `--no-human-review`, which enables `autoMode`.
+Reduce review prompts with `--no-human-review` (sets `defaultMode: auto` for all profiles).
 
 ## Security Permissions
 
-The following destructive operations are blocked by default via `permissions.deny`:
+Blocked by default via `permissions.deny`:
 
-| Category | Blocked commands |
-|----------|-----------------|
+| Category | Blocked |
+|----------|---------|
 | File deletion | `rm -rf`, `shred`, `find -delete` |
-| Environment | `os.environ`, `os.getenv`, `process.env`, `printenv`, `env` |
+| Environment | `printenv`, `env` |
 | Git destructive | `git push --force`, `git reset --hard`, `git clean -f` |
 | Disk operations | `mkfs`, `fdisk`, `parted` |
-
-To allow a specific command, remove its entry from `permissions.deny` in `claude/settings.json`.
-
-## Role-Based Profiles
-
-Each team's `claude/settings.json` defines permission profiles per agent role. Profiles control which tools and commands each agent can use:
-
-| Profile | Mode | Allowed Commands | Restrictions |
-|---------|------|-----------------|--------------|
-| `team-lead` | default | `agent-team *`, `git *` | Full access |
-| `architect` | manual | `agent-team plan` | No Write, Edit, or Bash |
-| `developer` | acceptEdits | `agent-team run`, `git add/commit` | — |
-| `reviewer` | manual | `agent-team validate`, `git diff/log` | No Write, Edit, or Bash |
-| `qa` | acceptEdits | `agent-team run --dry-run`, `bun test` | No writes to `src/` |
-
-Team-specific profiles may differ (e.g., localization has `localizer`, `tech-writer`, `seo-specialist`; frontend adds `npx playwright` access).
-
-## Audit Logging
-
-Tool calls are logged to `.claude-loop/audit/audit.jsonl` via hooks in each team's `claude/settings.json`.
-Each entry records the timestamp, agent role, tool name, phase (PRE/POST), status, and duration.
-
-```bash
-# Generate a summary report from audit logs
-agent-team audit
-```
 
 ## Creating Custom Teams
 
@@ -328,8 +282,16 @@ agent-team new-team \
   --roles "auditor,pentester,reviewer"
 ```
 
-This creates `agents/security-audit/` with a PROTOCOL.md and agent profiles for each role.
+Creates agents in `.claude/agents/` with a PROTOCOL.md and profiles for each role.
+
+## Requirements
+
+| Tool | Required | Install |
+|------|----------|---------|
+| Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` |
+| Bun / npm | no | [bun.sh](https://bun.sh) (for dev tooling) |
+| OpenSpec | no | `npm i -g @fission-ai/openspec` (if `--planner openspec`) |
 
 ## License
 
-This project is licensed under the terms of the [LICENSE](LICENSE) file included in the root directory.
+This project is licensed under the terms of the [LICENSE](LICENSE) file.

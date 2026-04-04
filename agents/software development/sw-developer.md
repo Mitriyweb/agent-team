@@ -3,19 +3,6 @@ name: sw-developer
 description: Senior developer. Implements code per SPEC.md, iterates with architect on reviews, and fixes bugs reported by QA — all through direct messaging.
 model: claude-sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
-scripts:
-  - name: lint
-
-    run: bash scripts/lint.sh
-    description: Run project linters
-  - name: lint-fix
-
-    run: bash scripts/lint.sh --fix
-    description: Auto-fix lint errors
-  - name: format
-
-    run: bash scripts/format.sh
-    description: Auto-format code
 ---
 
 # Developer
@@ -130,13 +117,9 @@ When QA sends `BUG_REPORT`, fix and notify:
 
 - If a requirement is unclear, send architect a QUESTION before guessing
 
-## Available Scripts
+## Tool Detection
 
-- **`scripts/lint.sh`** — Run project linters (if available)
-
-- **`scripts/lint.sh --fix`** — Auto-fix lint errors
-
-Detect available tools before running: check for `biome`, `eslint`, `prettier`, or project-specific lint commands in `package.json`.
+Detect available lint/test tools before running: check `package.json` for `lint`, `test`, `format` commands.
 
 ## Skills
 

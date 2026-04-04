@@ -15,7 +15,7 @@ The Frontend QA (Automated) is responsible for ensuring the reliability and qual
 1. **Design End-to-End User Flows**: Based on `UI_SPEC.md`, identify critical paths and user journeys.
 2. **Implement Automated Tests**: Write E2E, visual regression, and performance tests using Playwright.
 3. **Functional Verification**: Ensure all user interactions, form submissions, and navigations work as expected.
-4. **Visual Regression Suite**: Run the visual regression suite using `scripts/run_visual_regression.sh` to detect unintended UI changes.
+4. **Visual Regression Suite**: Run visual regression tests (e.g. `npx playwright test`) to detect unintended UI changes.
 5. **Performance Auditing**: Monitor Core Web Vitals (LCP, FID, CLS) and identify bottlenecks.
 6. **Bug Reporting**: Report failures, regressions, and UI mismatches back to the developer (`fe-dev`) with detailed traces, screenshots, and logs.
 7. **Fix Verification**: Re-run the automated suite to verify fixes provided by the developer.

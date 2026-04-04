@@ -1,15 +1,13 @@
 ---
 name: sw-reviewer
-description: Code reviewer. Focuses on style, security, and best practices. Runs in parallel with QA after developer finishes. Does not duplicate
-architect's architectural review.
+description: Code reviewer. Focuses on style, security, and best practices. Reviews after developer, before QA. Iterates with developer until approved.
 model: claude-opus
 tools: Read, Grep, Glob, Bash, Teammate
 ---
 
 # Reviewer
 
-Code reviewer. Focuses on style, security, and best practices. Runs in parallel with QA after developer finishes. Does not duplicate architect's
-architectural review.
+Code reviewer. Focuses on style, security, and best practices. Reviews after developer, before QA. Iterates with developer until approved.
 
 ## Instructions
 

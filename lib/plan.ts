@@ -105,53 +105,240 @@ async function planWithOpenSpec(inputFile: string) {
     err(`Input file not found: ${inputFile}`);
   }
 
-  log(`Planning with ${BLUE}OpenSpec${NC} from ${BLUE}${inputFile}${NC}...`);
+  // If inputFile is inside an existing openspec change with tasks.md, just convert
+  const existingChangeDir = path.dirname(inputFile);
+  const existingTasks = path.join(existingChangeDir, "tasks.md");
+  if (inputFile.includes("openspec/changes/") && fs.existsSync(existingTasks)) {
+    log(
+      `Converting existing OpenSpec change: ${BLUE}${existingChangeDir}${NC}`,
+    );
+    const tasksDir = "tasks";
+    if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
+    const planFile = path.join(tasksDir, "plan.md");
+    const converted = convertOpenSpecTasks(existingTasks, existingChangeDir);
+    fs.writeFileSync(planFile, converted);
+    ok(`Converted OpenSpec tasks → ${planFile}`);
+    showTaskSummary(planFile);
+    return;
+  }
+
+  const rawModel = findTeamLeadModel() || "sonnet";
+  const resolvedModel = resolveModelAlias(rawModel);
+  log(
+    `Planning with ${BLUE}OpenSpec${NC} from ${BLUE}${inputFile}${NC} (model: ${GREEN}${resolvedModel}${NC})...`,
+  );
+  const startTime = Date.now();
 
   const roadmapContent = fs.readFileSync(inputFile, "utf-8");
   const changeName = `roadmap-${Date.now()}`;
 
-  // Create an OpenSpec proposal from the roadmap
-  const proposePrompt = `Read this roadmap and create an OpenSpec proposal using the /opsx:propose command pattern.
+  // Step 1: Create OpenSpec change directory
+  const newChangeProc = Bun.spawnSync(
+    ["npx", "@fission-ai/openspec", "new", "change", changeName],
+    { stdio: ["inherit", "inherit", "inherit"] },
+  );
+  if (!newChangeProc.success) {
+    err("Failed to create OpenSpec change. Is @fission-ai/openspec installed?");
+  }
 
-Roadmap content:
+  const changeDir = path.join("openspec", "changes", changeName);
+
+  // Step 2: Use Claude to populate the change artifacts
+  const proposePrompt = `You are an autonomous planner. Read the task description and create OpenSpec artifacts.
+
+## Task description
+
 ${roadmapContent}
 
-Steps:
-1. Run: npx @fission-ai/openspec propose "${changeName}"
-2. Write the roadmap content into the generated proposal.md
-3. Fill in the design.md with architectural decisions
-4. Break down into tasks in tasks.md
-5. Output PLAN_READY when done`;
+## Instructions
 
-  const proc = Bun.spawn(
-    [
-      "claude",
-      "-p",
-      proposePrompt,
-      "--max-turns",
-      "30",
-      "--output-format",
-      "json",
-      "--allowedTools",
-      "Read,Write,Edit,Glob,Grep,Bash",
-    ],
-    { stderr: "inherit" },
-  );
+Create the following files in ${changeDir}/:
 
-  const response = await new Response(proc.stdout).text();
+### 1. proposal.md
+Write a clear proposal with:
+- Summary of what needs to be done
+- Motivation and context
+- Scope boundaries
+
+### 2. design.md
+Write architectural decisions:
+- Technical approach
+- Key components and their responsibilities
+- Dependencies and risks
+
+### 3. tasks.md
+Write an implementation checklist using this EXACT format:
+
+## 1. Setup
+- [ ] 1.1 First setup task
+- [ ] 1.2 Second setup task
+
+## 2. Implementation
+- [ ] 2.1 First implementation task
+- [ ] 2.2 Second implementation task
+
+## 3. Verification
+- [ ] 3.1 Run tests and verify
+
+Rules for tasks.md:
+- Group tasks into numbered sections
+- Each task is a checkbox: - [ ] N.M Description
+- Order tasks by dependency (earlier tasks first)
+- Be specific — each task should be actionable by a developer
+
+After writing all files, output: PLAN_READY`;
+
+  const cliArgs = [
+    "claude",
+    "-p",
+    proposePrompt,
+    "--max-turns",
+    "25",
+    "--output-format",
+    "json",
+    "--model",
+    resolvedModel,
+    "--allowedTools",
+    "Read,Write,Edit,Glob,Grep,Bash",
+  ];
+
+  const proc = Bun.spawn(cliArgs, { stderr: "pipe" });
+
+  const stderrChunks: string[] = [];
+  const stderrReader = proc.stderr
+    ? (async () => {
+        const reader = proc.stderr!.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value);
+          stderrChunks.push(text);
+          process.stderr.write(text);
+        }
+      })()
+    : Promise.resolve();
+
+  const [response] = await Promise.all([
+    new Response(proc.stdout).text(),
+    stderrReader,
+  ]);
   const exitCode = await proc.exited;
 
   if (exitCode !== 0) {
-    err("OpenSpec planning failed.");
+    const logDir = ".claude-loop/logs";
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(logDir, "plan-error.log"),
+      `# OpenSpec plan failed — exit code: ${exitCode}\n# ${new Date().toISOString()}\n\n## STDERR\n${stderrChunks.join("")}\n\n## STDOUT\n${response}\n`,
+    );
+    err("OpenSpec planning failed via Claude CLI.");
   }
 
-  if (response.includes("PLAN_READY")) {
-    ok(`OpenSpec proposal created: openspec/changes/${changeName}/`);
+  ok(`OpenSpec proposal created: ${changeDir}/`);
+
+  // Step 3: Convert OpenSpec tasks.md → our tasks/plan.md format
+  const tasksDir = "tasks";
+  if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
+  const planFile = path.join(tasksDir, "plan.md");
+
+  const openspecTasks = path.join(changeDir, "tasks.md");
+  if (fs.existsSync(openspecTasks)) {
+    const converted = convertOpenSpecTasks(openspecTasks, changeDir);
+    fs.writeFileSync(planFile, converted);
+    ok(`Converted OpenSpec tasks → ${planFile}`);
   } else {
-    warn(
-      "Planning finished but PLAN_READY not confirmed. Check openspec/changes/",
-    );
+    warn(`No tasks.md found in ${changeDir}. Create it manually.`);
   }
+
+  const elapsed = Date.now() - startTime;
+  const mins = Math.floor(elapsed / 60000);
+  const secs = Math.floor((elapsed % 60000) / 1000);
+  ok(`OpenSpec plan created in ${CYAN}${mins}m ${secs}s${NC}`);
+  showTaskSummary(planFile);
+}
+
+/**
+ * Convert OpenSpec tasks.md format to agent-team plan.md format.
+ *
+ * OpenSpec: `- [ ] 1.1 Description`
+ * Agent-team: `- [ ] id:N priority:high type:feature agents:developer Description`
+ */
+function convertOpenSpecTasks(tasksFile: string, changeDir: string): string {
+  const content = fs.readFileSync(tasksFile, "utf-8");
+  const lines = content.split("\n");
+
+  let header = "# Execution Plan (from OpenSpec)\n\n";
+  header += `> Source: ${changeDir}\n\n`;
+
+  // Read proposal for context if available
+  const proposalFile = path.join(changeDir, "proposal.md");
+  if (fs.existsSync(proposalFile)) {
+    const proposal = fs.readFileSync(proposalFile, "utf-8").trim();
+    header += `## Proposal\n\n${proposal}\n\n`;
+  }
+
+  // Read design for context if available
+  const designFile = path.join(changeDir, "design.md");
+  if (fs.existsSync(designFile)) {
+    const design = fs.readFileSync(designFile, "utf-8").trim();
+    header += `## Design\n\n${design}\n\n`;
+  }
+
+  header += "## Section 1: Structured tasks for agent-team run\n\n```\n";
+
+  const taskLines: string[] = [];
+  const specBlocks: string[] = [];
+  let taskId = 0;
+  let currentSection = "";
+  let prevTaskId = 0;
+
+  for (const line of lines) {
+    // Track section headers
+    const sectionMatch = line.match(/^##\s+\d+\.\s+(.+)/);
+    if (sectionMatch?.[1]) {
+      currentSection = sectionMatch[1].trim();
+      continue;
+    }
+
+    // Parse task checkboxes: - [ ] 1.1 Description or - [ ] Description
+    const taskMatch = line.match(/^-\s+\[[ x]\]\s+(?:\d+\.\d+\s+)?(.+)/);
+    if (taskMatch?.[1]) {
+      taskId++;
+      const desc = taskMatch[1].trim();
+      const isChecked = line.includes("[x]");
+
+      // Assign priority based on section position
+      const priority = taskId <= 2 ? "high" : taskId <= 5 ? "high" : "medium";
+      // Default agents — team-lead will delegate
+      const agents = "developer";
+      const depends =
+        prevTaskId > 0 && taskId > 1 ? ` depends:${prevTaskId}` : "";
+      const status = isChecked ? "x" : " ";
+
+      taskLines.push(
+        `- [${status}] id:${taskId} priority:${priority} type:feature agents:${agents}${depends} ${desc}`,
+      );
+
+      specBlocks.push(
+        `### Task #${taskId} — ${desc}\n` +
+          `**Agents:** ${agents}\n` +
+          (depends ? `**Depends on:** #${prevTaskId}\n` : "") +
+          `**Section:** ${currentSection || "General"}\n` +
+          "**Output:** As specified in task description\n" +
+          `**Details:**\n${desc}\n`,
+      );
+
+      prevTaskId = taskId;
+    }
+  }
+
+  let result = header;
+  result += taskLines.join("\n");
+  result += "\n```\n\n---\n\n## Section 2: Detailed spec per task\n\n";
+  result += specBlocks.join("\n---\n\n");
+
+  return result;
 }
 
 async function planWithBuiltin(inputFile: string, model?: string) {

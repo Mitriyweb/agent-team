@@ -4,19 +4,21 @@ All agents must use this protocol for inter-agent messaging.
 
 ## Execution Flow
 
-```
-ROADMAP.md → plan.sh (team-lead creates tasks/plan.md)
+```text
+ROADMAP.md → agent-team plan (team-lead creates tasks/plan.md)
                          ↓
-tasks/plan.md → run.sh (executes tasks one by one)
+tasks/plan.md → agent-team run (executes tasks one by one)
                          ↓
            sw-team-lead → sw-agents (per task spec)
 ```
 
-1. **Planning**: `plan.sh` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `run.sh` picks tasks from `tasks/plan.md` by priority and dependencies
+1. **Planning**: `agent-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
+2. **Execution**: `agent-team run` picks tasks from `tasks/plan.md` by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format
+
+Use the Teammate tool to communicate with other agents:
 
 ```javascript
 Teammate({
@@ -37,7 +39,6 @@ Teammate({
 
 | Type | When to use |
 |------|-------------|
-| `READY` | Agent is ready and waiting for a task |
 | `QUESTION` | Need clarification before continuing |
 | `ANSWER` | Response to a `QUESTION` |
 | `REVIEW_REQUEST` | Asking architect or sw-reviewer to check work |
@@ -50,80 +51,34 @@ Teammate({
 
 ## Communication Graph
 
-```
-sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-qa
-                                  │             └──► sw-aqa
-                              sw-reviewer
-```
-
-- `team-lead` coordinates all agents, never writes code.
-
-- `architect` talks directly to `developer` during design and implementation review.
-
-- `developer` iterates with `architect` until approved, then with `qa` and `aqa` until tests pass.
-
-- `sw-reviewer`, `qa`, and `aqa` run in parallel after developer finishes.
-
-- `sw-reviewer` reports only to `team-lead`.
-
-- `qa` and `aqa` report bugs directly to `developer`, final status to `team-lead`.
-
-## Example: sw-architect → sw-developer review loop
-
-```json
-// sw-architect → sw-developer
-{
-  "from": "sw-architect",
-  "type": "REVIEW_FEEDBACK",
-  "subject": "Implementation review: UserService",
-  "body": "🚨 Critical: no email validation in createUser.\n✅ Good: error handling is solid.",
-  "files": ["src/services/UserService.ts"],
-  "requires_response": true
-}
-
-// sw-developer → sw-architect
-{
-  "from": "sw-developer",
-  "type": "ANSWER",
-  "subject": "Re: UserService review — fixed",
-  "body": "Added zod validation on line 42. Ready for re-review.",
-  "files": ["src/services/UserService.ts"],
-  "requires_response": false
-}
+```text
+sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-reviewer
+                                        ▲                  │
+                                        │    fixes         │ approved
+                                        ▼                  ▼
+                                    sw-qa ◄──────────► sw-aqa
 ```
 
-## Example: sw-qa → sw-developer bug loop
+- `team-lead` coordinates all agents, never writes code
+- `architect` designs the solution, `developer` implements it
+- `developer` iterates with `architect` until spec is approved
+- `reviewer` reviews implementation (style, security, best practices)
+- `reviewer` sends feedback to `developer` — developer fixes and re-submits until approved
+- `qa` and `aqa` run **after reviewer approves** — write tests, find bugs
+- `qa` reports bugs to `developer`, developer fixes and re-submits to `qa`
+- Final status from `qa` goes to `team-lead`
 
-```json
-// sw-qa → sw-developer
-{
-  "from": "sw-qa",
-  "type": "BUG_REPORT",
-  "subject": "Bug: createUser returns 500 on duplicate email",
-  "body": "Test: POST /users with existing email.\nExpected: 409 Conflict.\nActual: 500 Internal Server Error.\nLocation: src/controllers/users.ts:78",
-  "files": ["tests/users.test.ts"],
-  "requires_response": true
-}
+## Tool Detection
 
-// sw-developer → sw-qa
-{
-  "from": "sw-developer",
-  "type": "BUG_FIX",
-  "subject": "Re: duplicate email bug — fixed",
-  "body": "Added UniqueConstraintError handler in UserController.ts:78. Please re-run tests.",
-  "files": ["src/controllers/users.ts"],
-  "requires_response": false
-}
-```
+Agents must detect the project's tooling before running commands.
+Check `package.json` for `lint`, `test`, `build`, `format` scripts.
+Do NOT assume any specific tool is installed.
 
-## Handoff and Context Management
+## Handoff Summary
 
-### Handoff Summary
-
-To ensure critical decisions survive context compaction, every agent MUST end its final message in a task with a structured handoff block:
+Every agent MUST end its final message with a structured handoff block:
 
 ```markdown
-
 ## Handoff Summary
 
 **Status**: [DONE | BLOCKED | NEEDS_REVIEW]
@@ -133,14 +88,18 @@ To ensure critical decisions survive context compaction, every agent MUST end it
 **Blockers**: <none | description>
 ```
 
-Agents must NOT assume prior context — they must re-derive state from the Handoff Summary of the previous agent's message.
+Agents must NOT assume prior context — re-derive state from the Handoff Summary.
 
-### Memory Management
+## Memory Management
 
-All agents should use `MEMORY.md` to persist and share knowledge across tasks.
+All agents MUST use `MEMORY.md` to persist and share knowledge across tasks.
 
-- **Read**: At the start of every task, read `MEMORY.md` to get context on architectural decisions and project-wide rules.
+- **Read**: At the start of every task, read `MEMORY.md` for context
+- **Write**: Before finishing, append findings: architectural decisions, gotchas, patterns established
+- **Format**: Use `## Task #N: Title` sections
 
-- **Write**: Before finishing a task, update `MEMORY.md` if you've made a significant decision, discovered a major "gotcha", or established a new pattern.
+## Reports and Logs
 
-- **Format**: Keep the file organized by sections (Shared Knowledge, Architectural Decisions, etc.).
+- Task reports: `.claude-loop/reports/task-{id}.md`
+- Task logs: `.claude-loop/logs/`
+- Audit trail: `.claude-loop/audit/audit.jsonl`

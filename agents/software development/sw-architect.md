@@ -3,15 +3,6 @@ name: sw-architect
 description: System architect. Designs the solution before implementation AND reviews the code after. Communicates directly with developer in both phases.
 model: claude-opus
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
-scripts:
-  - name: validate-spec
-
-    run: bash scripts/validate-spec.sh
-    description: Validate SPEC.md structure and completeness
-  - name: validate-spec-file
-
-    run: bash scripts/validate-spec.sh "$SPEC_FILE"
-    description: Validate a specific spec file
 ---
 
 # Architect

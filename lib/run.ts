@@ -46,6 +46,26 @@ export interface RunOptions {
 
 const AGENTS_DIR = path.join(".claude", "agents");
 
+/**
+ * Find the latest active OpenSpec change that has a proposal.md.
+ * Returns the path to proposal.md or undefined.
+ */
+function findLatestOpenSpecChange(): string | undefined {
+  const changesDir = path.join("openspec", "changes");
+  if (!fs.existsSync(changesDir)) return undefined;
+  const entries = fs.readdirSync(changesDir, { withFileTypes: true });
+  const changes = entries
+    .filter((e) => e.isDirectory() && e.name !== "archive")
+    .map((e) => ({
+      name: e.name,
+      proposal: path.join(changesDir, e.name, "proposal.md"),
+    }))
+    .filter((c) => fs.existsSync(c.proposal));
+  if (changes.length === 0) return undefined;
+  // Return the most recent (by dir name, which includes timestamp)
+  return changes[changes.length - 1]?.proposal;
+}
+
 function findMdFiles(dir: string): string[] {
   let results: string[] = [];
   for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -251,21 +271,26 @@ export class TaskRunner {
 
     let allTasks = this.getRoadmapTasks();
 
-    // Auto-plan if --plan flag is set or no structured tasks found
-    if (
-      allTasks.length === 0 &&
-      (this.options.planFirst || fs.existsSync("ROADMAP.md"))
-    ) {
-      const roadmapExists = fs.existsSync("ROADMAP.md");
-      if (roadmapExists) {
+    // Auto-plan if --plan flag set or no structured tasks found
+    if (allTasks.length === 0 || this.options.planFirst) {
+      if (fs.existsSync("ROADMAP.md")) {
         log("No structured tasks found. Running planner on ROADMAP.md...");
         await planRoadmap("ROADMAP.md");
-        // Reload roadmap source after planning
-        if (fs.existsSync("tasks/plan.md")) {
-          this.roadmap = "tasks/plan.md";
+      } else if (fs.existsSync("openspec/changes")) {
+        // OpenSpec mode: find the latest active change with tasks
+        const latestChange = findLatestOpenSpecChange();
+        if (latestChange) {
+          log(
+            `No structured tasks found. Converting OpenSpec change: ${latestChange}...`,
+          );
+          await planRoadmap(latestChange);
         }
-        allTasks = this.getRoadmapTasks();
       }
+      // Reload roadmap source after planning
+      if (fs.existsSync("tasks/plan.md")) {
+        this.roadmap = "tasks/plan.md";
+      }
+      allTasks = this.getRoadmapTasks();
     }
 
     this.totalTasks = allTasks.length;
@@ -500,17 +525,44 @@ export class TaskRunner {
     if (stderr.trim()) {
       body += `## STDERR\n${stderr}\n\n`;
     }
-    // For JSON output, try to extract the text result
     try {
       const parsed = JSON.parse(stdout);
-      if (parsed.result) {
-        body += `## RESULT\n${typeof parsed.result === "string" ? parsed.result : JSON.stringify(parsed.result, null, 2)}\n`;
+      // Session info
+      if (parsed.session_id) {
+        body += `## SESSION\n${parsed.session_id}\n\n`;
       }
+      if (parsed.model) {
+        body += `## MODEL\n${parsed.model}\n\n`;
+      }
+      // Full result — includes reasoning and teammate interactions
+      if (parsed.result) {
+        body += `## RESULT\n${typeof parsed.result === "string" ? parsed.result : JSON.stringify(parsed.result, null, 2)}\n\n`;
+      }
+      // Conversation messages — if available, shows full agent interaction
+      if (parsed.messages && Array.isArray(parsed.messages)) {
+        body += `## CONVERSATION (${parsed.messages.length} messages)\n\n`;
+        for (const msg of parsed.messages) {
+          const role = msg.role || "unknown";
+          const content =
+            typeof msg.content === "string"
+              ? msg.content
+              : JSON.stringify(msg.content, null, 2);
+          body += `### [${role}]\n${content}\n\n`;
+        }
+      }
+      // Num turns and stop reason
+      if (parsed.num_turns) {
+        body += `## TURNS: ${parsed.num_turns}\n`;
+      }
+      if (parsed.stop_reason) {
+        body += `## STOP REASON: ${parsed.stop_reason}\n`;
+      }
+      // Cost
       if (parsed.usage) {
         body += `\n## USAGE\n${JSON.stringify(parsed.usage, null, 2)}\n`;
       }
-      if (parsed.model) {
-        body += `\n## MODEL\n${parsed.model}\n`;
+      if (parsed.total_cost_usd) {
+        body += `\n## COST: $${parsed.total_cost_usd}\n`;
       }
     } catch {
       body += `## STDOUT\n${stdout}\n`;
@@ -586,35 +638,33 @@ export class TaskRunner {
     if (fs.existsSync("MEMORY.md")) {
       const memory = fs.readFileSync("MEMORY.md", "utf-8").trim();
       if (memory && memory !== "# Project Memory") {
-        memorySection = `\n## Shared memory (from previous tasks)\n${memory}\n`;
+        memorySection = `\n## Shared memory (from previous tasks)\n\n${memory}\n`;
       }
     }
 
     return `
-You are the ${team}-lead autonomous agent lead executing a task from the project roadmap.
+You are the ${team} team-lead orchestrating an autonomous agent team.
+You NEVER write code, tests, or content yourself — you delegate to teammates via the Teammate tool.
 
 TASK #${taskId}: ${desc}
 
 ## Detailed specification
 ${spec}
 ${memorySection}
-Instructions:
-1. Read the specification carefully.
-2. Explore the codebase to understand the state.
-3. Coordinate as necessary per PROTOCOL.md.
-4. Update MEMORY.md with important shared knowledge for subsequent tasks.
-5. Produce the EXACT deliverables.
-6. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md.
+## Instructions
 
-On your VERY LAST LINE of output, write one of:
-- TASK_STATUS: SUCCESS — task completed successfully
-- TASK_STATUS: HUMAN_REVIEW_NEEDED — request human review before proceeding
-
-Use HUMAN_REVIEW_NEEDED when:
-- A critical decision needs human approval
-- Requirements are ambiguous and cannot be resolved by the team
-- A potentially destructive or irreversible operation requires a safety check
-- The task specification explicitly requests a review checkpoint
+1. Read the specification and PROTOCOL.md to understand the workflow and available teammates.
+2. Explore the codebase to understand the current state.
+3. Delegate work to teammates following the communication graph in PROTOCOL.md.
+4. After the task, append findings to MEMORY.md:
+   \`\`\`
+   ## Task #${taskId}: ${desc}
+   - [key decisions]
+   - [files changed and why]
+   - [gotchas discovered]
+   \`\`\`
+5. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md (what was done, who did what, results).
+6. On your VERY LAST LINE, output: TASK_STATUS: SUCCESS or TASK_STATUS: HUMAN_REVIEW_NEEDED
     `.trim();
   }
 }

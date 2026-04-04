@@ -1,8 +1,24 @@
 # Localization Team — Communication Protocol
 
-Extends the base agent communication protocol for documentation and localization workflows.
+All localization agents must use this protocol for inter-agent messaging.
+
+## Execution Flow
+
+```text
+ROADMAP.md → agent-team plan (loc-team-lead creates tasks/plan.md)
+                         ↓
+tasks/plan.md → agent-team run (executes tasks one by one)
+                         ↓
+           loc-team-lead → loc-agents (per task spec)
+```
+
+1. **Planning**: `agent-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
+2. **Execution**: `agent-team run` picks tasks from `tasks/plan.md` by priority and dependencies
+3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format
+
+Use the Teammate tool to communicate with other agents:
 
 ```javascript
 Teammate({
@@ -23,49 +39,45 @@ Teammate({
 
 | Type | When to use |
 |------|-------------|
-| `READY` | Agent is ready and waiting for a task |
 | `QUESTION` | Need clarification before continuing |
 | `ANSWER` | Response to a `QUESTION` |
-| `REVIEW_REQUEST` | Asking loc-tech-writer or loc-qa to check work |
+| `REVIEW_REQUEST` | Asking tech-writer or QA to check work |
 | `REVIEW_FEEDBACK` | Review result with findings |
-| `LOCALIZATION_REQUEST` | Team lead assigns translation task to a loc-localizer |
+| `LOCALIZATION_REQUEST` | Team lead assigns translation task |
 | `LOCALIZATION_DONE` | Localizer finished translation, passing to review |
-| `QA_ISSUE` | QA found a problem, reporting to loc-localizer or loc-tech-writer |
-| `QA_FIX` | Localizer/loc-tech-writer fixed an issue, notifying QA to re-check |
+| `QA_ISSUE` | QA found a problem |
+| `QA_FIX` | Localizer/tech-writer fixed an issue |
 | `DONE` | Task complete, passing result upstream |
 | `HUMAN_REVIEW` | Need human input or approval before proceeding |
 | `BLOCKED` | Cannot continue, need help from team-lead |
 
 ## Communication Graph
 
-```
+```text
 loc-team-lead ──► loc-tech-writer ◄──► loc-localizer(s) ◄──► loc-qa
                    ▲                               │
-                   └────── loc-seo-specialist ◄────────┘
+                   └────── loc-seo-specialist ◄─────┘
 ```
 
 - `team-lead` orchestrates the full pipeline, never writes docs or translations
+- `tech-writer` writes source English content, reviews localizations and SEO changes
+- `localizer` translates into one target language, iterates on feedback
+- `seo-specialist` optimizes source and all translations, iterates with tech-writer
+- `qa` checks source, translations, and SEO changes; reports issues to the responsible agent
+- Multiple localizers run in parallel (one per language)
+- `seo-specialist` and `qa` run in parallel after localizations are approved
 
-- `loc-tech-writer` writes source English content, reviews localizations and SEO changes
+## Tool Detection
 
-- `loc-localizer` translates into one target language, iterates on feedback
+Agents must detect the project's tooling before running commands.
+Check for i18n frameworks, translation file formats (JSON, PO, XLIFF), and build tools.
+Do NOT assume any specific tool is installed.
 
-- `loc-seo-specialist` optimizes source and all translations, iterates with loc-tech-writer
+## Handoff Summary
 
-- `loc-qa` checks source, translations, and SEO changes; reports issues to the responsible agent
-
-- Multiple loc-localizers run in parallel (one per language)
-
-- `loc-seo-specialist` and `loc-qa` run in parallel after localizations are approved
-
-## Handoff and Context Management
-
-### Handoff Summary
-
-To ensure critical decisions survive context compaction, every agent MUST end its final message in a task with a structured handoff block:
+Every agent MUST end its final message with a structured handoff block:
 
 ```markdown
-
 ## Handoff Summary
 
 **Status**: [DONE | BLOCKED | NEEDS_REVIEW]
@@ -75,12 +87,18 @@ To ensure critical decisions survive context compaction, every agent MUST end it
 **Blockers**: <none | description>
 ```
 
-Agents must NOT assume prior context — they must re-derive state from the Handoff Summary of the previous agent's message.
+Agents must NOT assume prior context — re-derive state from the Handoff Summary.
 
-### Memory Management
+## Memory Management
 
-All agents should use `MEMORY.md` to persist and share knowledge across tasks.
+All agents MUST use `MEMORY.md` to persist and share knowledge across tasks.
 
-- **Read**: At the start of every task, read `MEMORY.md` to get context on terminology, style guides, and cultural preferences.
+- **Read**: At the start of every task, read `MEMORY.md` for context on terminology, style guides, and cultural preferences
+- **Write**: Before finishing, append findings: translation rules, terminology standards, cultural notes
+- **Format**: Use `## Task #N: Title` sections
 
-- **Write**: Before finishing a task, update `MEMORY.md` if you've established a new translation rule or terminology standard.
+## Reports and Logs
+
+- Task reports: `.claude-loop/reports/task-{id}.md`
+- Task logs: `.claude-loop/logs/`
+- Audit trail: `.claude-loop/audit/audit.jsonl`

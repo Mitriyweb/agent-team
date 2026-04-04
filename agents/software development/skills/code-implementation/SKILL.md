@@ -27,7 +27,7 @@ Your goal is to implement solutions that are robust, efficient, and follow stric
 ## Phase 3: Reliability & Verification
 
 1. **Test-Driven Delivery**: Write unit and integration tests (TDD) for all new logic using `tests/` patterns.
-2. **Code Validation**: Run `scripts/validate_code.sh` and fix any linting/quality issues.
+2. **Code Validation**: Run the project's linter and fix any quality issues.
 3. **Performance Audit**: Ensure critical paths are efficient and free of common pitfalls (N+1 queries, etc.).
 
 ## Phase 4: Delivery
