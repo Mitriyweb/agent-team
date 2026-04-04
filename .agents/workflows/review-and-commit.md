@@ -6,7 +6,7 @@ description: Review code changes and create a commit following project standards
 
 Review changed code for quality and compliance, then commit if all checks pass.
 
-**References:** `CLAUDE.md` (workflow rules), `MEMORY.md` (cross-session decisions)
+**References:** `CLAUDE.md` (workflow rules), `.claude-loop/memory.md` (cross-session decisions)
 
 ## Phase 0: Detect Changes
 

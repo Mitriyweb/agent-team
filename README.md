@@ -77,7 +77,7 @@ This will:
 
 - Deploy agent definitions to `.claude/agents/` (flat layout)
 - Generate `CLAUDE.md` with team context (managed block)
-- Create `MEMORY.md` for shared knowledge across tasks
+- Create `.claude-loop/memory.md` for shared knowledge across tasks
 - Create `ROADMAP.md` (builtin planner) or init OpenSpec
 - Configure `.claude/settings.json` with team profiles
 - Save project config to `agent-team.json`
@@ -152,7 +152,10 @@ Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`).
 ```text
 your-project/
 ├── CLAUDE.md                    # Project instructions (with agent-team managed block)
-├── MEMORY.md                    # Shared knowledge across tasks
+├── .claude-loop/
+│   ├── memory.md                # Shared knowledge across tasks
+│   ├── logs/                    # Task execution logs
+│   └── reports/                 # Task reports and cost summary
 ├── ROADMAP.md                   # Task descriptions (builtin planner)
 ├── agent-team.json              # Project config (planner, team name)
 ├── .claude/
@@ -203,9 +206,9 @@ Each agent has a `model:` field in its frontmatter (e.g., `claude-opus`, `claude
 
 ### Memory
 
-`MEMORY.md` is injected into every task prompt. Agents are required to:
+`.claude-loop/memory.md` is injected into every task prompt. Agents are required to:
 
-1. Read MEMORY.md before starting
+1. Read `.claude-loop/memory.md` before starting
 2. Append findings after completing (decisions, gotchas, patterns)
 
 This ensures knowledge transfers between sequential tasks.

@@ -48,7 +48,7 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 
 ### Phase 0.5 — Memory Check
 
-Read `MEMORY.md` to understand the current context, architectural decisions, and project-wide rules.
+Read `.claude-loop/memory.md` to understand the current context, architectural decisions, and project-wide rules.
 
 ### Phase 1 — Spec Freeze (Design)
 
@@ -104,7 +104,7 @@ Iterate with the developer if bugs are found (VERDICT.json contains FAIL).
 
 ### Phase 4 — Summary
 
-Create `SUMMARY.md` and update `MEMORY.md` if the task introduced new architectural decisions or important shared knowledge.
+Create `SUMMARY.md` and update `.claude-loop/memory.md` if the task introduced new architectural decisions or important shared knowledge.
 
 ```markdown
 

@@ -30,7 +30,7 @@ spawn and manage sub-agents (architect, dev, reviewer, qa, aqa).
 
 ### Phase 0.5 — Memory Check
 
-Read `MEMORY.md` to understand design tokens, component hierarchy, and project-wide rules.
+Read `.claude-loop/memory.md` to understand design tokens, component hierarchy, and project-wide rules.
 
 ### Phase 1 — Spec Freeze (Design) & Architecture
 
@@ -96,7 +96,7 @@ Iterate with the developer if issues are found.
 
 ### Phase 4 — Summary
 
-Create `SUMMARY.md` and update `MEMORY.md` if the task introduced new design patterns or component standards.
+Create `SUMMARY.md` and update `.claude-loop/memory.md` if the task introduced new design patterns or component standards.
 
 ## Rules
 

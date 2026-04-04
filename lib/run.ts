@@ -27,8 +27,10 @@ import {
 import { planRoadmap } from "./plan.ts";
 import { TerminalUI } from "./ui.ts";
 
-const LOG_DIR = ".claude-loop/logs";
-const REPORTS_DIR = ".claude-loop/reports";
+const LOOP_DIR = ".claude-loop";
+const LOG_DIR = `${LOOP_DIR}/logs`;
+const REPORTS_DIR = `${LOOP_DIR}/reports`;
+const MEMORY_FILE = `${LOOP_DIR}/memory.md`;
 
 export interface RunOptions {
   roadmapFile?: string;
@@ -104,8 +106,38 @@ export class TaskRunner {
     if (!fs.existsSync(REPORTS_DIR))
       fs.mkdirSync(REPORTS_DIR, { recursive: true });
 
+    // Migrate legacy MEMORY.md to .claude-loop/memory.md
+    this.migrateMemory();
+
     this.loadCumulativeCost();
     this.resolveTeamLeadModel();
+  }
+
+  private migrateMemory() {
+    const legacy = "MEMORY.md";
+    if (fs.existsSync(legacy)) {
+      const content = fs.readFileSync(legacy, "utf-8").trim();
+      if (fs.existsSync(MEMORY_FILE)) {
+        // Merge: append legacy content if it has real entries
+        if (content && content !== "# Project Memory") {
+          const existing = fs.readFileSync(MEMORY_FILE, "utf-8");
+          if (!existing.includes(content.replace("# Project Memory\n", ""))) {
+            fs.appendFileSync(
+              MEMORY_FILE,
+              `\n${content.replace("# Project Memory\n", "")}`,
+            );
+          }
+        }
+      } else {
+        fs.copyFileSync(legacy, MEMORY_FILE);
+      }
+      fs.unlinkSync(legacy);
+      log(`Migrated MEMORY.md → ${MEMORY_FILE}`);
+    }
+    // Ensure memory file exists
+    if (!fs.existsSync(MEMORY_FILE)) {
+      fs.writeFileSync(MEMORY_FILE, "# Project Memory\n");
+    }
   }
 
   private loadCumulativeCost() {
@@ -460,10 +492,10 @@ export class TaskRunner {
         this.saveTaskLog(taskId, exitCode, stdoutBuffer, stderrBuffer);
         this.trackCost(taskId, stdoutBuffer);
 
-        if (
-          exitCode === 0 &&
-          stdoutBuffer.includes("TASK_STATUS: HUMAN_REVIEW_NEEDED")
-        ) {
+        // Extract TASK_STATUS from result (may be in JSON .result or raw stdout)
+        const taskStatus = this.extractTaskStatus(stdoutBuffer);
+
+        if (exitCode === 0 && taskStatus === "HUMAN_REVIEW_NEEDED") {
           const approved = await this.promptHumanReview(taskId, desc);
           if (approved) {
             ok(`Task #${taskId} review approved — continuing.`);
@@ -484,7 +516,15 @@ export class TaskRunner {
           return false;
         }
 
-        if (exitCode === 0 && stdoutBuffer.includes("TASK_STATUS: SUCCESS")) {
+        if (
+          exitCode === 0 &&
+          (taskStatus === "SUCCESS" || taskStatus === "MISSING")
+        ) {
+          if (taskStatus === "MISSING") {
+            warn(
+              `Task #${taskId} — no TASK_STATUS line found, treating exit 0 as success.`,
+            );
+          }
           ok(`Task #${taskId} completed.`);
           this.markStatus(taskId, "~", "x");
 
@@ -498,7 +538,14 @@ export class TaskRunner {
           }
           return true;
         }
-        warn(`Task #${taskId} failed attempt ${attempt}.`);
+
+        if (exitCode === 0 && taskStatus.startsWith("FAILED")) {
+          warn(`Task #${taskId} agent reported failure: ${taskStatus}`);
+        } else {
+          warn(
+            `Task #${taskId} failed attempt ${attempt} (exit code: ${exitCode}).`,
+          );
+        }
       } catch (e) {
         clearInterval(timer);
         this.ui.stopProgressBar();
@@ -510,6 +557,33 @@ export class TaskRunner {
     this.markStatus(taskId, "~", "!");
     if (this.options.branch && originalBranch) checkout(originalBranch);
     return false;
+  }
+
+  /**
+   * Extract TASK_STATUS from stdout. Checks both raw text and JSON .result field.
+   * Returns: "SUCCESS", "HUMAN_REVIEW_NEEDED", "FAILED: <reason>", or "MISSING".
+   */
+  private extractTaskStatus(stdout: string): string {
+    // Search in raw stdout first
+    const rawMatch = stdout.match(
+      /TASK_STATUS:\s*(SUCCESS|HUMAN_REVIEW_NEEDED|FAILED[^\n]*)/,
+    );
+    if (rawMatch?.[1]) return rawMatch[1].trim();
+
+    // Search inside JSON .result field
+    try {
+      const parsed = JSON.parse(stdout);
+      const result =
+        typeof parsed.result === "string"
+          ? parsed.result
+          : JSON.stringify(parsed.result || "");
+      const jsonMatch = result.match(
+        /TASK_STATUS:\s*(SUCCESS|HUMAN_REVIEW_NEEDED|FAILED[^\n]*)/,
+      );
+      if (jsonMatch?.[1]) return jsonMatch[1].trim();
+    } catch {}
+
+    return "MISSING";
   }
 
   private saveTaskLog(
@@ -635,8 +709,8 @@ export class TaskRunner {
 
     // Inject shared memory so each task sees what previous tasks learned
     let memorySection = "";
-    if (fs.existsSync("MEMORY.md")) {
-      const memory = fs.readFileSync("MEMORY.md", "utf-8").trim();
+    if (fs.existsSync(MEMORY_FILE)) {
+      const memory = fs.readFileSync(MEMORY_FILE, "utf-8").trim();
       if (memory && memory !== "# Project Memory") {
         memorySection = `\n## Shared memory (from previous tasks)\n\n${memory}\n`;
       }
@@ -656,7 +730,7 @@ ${memorySection}
 1. Read the specification and PROTOCOL.md to understand the workflow and available teammates.
 2. Explore the codebase to understand the current state.
 3. Delegate work to teammates following the communication graph in PROTOCOL.md.
-4. After the task, append findings to MEMORY.md:
+4. After the task, append findings to \`.claude-loop/memory.md\`:
    \`\`\`
    ## Task #${taskId}: ${desc}
    - [key decisions]
@@ -664,7 +738,11 @@ ${memorySection}
    - [gotchas discovered]
    \`\`\`
 5. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md (what was done, who did what, results).
-6. On your VERY LAST LINE, output: TASK_STATUS: SUCCESS or TASK_STATUS: HUMAN_REVIEW_NEEDED
+6. On your VERY LAST LINE, output exactly one of:
+   - TASK_STATUS: SUCCESS
+   - TASK_STATUS: HUMAN_REVIEW_NEEDED
+   - TASK_STATUS: FAILED: <reason>
+   This line is MANDATORY — the runner uses it to determine task outcome.
     `.trim();
   }
 }

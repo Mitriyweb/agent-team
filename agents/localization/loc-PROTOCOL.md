@@ -91,9 +91,9 @@ Agents must NOT assume prior context — re-derive state from the Handoff Summar
 
 ## Memory Management
 
-All agents MUST use `MEMORY.md` to persist and share knowledge across tasks.
+All agents MUST use `.claude-loop/memory.md` to persist and share knowledge across tasks.
 
-- **Read**: At the start of every task, read `MEMORY.md` for context on terminology, style guides, and cultural preferences
+- **Read**: At the start of every task, read `.claude-loop/memory.md` for context on terminology, style guides, and cultural preferences
 - **Write**: Before finishing, append findings: translation rules, terminology standards, cultural notes
 - **Format**: Use `## Task #N: Title` sections
 

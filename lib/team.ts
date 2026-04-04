@@ -152,14 +152,24 @@ export async function initProject(options: InitProjectOptions) {
     }
   }
 
-  if (!fs.existsSync("MEMORY.md")) {
-    const srcMemory = path.join(sourceDir, "MEMORY.md");
-    if (fs.existsSync(srcMemory)) {
-      fs.copyFileSync(srcMemory, "MEMORY.md");
-    } else {
-      fs.writeFileSync("MEMORY.md", "# Project Memory\n");
+  const loopDir = ".claude-loop";
+  if (!fs.existsSync(loopDir)) fs.mkdirSync(loopDir, { recursive: true });
+  const memoryFile = path.join(loopDir, "memory.md");
+  if (!fs.existsSync(memoryFile)) {
+    fs.writeFileSync(memoryFile, "# Project Memory\n");
+    ok(`Created ${memoryFile}`);
+  }
+  // Migrate legacy MEMORY.md if present
+  if (fs.existsSync("MEMORY.md")) {
+    const legacy = fs.readFileSync("MEMORY.md", "utf-8").trim();
+    if (legacy && legacy !== "# Project Memory") {
+      fs.appendFileSync(
+        memoryFile,
+        `\n${legacy.replace("# Project Memory\n", "")}`,
+      );
     }
-    ok("Created MEMORY.md");
+    fs.unlinkSync("MEMORY.md");
+    ok("Migrated MEMORY.md → .claude-loop/memory.md");
   }
   if (planner !== "openspec" && !fs.existsSync("ROADMAP.md")) {
     fs.writeFileSync("ROADMAP.md", "# Project Roadmap\n");
@@ -341,8 +351,8 @@ ${agentList || "No agents installed."}
 ${protocolSection}
 ## Shared memory
 
-Read MEMORY.md before starting any task — it contains decisions and context from previous tasks.
-After completing work, append findings to MEMORY.md using format: \`## Task #N: Title\`
+Read \`.claude-loop/memory.md\` before starting any task — it contains decisions and context from previous tasks.
+After completing work, append findings to \`.claude-loop/memory.md\` using format: \`## Task #N: Title\`
 
 ## Reports
 

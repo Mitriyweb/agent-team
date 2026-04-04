@@ -32,9 +32,9 @@ When team-lead assigns a task:
 }
 ```
 
-**Step 2** — Check `MEMORY.md` for existing architectural constraints.
+**Step 2** — Check `.claude-loop/memory.md` for existing architectural constraints.
 
-**Step 3** — Update `MEMORY.md` if your design introduces new patterns or architectural decisions.
+**Step 3** — Update `.claude-loop/memory.md` if your design introduces new patterns or architectural decisions.
 
 **Step 4** — Write `SPEC.md` after developer replies. This is the **Spec Freeze** phase.
 

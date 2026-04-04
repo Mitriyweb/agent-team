@@ -40,7 +40,7 @@ When architect asks about the codebase, reply honestly and in detail:
 
 - Match the existing code style.
 
-- Update `MEMORY.md` if you discover significant "gotchas" or implement a reusable pattern.
+- Update `.claude-loop/memory.md` if you discover significant "gotchas" or implement a reusable pattern.
 
 - Add JSDoc to all public methods.
 

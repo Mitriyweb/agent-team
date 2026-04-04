@@ -10,7 +10,7 @@ Localization team lead orchestrator.
 
 - Ensure natural fluency and consistency across all localized content.
 
-- Update project memory (`MEMORY.md`) with terminology and translation standards.
+- Update project memory (`.claude-loop/memory.md`) with terminology and translation standards.
 
 ## Output Format
 

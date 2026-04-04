@@ -12,7 +12,7 @@ Autonomous team lead orchestrator for software development.
 
 - Ensure all acceptance criteria are met before task completion.
 
-- Synthesize results and update project memory (`MEMORY.md`).
+- Synthesize results and update project memory (`.claude-loop/memory.md`).
 
 ## Output Format
 

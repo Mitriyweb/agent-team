@@ -35,7 +35,7 @@ manage sub-agents (tech-writer, localizers, seo-specialist, qa).
 
 ### Phase 0.5 — Memory Check
 
-Read `MEMORY.md` to understand terminology, style guides, and cultural preferences.
+Read `.claude-loop/memory.md` to understand terminology, style guides, and cultural preferences.
 
 ### Phase 1 — Source Documentation
 
@@ -91,7 +91,7 @@ Iterate with the tech-writer, localizers, or seo-specialist if issues are found.
 
 ### Phase 4 — Summary
 
-Create `SUMMARY.md` and update `MEMORY.md` if the task established new terminology or translation standards.
+Create `SUMMARY.md` and update `.claude-loop/memory.md` if the task established new terminology or translation standards.
 
 ```markdown
 
