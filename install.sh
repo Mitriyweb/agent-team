@@ -46,9 +46,13 @@ command -v curl >/dev/null 2>&1 || err "curl is required but not found."
 
 mkdir -p "$BIN_DIR"
 
-if curl -fsSL "$URL" | install -m 755 /dev/stdin "${BIN_DIR}/${BIN_NAME}"; then
+TMP_FILE="$(mktemp)"
+if curl -fsSL "$URL" -o "$TMP_FILE"; then
+  chmod 755 "$TMP_FILE"
+  mv "$TMP_FILE" "${BIN_DIR}/${BIN_NAME}"
   ok "Installed ${BIN_NAME} to ${BIN_DIR}/${BIN_NAME}"
 else
+  rm -f "$TMP_FILE"
   err "Download failed. Check https://github.com/${REPO}/releases for available binaries."
 fi
 
