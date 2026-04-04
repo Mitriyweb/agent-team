@@ -11,7 +11,13 @@ import { runAuditHook } from "../lib/audit-hook.ts";
 import { err } from "../lib/common.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
-import { createTeam, initProject, validateTeam } from "../lib/team.ts";
+import {
+  createTeam,
+  initProject,
+  reconfigureProject,
+  updateProject,
+  validateTeam,
+} from "../lib/team.ts";
 
 import PKG from "../package.json" with { type: "json" };
 
@@ -92,6 +98,10 @@ async function main() {
       roles: args[rolesIdx + 1] ?? "",
       humanReview: !noHumanReview,
     });
+  } else if (command === "update") {
+    await updateProject({ sourceDir });
+  } else if (command === "reconfigurate") {
+    await reconfigureProject({ sourceDir });
   } else if (command === "validate") {
     const name = args[1];
     if (!name) err("Usage: agent-team validate NAME");

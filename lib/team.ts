@@ -365,6 +365,139 @@ function copyTeamFlat(srcTeamDir: string, targetDir: string) {
   copyRecursiveSync(srcTeamDir, targetDir);
 }
 
+export async function updateProject(options: { sourceDir?: string }) {
+  const { sourceDir = "." } = options;
+  log("Updating agent-team project configuration...");
+
+  // 1. Update .gitignore
+  const gitignoreEntries = [
+    "# Agent team artifacts",
+    ".claude-loop/",
+    "tasks/",
+    ".agents/",
+    "*.log",
+    ".DS_Store",
+    "settings.local.json",
+  ];
+  const gitignorePath = ".gitignore";
+  if (fs.existsSync(gitignorePath)) {
+    const existingGitignore = fs.readFileSync(gitignorePath, "utf-8");
+    const existingLines = new Set(existingGitignore.split("\n"));
+    const newEntries = gitignoreEntries.filter((e) => !existingLines.has(e));
+    if (newEntries.length > 0) {
+      fs.appendFileSync(gitignorePath, `\n${newEntries.join("\n")}\n`);
+      ok("Updated .gitignore");
+    }
+  }
+
+  // 2. Refresh .claude/settings.json
+  const config = loadConfig();
+  const teamName = config.team;
+  if (!fs.existsSync(".claude")) fs.mkdirSync(".claude", { recursive: true });
+  const targetSettings = path.join(".claude", "settings.json");
+
+  let settingsSource = "";
+  if (
+    teamName &&
+    fs.existsSync(
+      path.join(sourceDir, "agents", teamName, "claude/settings.json"),
+    )
+  ) {
+    settingsSource = path.join(
+      sourceDir,
+      "agents",
+      teamName,
+      "claude/settings.json",
+    );
+  }
+
+  if (settingsSource) {
+    fs.copyFileSync(settingsSource, targetSettings);
+    ok(`Refreshed team-specific Claude settings for ${teamName}`);
+  } else {
+    fs.writeFileSync(targetSettings, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+    ok("Refreshed default Claude settings");
+  }
+
+  // 3. Re-apply documentation fixes
+  log("Refreshing project documentation...");
+  const mdFiles = findFiles(".", 3, ".md");
+  for (const file of mdFiles) {
+    if (file.startsWith("agents/")) {
+      const content = fs.readFileSync(file, "utf-8");
+      const original = content;
+      const newContent = content
+        .replace(/\.\/scripts\/run\.sh/g, "agent-team run")
+        .replace(/\.\/scripts\/plan\.sh/g, "agent-team plan")
+        .replace(/plan\.sh /g, "agent-team plan ")
+        .replace(/run\.sh /g, "agent-team run ")
+        .replace(/`plan\.sh`/g, "`agent-team plan`")
+        .replace(/`run\.sh`/g, "`agent-team run`")
+        .replace(/_common\.sh/g, "lib/common.ts");
+
+      if (newContent !== original) {
+        fs.writeFileSync(file, newContent);
+      }
+    }
+  }
+
+  ok("Project configuration updated successfully.");
+}
+
+export async function reconfigureProject(options: { sourceDir?: string }) {
+  const { sourceDir = "." } = options;
+  log("Reconfiguring agent-team skills and workflows...");
+
+  // 1. Refresh global workflows
+  const srcWorkflowsDir = path.join(sourceDir, ".agents", "workflows");
+  if (fs.existsSync(srcWorkflowsDir)) {
+    const targetWorkflowsDir = path.join(".agents", "workflows");
+    if (!fs.existsSync(targetWorkflowsDir))
+      fs.mkdirSync(targetWorkflowsDir, { recursive: true });
+    copyRecursiveSync(srcWorkflowsDir, targetWorkflowsDir);
+    ok("Updated global workflows");
+  }
+
+  // 2. Identify teams and update skills/scripts
+  const config = loadConfig();
+  const teams: string[] = [];
+
+  if (config.team) {
+    teams.push(config.team);
+  } else if (fs.existsSync("agents")) {
+    const entries = fs.readdirSync("agents", { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        teams.push(entry.name);
+      }
+    }
+  }
+
+  for (const team of teams) {
+    const srcTeamDir = path.join(sourceDir, "agents", team);
+    const targetTeamDir = path.join("agents", team);
+
+    if (fs.existsSync(srcTeamDir) && fs.existsSync(targetTeamDir)) {
+      log(`Updating skills for team: ${team}`);
+
+      const subdirs = ["skills", "scripts", "claude"];
+      for (const subdir of subdirs) {
+        const srcSubdir = path.join(srcTeamDir, subdir);
+        const targetSubdir = path.join(targetTeamDir, subdir);
+
+        if (fs.existsSync(srcSubdir)) {
+          if (!fs.existsSync(targetSubdir))
+            fs.mkdirSync(targetSubdir, { recursive: true });
+          copyRecursiveSync(srcSubdir, targetSubdir);
+          ok(`Updated ${team}/${subdir}`);
+        }
+      }
+    }
+  }
+
+  ok("Project reconfigured successfully.");
+}
+
 function copyRecursiveSync(src: string, dest: string) {
   if (!fs.existsSync(src)) return;
   const stats = fs.statSync(src);

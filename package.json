@@ -1,6 +1,6 @@
 {
   "name": "@mitriyweb/agent-team",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
   "license": "MIT",
   "author": "Mitriyweb",
