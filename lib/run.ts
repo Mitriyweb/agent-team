@@ -25,6 +25,8 @@ import {
   getCurrentBranch,
 } from "./git.ts";
 import { planRoadmap } from "./plan.ts";
+// @ts-expect-error
+import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import { TerminalUI } from "./ui.ts";
 
 const LOOP_DIR = ".claude-loop";
@@ -134,9 +136,9 @@ export class TaskRunner {
       fs.unlinkSync(legacy);
       log(`Migrated MEMORY.md → ${MEMORY_FILE}`);
     }
-    // Ensure memory file exists
+    // Ensure memory file exists with structured template
     if (!fs.existsSync(MEMORY_FILE)) {
-      fs.writeFileSync(MEMORY_FILE, "# Project Memory\n");
+      fs.writeFileSync(MEMORY_FILE, MEMORY_TEMPLATE as string);
     }
   }
 
@@ -500,6 +502,7 @@ export class TaskRunner {
           if (approved) {
             ok(`Task #${taskId} review approved — continuing.`);
             this.markStatus(taskId, "~", "x");
+            this.runLibrarian(taskId);
             if (this.options.branch) {
               commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
               createPR(
@@ -527,6 +530,7 @@ export class TaskRunner {
           }
           ok(`Task #${taskId} completed.`);
           this.markStatus(taskId, "~", "x");
+          this.runLibrarian(taskId);
 
           if (this.options.branch) {
             commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
@@ -701,6 +705,71 @@ export class TaskRunner {
         },
       );
     });
+  }
+
+  private runLibrarian(taskId: string) {
+    const librarianAgent = path.join(AGENTS_DIR, "librarian.md");
+    if (!fs.existsSync(librarianAgent)) return;
+
+    // Find report: prefer team-lead's report, fall back to runner's log
+    const reportFile = path.join(REPORTS_DIR, `task-${taskId}.md`);
+    let reportSource = "";
+    if (fs.existsSync(reportFile)) {
+      reportSource = reportFile;
+    } else {
+      // Find latest log for this task
+      const logFiles = fs.existsSync(LOG_DIR)
+        ? fs
+            .readdirSync(LOG_DIR)
+            .filter(
+              (f) => f.startsWith(`task-${taskId}-`) && f.endsWith(".log"),
+            )
+            .sort()
+            .reverse()
+        : [];
+      if (logFiles.length > 0)
+        reportSource = path.join(LOG_DIR, logFiles[0] as string);
+    }
+    if (!reportSource) return;
+
+    try {
+      log(`Running librarian on task #${taskId} report...`);
+      const instructions = fs.readFileSync(librarianAgent, "utf-8");
+      const report = fs.readFileSync(reportSource, "utf-8");
+      const prompt = `${instructions}\n\n---\n\n## Task Report\n\n${report}`;
+      const proc = Bun.spawnSync(
+        [
+          "claude",
+          "-p",
+          prompt,
+          "--model",
+          "sonnet",
+          "--max-turns",
+          "10",
+          "--allowedTools",
+          "Read,Write,Edit,Glob,Grep",
+        ],
+        { stderr: "pipe" },
+      );
+      if (proc.exitCode === 0) {
+        let output = "";
+        try {
+          const parsed = JSON.parse(new TextDecoder().decode(proc.stdout));
+          output =
+            typeof parsed.result === "string"
+              ? parsed.result
+              : new TextDecoder().decode(proc.stdout);
+        } catch {
+          output = new TextDecoder().decode(proc.stdout);
+        }
+        const summary = output.trim().split("\n").slice(-3).join("\n");
+        if (summary) log(`Librarian: ${summary}`);
+      } else {
+        warn(`Librarian failed (exit ${proc.exitCode})`);
+      }
+    } catch (e) {
+      warn(`Librarian error: ${e}`);
+    }
   }
 
   private buildPrompt(taskId: string, desc: string, spec: string): string {

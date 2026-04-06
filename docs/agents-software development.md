@@ -74,6 +74,18 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 - **Output:** QA_REPORT.md → reports to team-lead
 
+### librarian (cross-team)
+
+- **Model:** claude-sonnet
+
+- **Responsibilities:** Curates `.claude-loop/memory.md` after each completed task
+
+- **Runs:** Automatically after task SUCCESS or approved HUMAN_REVIEW
+
+- **Input:** Task report from `.claude-loop/reports/` (falls back to task log)
+
+- **Output:** Structured updates to memory.md sections (Patterns & Decisions, Known Errors & Gotchas, Session Log)
+
 ---
 
 ## Task Flow
@@ -104,6 +116,7 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 19. team-lead writes SUMMARY.md
 20. task marked as done in ROADMAP.md
+21. librarian curates memory.md from task report
 ```
 
 ## Handoff Summaries

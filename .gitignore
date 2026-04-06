@@ -11,3 +11,4 @@ dist/
 bin/claude
 .claude/settings.json
 tmp/*
+.obsidian

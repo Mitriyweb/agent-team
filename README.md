@@ -76,8 +76,9 @@ agent-team import .github
 This will:
 
 - Deploy agent definitions to `.claude/agents/` (flat layout)
+- Deploy the **librarian** agent for automated memory curation
 - Generate `CLAUDE.md` with team context (managed block)
-- Create `.claude-loop/memory.md` for shared knowledge across tasks
+- Create `.claude-loop/memory.md` with structured knowledge base template
 - Create `ROADMAP.md` (builtin planner) or init OpenSpec
 - Configure `.claude/settings.json` with team profiles
 - Save project config to `agent-team.json`
@@ -153,14 +154,16 @@ Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`).
 your-project/
 ├── CLAUDE.md                    # Project instructions (with agent-team managed block)
 ├── .claude-loop/
-│   ├── memory.md                # Shared knowledge across tasks
+│   ├── memory.md                # Structured knowledge base (curated by librarian)
 │   ├── logs/                    # Task execution logs
-│   └── reports/                 # Task reports and cost summary
+│   ├── reports/                 # Task reports and cost summary
+│   └── audit/                   # Tool call audit trail
 ├── ROADMAP.md                   # Task descriptions (builtin planner)
 ├── agent-team.json              # Project config (planner, team name)
 ├── .claude/
 │   ├── settings.json            # Permissions, profiles, hooks
 │   └── agents/
+│       ├── librarian.md         # Knowledge curator (cross-team, auto-deployed)
 │       ├── sw-team-lead.md      # Agent definitions (flat layout)
 │       ├── sw-architect.md
 │       ├── sw-developer.md
@@ -172,12 +175,8 @@ your-project/
 │       ├── architect/
 │       │   └── CLAUDE.md
 │       └── skills/              # Agent skills and references
-├── tasks/
-│   └── plan.md                  # Decomposed task plan
-└── .claude-loop/
-    ├── logs/                    # Task execution logs
-    ├── reports/                 # Task completion reports
-    └── audit/                   # Tool call audit trail
+└── tasks/
+    └── plan.md                  # Decomposed task plan
 ```
 
 ## Importing Rules
@@ -206,12 +205,21 @@ Each agent has a `model:` field in its frontmatter (e.g., `claude-opus`, `claude
 
 ### Memory
 
-`.claude-loop/memory.md` is injected into every task prompt. Agents are required to:
+`.claude-loop/memory.md` is a structured knowledge base injected into every task prompt. It has four sections:
 
-1. Read `.claude-loop/memory.md` before starting
-2. Append findings after completing (decisions, gotchas, patterns)
+- **Patterns & Decisions** — architectural choices that must be remembered
+- **Known Errors & Gotchas** — what broke and how it was fixed
+- **Skills Index** — quick reference to skill files
+- **Session Log** — table of completed tasks
 
-This ensures knowledge transfers between sequential tasks.
+After each completed task, the **librarian** agent runs automatically to curate memory:
+
+1. Reads the task report from `.claude-loop/reports/`
+2. Extracts decisions, errors, patterns, and gotchas
+3. Updates the correct section in `memory.md`
+4. Syncs agent-specific gotchas to `.claude/agents/skills/`
+
+The librarian keeps `memory.md` under 300 lines, summarizing older entries into an archive section when needed.
 
 ### Logging
 

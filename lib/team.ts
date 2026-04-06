@@ -21,6 +21,10 @@ import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
  * Port of create_team logic from team.sh
  */
 // @ts-expect-error
+import LIBRARIAN_TEMPLATE from "./templates/librarian.md" with { type: "text" };
+// @ts-expect-error
+import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
+// @ts-expect-error
 import PROTOCOL_TEMPLATE from "./templates/PROTOCOL.md" with { type: "text" };
 import DEFAULT_SETTINGS from "./templates/settings.json" with { type: "json" };
 
@@ -156,7 +160,7 @@ export async function initProject(options: InitProjectOptions) {
   if (!fs.existsSync(loopDir)) fs.mkdirSync(loopDir, { recursive: true });
   const memoryFile = path.join(loopDir, "memory.md");
   if (!fs.existsSync(memoryFile)) {
-    fs.writeFileSync(memoryFile, "# Project Memory\n");
+    fs.writeFileSync(memoryFile, MEMORY_TEMPLATE as string);
     ok(`Created ${memoryFile}`);
   }
   // Migrate legacy MEMORY.md if present
@@ -250,6 +254,11 @@ export async function initProject(options: InitProjectOptions) {
   // Clean up: settings.json should only live in .claude/, not in .claude/agents/
   const leftoverSettings = path.join(CLAUDE_AGENTS_DIR, "settings.json");
   if (fs.existsSync(leftoverSettings)) fs.rmSync(leftoverSettings);
+
+  // Deploy cross-team librarian agent
+  const librarianPath = path.join(CLAUDE_AGENTS_DIR, "librarian.md");
+  fs.writeFileSync(librarianPath, LIBRARIAN_TEMPLATE as string);
+  ok("Deployed librarian agent");
 
   if (!humanReview && fs.existsSync(targetSettings)) {
     try {
@@ -353,6 +362,11 @@ ${protocolSection}
 
 Read \`.claude-loop/memory.md\` before starting any task — it contains decisions and context from previous tasks.
 After completing work, append findings to \`.claude-loop/memory.md\` using format: \`## Task #N: Title\`
+
+The **librarian** agent runs automatically after each completed task to curate memory:
+- Extracts decisions, errors, patterns, and gotchas from task reports
+- Updates structured sections in \`memory.md\` (Patterns & Decisions, Known Errors & Gotchas, Session Log)
+- Syncs agent-specific gotchas to \`.claude/agents/skills/\`
 
 ## Reports
 
@@ -545,6 +559,15 @@ export async function updateProject(options: { sourceDir?: string }) {
     fs.rmSync(agentSettings);
     ok("Refreshed .claude/settings.json");
   }
+
+  // 2b. Deploy cross-team librarian agent
+  if (!fs.existsSync(CLAUDE_AGENTS_DIR))
+    fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+  fs.writeFileSync(
+    path.join(CLAUDE_AGENTS_DIR, "librarian.md"),
+    LIBRARIAN_TEMPLATE as string,
+  );
+  ok("Updated librarian agent");
 
   // 3. Fix legacy references in agent docs
   const mdFiles = findFiles(CLAUDE_AGENTS_DIR, 4, ".md");

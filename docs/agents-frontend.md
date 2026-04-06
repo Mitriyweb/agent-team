@@ -83,3 +83,4 @@ The frontend team relies on the following configuration in `.env` (see `config/f
 4. **Visual & A11y Review:** `fe-reviewer` checks for visual matches and accessibility.
 5. **Functional QA:** `fe-qa` runs E2E and visual regression tests.
 6. **Delivery:** `fe-team-lead` synthesizes the `SUMMARY.md` and marks the task as complete.
+7. **Memory curation:** `librarian` extracts findings from the task report into structured `memory.md`.

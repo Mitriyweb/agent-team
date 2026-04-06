@@ -97,6 +97,12 @@ All agents MUST use `.claude-loop/memory.md` to persist and share knowledge acro
 - **Write**: Before finishing, append findings: translation rules, terminology standards, cultural notes
 - **Format**: Use `## Task #N: Title` sections
 
+### Librarian Agent
+
+The `librarian` agent runs automatically after each completed task.
+It reads the task report and updates `memory.md` with extracted decisions, errors, patterns, and gotchas.
+Agent-specific gotchas are synced to the relevant `skills/*/references/gotchas.md`.
+
 ## Reports and Logs
 
 - Task reports: `.claude-loop/reports/task-{id}.md`
