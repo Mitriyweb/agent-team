@@ -67,6 +67,7 @@ describe("team.ts", () => {
       question: mock((_q, cb) => cb("y")),
       close: mock(() => {}),
     };
+    // biome-ignore lint/suspicious/noExplicitAny: mock implementation
     spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
 
     // Create dummy source agents
@@ -135,6 +136,7 @@ describe("team.ts", () => {
       question: mock((_q, cb) => cb("n")),
       close: mock(() => {}),
     };
+    // biome-ignore lint/suspicious/noExplicitAny: mock implementation
     spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
     await team.initProject({ teamName: "new" });
     // Should not have deleted .claude/agents if cancelled

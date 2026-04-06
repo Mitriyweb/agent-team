@@ -118,6 +118,7 @@ describe("run.ts", () => {
         question: mock((_q, cb) => cb("y")),
         close: mock(() => {}),
       };
+      // biome-ignore lint/suspicious/noExplicitAny: mock implementation
       spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
       const runner3 = new TaskRunner({ all: true });
       await runner3.run();

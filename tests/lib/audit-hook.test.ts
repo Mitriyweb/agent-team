@@ -4,6 +4,7 @@ import { runAuditHook } from "../../lib/audit-hook.ts";
 
 describe("audit-hook.ts", () => {
   it("runs audit hook for PRE and POST", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: mock implementation
     spyOn(fs, "mkdirSync").mockImplementation(() => undefined as any);
     spyOn(fs, "appendFileSync").mockImplementation(() => undefined);
 

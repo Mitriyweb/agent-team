@@ -39,6 +39,7 @@ describe("common.ts", () => {
     const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
     const errSpy = spyOn(console, "error").mockImplementation(() => {});
     const exitSpy = spyOn(process, "exit").mockImplementation(
+      // biome-ignore lint/suspicious/noExplicitAny: mock implementation
       (() => {}) as any,
     );
 
@@ -100,6 +101,7 @@ describe("common.ts", () => {
   it("covers configureProvider", () => {
     const origEnv = { ...process.env };
     const _errSpy = spyOn(process, "exit").mockImplementation(
+      // biome-ignore lint/suspicious/noExplicitAny: mock implementation
       (() => {}) as any,
     );
     spyOn(console, "error").mockImplementation(() => {});
