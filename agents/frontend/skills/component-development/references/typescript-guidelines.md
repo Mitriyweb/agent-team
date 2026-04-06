@@ -23,3 +23,5 @@ Strong typing is the foundation of a scalable frontend codebase.
 
 - Use JSDoc comments on interface properties to provide context in IDE tooltips.
 - Types should serve as the primary documentation for how to use a component.
+
+![[Untitled.base]]

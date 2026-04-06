@@ -40,7 +40,7 @@ Detects your platform, downloads the binary, and installs to `~/.local/bin/`.
 ### Option 2: npx (no install)
 
 ```bash
-npx @mitriyweb/agent-team init --team frontend
+npx @mitriyweb/agent-team init
 ```
 
 ### Option 3: Clone from source
@@ -56,21 +56,17 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team
 ## Quickstart
 
 ```bash
-# Initialize with a team
+# Interactive setup (recommended)
+agent-team init
+
+# Non-interactive (flags skip prompts)
 agent-team init --team "software development"
-agent-team init --team frontend
-agent-team init --team localization
-
-# Without human review checkpoints (auto mode)
 agent-team init --team frontend --no-human-review
-
-# With OpenSpec planner
 agent-team init --team "software development" --planner openspec
 
-# Import rules from another tool
+# Import rules (interactive if no path given)
+agent-team import
 agent-team import .windsurf
-agent-team import .cursor
-agent-team import .github
 ```
 
 This will:
@@ -95,10 +91,11 @@ agent-team run --dry-run # preview without running
 
 ```text
 Setup:
-  agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]
+  agent-team init                                      Interactive setup
+  agent-team init --team NAME [--planner P]            Non-interactive
   agent-team update                                    Update project configs
   agent-team reconfigure                               Update skills & workflows
-  agent-team import <path>                             Import rules from .windsurf, .cursor, .github
+  agent-team import [path]                             Import rules (interactive if no path)
 
 Execution:
   agent-team run [--all] [--plan] [--dry-run]          Execute tasks
@@ -107,7 +104,8 @@ Execution:
   agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks
 
 Teams:
-  agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2
+  agent-team new-team                                  Interactive team creation
+  agent-team new-team --name N --description D --roles R1,R2
   agent-team validate NAME                             Validate team structure
 
 Monitoring:
@@ -116,6 +114,9 @@ Monitoring:
   agent-team -v, --version                             Show version
   agent-team -h, --help                                Show this help
 ```
+
+All setup commands (`init`, `new-team`, `import`) are interactive by default.
+Pass CLI flags to skip prompts for scripting and CI.
 
 ## Planning
 
@@ -184,6 +185,7 @@ your-project/
 Import rules and workflows from other AI coding tools:
 
 ```bash
+agent-team import               # Interactive — auto-detects available sources
 agent-team import .windsurf     # Windsurf rules (rules/*.md + .windsurfrules)
 agent-team import .cursor       # Cursor rules (rules/*.mdc + .cursorrules)
 agent-team import .github       # GitHub Copilot (copilot-instructions.md)
@@ -287,6 +289,10 @@ Blocked by default via `permissions.deny`:
 ## Creating Custom Teams
 
 ```bash
+# Interactive (recommended)
+agent-team new-team
+
+# Non-interactive
 agent-team new-team \
   --name "security-audit" \
   --description "Security and vulnerability assessment team" \

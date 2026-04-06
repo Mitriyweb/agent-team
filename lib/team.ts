@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import readline from "node:readline";
+import * as p from "@clack/prompts";
 import {
   BLUE,
   err,
@@ -12,7 +12,6 @@ import {
   type ProjectConfig,
   saveConfig,
   warn,
-  YELLOW,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
 // @ts-expect-error
@@ -184,12 +183,11 @@ export async function initProject(options: InitProjectOptions) {
   if (teamName && fs.existsSync(CLAUDE_AGENTS_DIR)) {
     const existingTeam = getInstalledTeam();
     if (existingTeam && existingTeam !== teamName) {
-      log(`${YELLOW}Existing team detected:${NC} ${BLUE}${existingTeam}${NC}`);
-      const confirmed = await confirmPrompt(
-        `Replace with ${GREEN}${teamName}${NC}? (y/n): `,
-      );
-      if (!confirmed) {
-        warn("Init cancelled by user.");
+      const confirmed = await p.confirm({
+        message: `Replace existing team "${existingTeam}" with "${teamName}"?`,
+      });
+      if (p.isCancel(confirmed) || !confirmed) {
+        p.cancel("Init cancelled.");
         return;
       }
       // Clean .claude/agents/ completely
@@ -492,19 +490,6 @@ export function validateTeam(_name: string) {
   } else {
     ok(`Team '${installed}' is valid`);
   }
-}
-
-function confirmPrompt(question: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(`  ${question}`, (answer: string) => {
-      rl.close();
-      resolve(answer.trim().toLowerCase() === "y");
-    });
-  });
 }
 
 /**

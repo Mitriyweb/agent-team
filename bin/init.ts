@@ -5,12 +5,14 @@
  */
 
 import path from "node:path";
+import * as p from "@clack/prompts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
 import { err } from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
+import { promptImport, promptInit, promptNewTeam } from "../lib/prompts.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
 import {
   createTeam,
@@ -35,22 +37,61 @@ const sourceDir = path.join(import.meta.dir, "..");
 // Extract assets on startup
 extractReviewSound();
 
+/** Check if any flags were explicitly provided (non-interactive mode). */
+function hasFlag(...flags: string[]): boolean {
+  return flags.some((f) => args.includes(f));
+}
+
+function flagValue(flag: string): string | undefined {
+  const idx = args.indexOf(flag);
+  if (idx === -1) return undefined;
+  const val = args[idx + 1];
+  return val && !val.startsWith("-") ? val : undefined;
+}
+
 async function main() {
   if (command === "init") {
-    const teamIdx = args.indexOf("--team");
-    const teamName = teamIdx !== -1 ? args[teamIdx + 1] : args[1];
-    const noHumanReview = args.includes("--no-human-review");
-    const plannerIdx = args.indexOf("--planner");
-    const plannerArg = plannerIdx !== -1 ? args[plannerIdx + 1] : undefined;
-    const planner =
-      plannerArg === "openspec" ? "openspec" : ("builtin" as const);
+    // Detect explicit flags → non-interactive
+    const explicitTeam = flagValue("--team") ?? args[1];
+    const teamFromFlag =
+      explicitTeam && !explicitTeam.startsWith("-") ? explicitTeam : undefined;
+    const explicitPlanner = flagValue("--planner");
+    const explicitNoReview = hasFlag("--no-human-review");
+
+    const isNonInteractive =
+      teamFromFlag !== undefined ||
+      explicitPlanner !== undefined ||
+      explicitNoReview;
+
+    let teamName: string | undefined;
+    let planner: "builtin" | "openspec";
+    let humanReview: boolean;
+
+    if (isNonInteractive) {
+      // Classic flag-based mode
+      teamName = teamFromFlag;
+      planner =
+        explicitPlanner === "openspec" ? "openspec" : ("builtin" as const);
+      humanReview = !explicitNoReview;
+    } else {
+      // Interactive mode
+      p.intro("agent-team");
+      const answers = await promptInit(sourceDir, {});
+      if (!answers) return;
+      teamName = answers.teamName;
+      planner = answers.planner;
+      humanReview = answers.humanReview;
+    }
 
     await initProject({
-      teamName: teamName && !teamName.startsWith("-") ? teamName : undefined,
-      humanReview: !noHumanReview,
+      teamName,
+      humanReview,
       sourceDir,
       planner,
     });
+
+    if (!isNonInteractive)
+      p.outro("Done. Run agent-team run --plan --all to start.");
   } else if (command === "run") {
     const options: RunOptions = {
       all: args.includes("--all"),
@@ -82,30 +123,47 @@ async function main() {
     const planModel = modelIdx !== -1 ? args[modelIdx + 1] : undefined;
     await planRoadmap(inputFile, planModel);
   } else if (command === "new-team") {
-    const nameIdx = args.indexOf("--name");
-    const descIdx = args.indexOf("--description");
-    const rolesIdx = args.indexOf("--roles");
-    const noHumanReview = args.includes("--no-human-review");
+    const nameFromFlag = flagValue("--name");
+    const descFromFlag = flagValue("--description");
+    const rolesFromFlag = flagValue("--roles");
+    const noHumanReview = hasFlag("--no-human-review");
 
-    if (nameIdx === -1 || descIdx === -1 || rolesIdx === -1) {
-      err(
-        "Usage: agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2",
-      );
+    const isNonInteractive =
+      nameFromFlag !== undefined &&
+      descFromFlag !== undefined &&
+      rolesFromFlag !== undefined;
+
+    if (isNonInteractive) {
+      await createTeam({
+        name: nameFromFlag,
+        description: descFromFlag,
+        roles: rolesFromFlag,
+        humanReview: !noHumanReview,
+      });
+    } else {
+      p.intro("agent-team new-team");
+      const answers = await promptNewTeam({
+        name: nameFromFlag,
+        description: descFromFlag,
+        roles: rolesFromFlag,
+        humanReview: noHumanReview ? false : undefined,
+      });
+      if (!answers) return;
+      await createTeam(answers);
+      p.outro("Team created.");
     }
-
-    await createTeam({
-      name: args[nameIdx + 1] ?? "",
-      description: args[descIdx + 1] ?? "",
-      roles: args[rolesIdx + 1] ?? "",
-      humanReview: !noHumanReview,
-    });
   } else if (command === "import") {
     const source = args[1];
-    if (!source)
-      err(
-        "Usage: agent-team import <path>\n  e.g. agent-team import .windsurf",
-      );
-    await importConfig(source);
+
+    if (source) {
+      await importConfig(source);
+    } else {
+      p.intro("agent-team import");
+      const answers = await promptImport();
+      if (!answers) return;
+      await importConfig(answers.source);
+      p.outro("Import complete.");
+    }
   } else if (command === "update") {
     await updateProject({ sourceDir });
   } else if (command === "reconfigure") {
@@ -126,7 +184,10 @@ async function main() {
     console.log("");
     console.log("  Setup:");
     console.log(
-      "    agent-team init [--team NAME] [--planner builtin|openspec] [--no-human-review]",
+      "    agent-team init                                      Interactive setup",
+    );
+    console.log(
+      "    agent-team init --team NAME [--planner P]            Non-interactive",
     );
     console.log(
       "    agent-team update                                    Update project configs",
@@ -135,7 +196,7 @@ async function main() {
       "    agent-team reconfigure                               Update skills & workflows",
     );
     console.log(
-      "    agent-team import <path>                             Import rules from .windsurf, .cursor, .github",
+      "    agent-team import [path]                             Import rules (interactive if no path)",
     );
     console.log("");
     console.log("  Execution:");
@@ -150,7 +211,10 @@ async function main() {
     console.log("");
     console.log("  Teams:");
     console.log(
-      "    agent-team new-team --name NAME --description DESC --roles ROLE1,ROLE2",
+      "    agent-team new-team                                  Interactive team creation",
+    );
+    console.log(
+      "    agent-team new-team --name N --description D --roles R1,R2",
     );
     console.log(
       "    agent-team validate NAME                             Validate team structure",

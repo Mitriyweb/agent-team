@@ -60,3 +60,5 @@ When implementation is complete:
 Activate `skills/code-implementation/` for all coding tasks.
 Load `skills/code-implementation/references/gotchas.md` when
 working with shell scripts, YAML files, or directory paths.
+
+TypeScript & Typing Guidelines

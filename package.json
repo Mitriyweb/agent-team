@@ -52,5 +52,8 @@
     "markdownlint-cli2": "0.22.0",
     "typescript": "6.0.2",
     "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.2.0"
   }
 }

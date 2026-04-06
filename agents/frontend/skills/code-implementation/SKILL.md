@@ -6,6 +6,7 @@ metadata:
   team: frontend
   role: developer
   version: "1.0"
+tags:
 ---
 
 The Frontend Developer is responsible for building accessible, responsive, and performant UI components using the project's specified framework and styling approach.
