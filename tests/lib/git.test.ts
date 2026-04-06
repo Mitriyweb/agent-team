@@ -18,7 +18,6 @@ describe("git.ts", () => {
     git.createPR("t", "b");
 
     // Test throw
-    // @ts-expect-error
     Bun.spawnSync = mock(() => {
       throw new Error("git fail");
     });

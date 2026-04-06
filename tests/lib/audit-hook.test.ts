@@ -16,7 +16,6 @@ describe("audit-hook.ts", () => {
         },
       });
 
-    // @ts-expect-error
     const streamSpy = spyOn(Bun.stdin, "stream");
 
     streamSpy.mockReturnValue(mockStdin('{"tool":"t"}'));

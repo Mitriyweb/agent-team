@@ -28,16 +28,18 @@ describe("run.ts", () => {
     spyOn(common, "log").mockImplementation(() => {});
     spyOn(common, "ok").mockImplementation(() => {});
     spyOn(common, "warn").mockImplementation(() => {});
-    spyOn(common, "err").mockImplementation((m) => {
+    spyOn(common, "err").mockImplementation((m): never => {
       if (
         m &&
         typeof m === "string" &&
         (m.includes("Status: FAILED") ||
           m.includes("review rejected") ||
           m.includes("Budget exceeded"))
-      )
+      ) {
+        // @ts-expect-error: mock non-never return
         return;
-      throw new Error(m);
+      }
+      throw new Error(String(m));
     });
   });
 
@@ -162,16 +164,18 @@ describe("run.ts", () => {
 
   it("covers extractTaskStatus and findLatestOpenSpecChange", async () => {
     const runner = new TaskRunner({});
-    // @ts-expect-error
-    expect(runner.extractTaskStatus("TASK_STATUS: SUCCESS")).toBe("SUCCESS");
-    // @ts-expect-error
+    // biome-ignore lint/suspicious/noExplicitAny: private method test
+    expect((runner as any).extractTaskStatus("TASK_STATUS: SUCCESS")).toBe(
+      "SUCCESS",
+    );
     expect(
-      runner.extractTaskStatus(
+      // biome-ignore lint/suspicious/noExplicitAny: private method test
+      (runner as any).extractTaskStatus(
         JSON.stringify({ result: "TASK_STATUS: SUCCESS" }),
       ),
     ).toBe("SUCCESS");
-    // @ts-expect-error
-    expect(runner.extractTaskStatus("oops")).toBe("MISSING");
+    // biome-ignore lint/suspicious/noExplicitAny: private method test
+    expect((runner as any).extractTaskStatus("oops")).toBe("MISSING");
 
     // findLatestOpenSpecChange
     fs.mkdirSync("openspec/changes/c1", { recursive: true });

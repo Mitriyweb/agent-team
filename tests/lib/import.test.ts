@@ -22,7 +22,7 @@ describe("import.ts", () => {
     spyOn(common, "ok").mockImplementation(() => {});
     spyOn(common, "warn").mockImplementation(() => {});
     spyOn(common, "err").mockImplementation((m) => {
-      throw new Error(m);
+      throw new Error(String(m));
     });
   });
 

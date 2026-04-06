@@ -100,7 +100,7 @@ describe("common.ts", () => {
 
   it("covers configureProvider", () => {
     const origEnv = { ...process.env };
-    const _errSpy = spyOn(process, "exit").mockImplementation(
+    spyOn(process, "exit").mockImplementation(
       // biome-ignore lint/suspicious/noExplicitAny: mock implementation
       (() => {}) as any,
     );
