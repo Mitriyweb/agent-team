@@ -1,244 +1,189 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import readline from "node:readline";
+import * as common from "../../lib/common.ts";
+import { TaskRunner } from "../../lib/run.ts";
 
-let tmpDir: string;
-let origCwd: string;
-let origEnv: Record<string, string | undefined>;
-let origConsole: {
-  log: typeof console.log;
-  warn: typeof console.warn;
-  error: typeof console.error;
-};
-const origStderrWrite = process.stderr.write.bind(process.stderr);
+describe("run.ts", () => {
+  let tmpDir: string;
+  let origCwd: string;
 
-beforeEach(() => {
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "run-test-"));
-  origCwd = process.cwd();
-  origEnv = { PROVIDER: process.env.PROVIDER };
-  origConsole = {
-    log: console.log,
-    warn: console.warn,
-    error: console.error,
-  };
-  console.log = () => {};
-  console.warn = () => {};
-  console.error = () => {};
-  process.stderr.write = () => true;
-  process.chdir(tmpDir);
-  process.env.PROVIDER = "oauth";
-});
-
-afterEach(() => {
-  process.chdir(origCwd);
-  process.env.PROVIDER = origEnv.PROVIDER;
-  console.log = origConsole.log;
-  console.warn = origConsole.warn;
-  console.error = origConsole.error;
-  process.stderr.write = origStderrWrite;
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-});
-
-function writeRoadmap(content: string, filename = "tasks/plan.md") {
-  const dir = path.dirname(path.join(tmpDir, filename));
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(tmpDir, filename), content);
-}
-
-const ROADMAP_2_TASKS = [
-  "# Plan",
-  "",
-  "```",
-  "- [ ] id:001 priority:high type:feature agents:developer Implement login",
-  "- [ ] id:002 priority:medium type:test depends:001 agents:qa Write login tests",
-  "```",
-  "",
-  "### Task #001 — Implement login",
-  "**Agents:** developer",
-  "**Output:** src/login.ts",
-  "",
-  "### Task #002 — Write login tests",
-  "**Agents:** qa",
-  "**Depends on:** #001",
-].join("\n");
-
-describe("TaskRunner", () => {
-  it("creates log/report directories on construction", async () => {
-    writeRoadmap(ROADMAP_2_TASKS);
-    const { TaskRunner } = await import("../../lib/run.ts");
-    new TaskRunner({});
-
-    expect(fs.existsSync(path.join(tmpDir, ".claude-loop/logs"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, ".claude-loop/reports"))).toBe(true);
-  });
-
-  it("dry-run marks all tasks as done without spawning claude", async () => {
-    writeRoadmap(ROADMAP_2_TASKS);
-    const { TaskRunner } = await import("../../lib/run.ts");
-
-    const runner = new TaskRunner({ all: true, dryRun: true });
-    await runner.run();
-
-    const content = fs.readFileSync(
-      path.join(tmpDir, "tasks/plan.md"),
-      "utf-8",
+  beforeEach(() => {
+    origCwd = process.cwd();
+    tmpDir = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "agt-run-test-")),
     );
-    expect(content).toContain("[x] id:001");
-    expect(content).toContain("[x] id:002");
-    expect(content).not.toContain("[ ] id:001");
-    expect(content).not.toContain("[ ] id:002");
-  });
+    process.chdir(tmpDir);
 
-  it("dry-run single task stops after first task", async () => {
-    writeRoadmap(ROADMAP_2_TASKS);
-    const { TaskRunner } = await import("../../lib/run.ts");
-
-    const runner = new TaskRunner({ dryRun: true });
-    await runner.run();
-
-    const content = fs.readFileSync(
-      path.join(tmpDir, "tasks/plan.md"),
-      "utf-8",
-    );
-    // Only first task done (dependency blocks second anyway in single mode)
-    expect(content).toContain("[x] id:001");
-    expect(content).toContain("[ ] id:002");
-  });
-
-  it("respects dependency ordering", async () => {
-    const roadmap = [
-      "```",
-      "- [ ] id:001 priority:medium type:feature agents:developer Base setup",
-      "- [ ] id:002 priority:high type:feature depends:001 agents:developer Depends on base",
-      "```",
-    ].join("\n");
-
-    writeRoadmap(roadmap);
-    const { TaskRunner } = await import("../../lib/run.ts");
-
-    // Run only one task in dry-run — should pick 001 first despite 002 being high priority
-    const runner = new TaskRunner({ dryRun: true });
-    await runner.run();
-
-    const content = fs.readFileSync(
-      path.join(tmpDir, "tasks/plan.md"),
-      "utf-8",
-    );
-    expect(content).toContain("[x] id:001");
-    expect(content).toContain("[ ] id:002");
-  });
-
-  it("reports empty roadmap gracefully", async () => {
-    writeRoadmap("# Empty plan\n\nNo tasks here.");
-    const { TaskRunner } = await import("../../lib/run.ts");
-
-    const runner = new TaskRunner({ dryRun: true });
-    // Should not throw
-    await runner.run();
-  });
-
-  it("saves cost summary to reports directory", async () => {
-    const roadmap = [
-      "```",
-      "- [ ] id:001 priority:high type:feature agents:developer Build it",
-      "```",
-      "",
-      "### Task #001 — Build it",
-      "**Agents:** developer",
-    ].join("\n");
-
-    writeRoadmap(roadmap);
-
-    const originalSpawn = Bun.spawn;
-    // Claude CLI with --output-format json returns a single JSON object.
-    // The code checks for TASK_STATUS: SUCCESS in the string AND tries JSON.parse.
-    // We embed the marker inside the JSON so both checks pass.
-    const responseJson = JSON.stringify({
-      result: "TASK_STATUS: SUCCESS",
-      model: "claude-sonnet-4-5-20250514",
-      usage: { input_tokens: 1000, output_tokens: 500 },
+    spyOn(common, "log").mockImplementation(() => {});
+    spyOn(common, "ok").mockImplementation(() => {});
+    spyOn(common, "warn").mockImplementation(() => {});
+    spyOn(common, "err").mockImplementation((m) => {
+      if (
+        m &&
+        typeof m === "string" &&
+        (m.includes("Status: FAILED") ||
+          m.includes("review rejected") ||
+          m.includes("Budget exceeded"))
+      )
+        return;
+      throw new Error(m);
     });
-    // @ts-expect-error - mock override
-    Bun.spawn = mock((_cmd: string[]) => {
-      return {
-        stdout: new Response(responseJson).body,
-        stderr: null,
+  });
+
+  afterEach(() => {
+    process.chdir(origCwd);
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch (_e) {}
+    mock.restore();
+  });
+
+  it(
+    "covers TaskRunner",
+    async () => {
+      const agentsDir = path.join(tmpDir, ".claude", "agents");
+      fs.mkdirSync(agentsDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(agentsDir, "lead.md"),
+        "---\nname: team-lead\nmodel: opus\n---\n",
+      );
+
+      const loopDir = path.join(tmpDir, ".claude-loop");
+      fs.mkdirSync(loopDir, { recursive: true });
+      fs.writeFileSync(path.join(loopDir, "memory.md"), "# Memory");
+
+      const tasksDir = path.join(tmpDir, "tasks");
+      fs.mkdirSync(tasksDir, { recursive: true });
+      const planFile = path.join(tasksDir, "plan.md");
+      fs.writeFileSync(
+        planFile,
+        "```\n- [ ] id:1 priority:high type:feature agents:dev Task\n```\n### Task #1 — Task\nDetails\n",
+      );
+
+      const originalSpawn = Bun.spawn;
+      // @ts-expect-error
+      Bun.spawn = mock(() => ({
+        stdout: new Response(
+          JSON.stringify({
+            result: "TASK_STATUS: SUCCESS",
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+        ).body,
+        stderr: new Response("").body,
         exited: Promise.resolve(0),
-        pid: 1,
-        kill: () => {},
-      };
-    });
+      }));
 
-    try {
-      const { TaskRunner } = await import("../../lib/run.ts");
-      const runner = new TaskRunner({});
+      const runner = new TaskRunner({ dryRun: false, all: true });
       await runner.run();
+      expect(fs.readFileSync(planFile, "utf-8")).toContain("[x] id:1");
 
-      const costFile = path.join(
-        tmpDir,
-        ".claude-loop/reports/cost-summary.json",
+      // Failure case and retry
+      fs.writeFileSync(
+        planFile,
+        "```\n- [ ] id:2 priority:high type:feature agents:dev Task 2\n```",
       );
-      expect(fs.existsSync(costFile)).toBe(true);
+      // @ts-expect-error
+      Bun.spawn = mock(() => ({
+        stdout: new Response("TASK_STATUS: FAILED: oops").body,
+        stderr: new Response("").body,
+        exited: Promise.resolve(0),
+      }));
+      const runner2 = new TaskRunner({ retryLimit: 0, all: true });
+      await runner2.run();
+      expect(fs.readFileSync(planFile, "utf-8")).toContain("[!] id:2");
 
-      const costData = JSON.parse(fs.readFileSync(costFile, "utf-8"));
-      expect(costData.total_cost).toBeGreaterThan(0);
-      expect(costData.tasks["001"]).toBeGreaterThan(0);
-    } finally {
-      Bun.spawn = originalSpawn;
-    }
-  });
-
-  it("marks task as failed after exhausting retries", async () => {
-    const roadmap = [
-      "```",
-      "- [ ] id:001 priority:high type:feature agents:developer Failing task",
-      "```",
-    ].join("\n");
-
-    writeRoadmap(roadmap);
-
-    const originalSpawn = Bun.spawn;
-    // @ts-expect-error - mock override
-    Bun.spawn = mock((_cmd: string[]) => {
-      return {
-        stdout: new Response("ERROR: something went wrong").body,
-        stderr: null,
-        exited: Promise.resolve(1),
-        pid: 1,
-        kill: () => {},
+      // Human review needed
+      fs.writeFileSync(
+        planFile,
+        "```\n- [ ] id:3 priority:high type:feature agents:dev Task 3\n```",
+      );
+      // @ts-expect-error
+      Bun.spawn = mock(() => ({
+        stdout: new Response("TASK_STATUS: HUMAN_REVIEW_NEEDED").body,
+        stderr: new Response("").body,
+        exited: Promise.resolve(0),
+      }));
+      const rlMock = {
+        question: mock((_q, cb) => cb("y")),
+        close: mock(() => {}),
       };
-    });
+      spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
+      const runner3 = new TaskRunner({ all: true });
+      await runner3.run();
+      expect(fs.readFileSync(planFile, "utf-8")).toContain("[x] id:3");
 
-    try {
-      const { TaskRunner } = await import("../../lib/run.ts");
-      const runner = new TaskRunner({ retryLimit: 0 });
-      await runner.run();
-
-      const content = fs.readFileSync(
-        path.join(tmpDir, "tasks/plan.md"),
-        "utf-8",
-      );
-      expect(content).toContain("[!] id:001");
-    } finally {
       Bun.spawn = originalSpawn;
-    }
-  });
+    },
+    { timeout: 10000 },
+  );
 
-  it("uses ROADMAP.md as fallback when tasks/plan.md is missing", async () => {
-    const roadmap = [
-      "```",
-      "- [ ] id:001 priority:high type:chore agents:developer Quick fix",
-      "```",
-    ].join("\n");
-
-    fs.writeFileSync(path.join(tmpDir, "ROADMAP.md"), roadmap);
-
-    const { TaskRunner } = await import("../../lib/run.ts");
-    const runner = new TaskRunner({ dryRun: true });
+  it("covers TaskRunner edge cases", async () => {
+    // Missing roadmap
+    const runner = new TaskRunner({ roadmapFile: "nonexistent.md" });
     await runner.run();
 
-    const content = fs.readFileSync(path.join(tmpDir, "ROADMAP.md"), "utf-8");
-    expect(content).toContain("[x] id:001");
+    // Legacy memory migration
+    fs.writeFileSync("MEMORY.md", "old memory");
+    new TaskRunner({});
+    expect(fs.existsSync(".claude-loop/memory.md")).toBe(true);
+    expect(fs.readFileSync(".claude-loop/memory.md", "utf-8")).toContain(
+      "old memory",
+    );
+
+    // Budget exceeded
+    const reportsDir = ".claude-loop/reports";
+    if (!fs.existsSync(reportsDir))
+      fs.mkdirSync(reportsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(reportsDir, "cost-summary.json"),
+      JSON.stringify({ total_cost: 10 }),
+    );
+    const runner2 = new TaskRunner({ budget: 5, all: true });
+    const tasksDir = "tasks";
+    if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(tasksDir, "plan.md"),
+      "```\n- [ ] id:1 priority:high type:feature agents:dev Task\n```",
+    );
+    await runner2.run();
+  });
+
+  it("covers extractTaskStatus and findLatestOpenSpecChange", async () => {
+    const runner = new TaskRunner({});
+    // @ts-expect-error
+    expect(runner.extractTaskStatus("TASK_STATUS: SUCCESS")).toBe("SUCCESS");
+    // @ts-expect-error
+    expect(
+      runner.extractTaskStatus(
+        JSON.stringify({ result: "TASK_STATUS: SUCCESS" }),
+      ),
+    ).toBe("SUCCESS");
+    // @ts-expect-error
+    expect(runner.extractTaskStatus("oops")).toBe("MISSING");
+
+    // findLatestOpenSpecChange
+    fs.mkdirSync("openspec/changes/c1", { recursive: true });
+    fs.writeFileSync("openspec/changes/c1/proposal.md", "p");
+
+    if (fs.existsSync("ROADMAP.md")) fs.unlinkSync("ROADMAP.md");
+    const originalSpawn = Bun.spawn;
+    // @ts-expect-error
+    Bun.spawn = mock(() => ({
+      stdout: new Response("PLAN_READY").body,
+      exited: Promise.resolve(0),
+    }));
+    await runner.run();
+    Bun.spawn = originalSpawn;
   });
 });

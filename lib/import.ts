@@ -84,7 +84,7 @@ export async function importConfig(sourcePath: string) {
   }
 
   for (const rule of otherRules) {
-    const fileName = sanitizeFileName(rule.name) + ".md";
+    const fileName = `${sanitizeFileName(rule.name)}.md`;
     const filePath = path.join(rulesDir, fileName);
     const content = buildRuleFile(rule);
     fs.writeFileSync(filePath, content);
@@ -304,7 +304,7 @@ function parseFrontmatter(content: string): {
 
   // biome-ignore lint/suspicious/noExplicitAny: frontmatter is dynamic
   const frontmatter: Record<string, any> = {};
-  for (const line of fmMatch[1]!.split("\n")) {
+  for (const line of (fmMatch[1] || "").split("\n")) {
     const match = line.match(/^(\w+):\s*(.+)$/);
     if (match?.[1] && match[2]) {
       let value: string | boolean = match[2].trim();
