@@ -12,8 +12,14 @@ import { runAuditHook } from "../lib/audit-hook.ts";
 import { err } from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
-import { promptImport, promptInit, promptNewTeam } from "../lib/prompts.ts";
+import {
+  promptImport,
+  promptInit,
+  promptNewTeam,
+  promptSyncVault,
+} from "../lib/prompts.ts";
 import { type RunOptions, TaskRunner } from "../lib/run.ts";
+import { syncVault } from "../lib/sync-vault.ts";
 import {
   createTeam,
   initProject,
@@ -177,6 +183,42 @@ async function main() {
     await runAuditHook(phase);
   } else if (command === "audit") {
     auditReport();
+  } else if (command === "sync-vault") {
+    const agentsDirFlag = flagValue("--source") ?? flagValue("--agents");
+    const vaultDirFlag = flagValue("--vault");
+
+    // Also support positional args: sync-vault <source> <vault>
+    const positionalSource =
+      !agentsDirFlag && args[1] && !args[1].startsWith("--")
+        ? args[1]
+        : undefined;
+    const positionalVault =
+      !vaultDirFlag && args[2] && !args[2].startsWith("--")
+        ? args[2]
+        : undefined;
+
+    const sourceDir = agentsDirFlag ?? positionalSource;
+    const vaultDir_ = vaultDirFlag ?? positionalVault;
+
+    const isNonInteractive = sourceDir !== undefined || vaultDir_ !== undefined;
+
+    let agentsDir: string;
+    let vaultDir: string;
+
+    if (isNonInteractive) {
+      agentsDir = sourceDir ?? "./agents";
+      vaultDir = vaultDir_ ?? "./vault";
+    } else {
+      p.intro("agent-team sync-vault");
+      const answers = await promptSyncVault({});
+      if (!answers) return;
+      agentsDir = answers.agentsDir;
+      vaultDir = answers.vaultDir;
+    }
+
+    await syncVault({ agentsDir, vaultDir });
+
+    if (!isNonInteractive) p.outro(`Vault synced to ${vaultDir}`);
   } else {
     console.log("Claude Code Agent Team");
     console.log("");
@@ -218,6 +260,14 @@ async function main() {
     );
     console.log(
       "    agent-team validate NAME                             Validate team structure",
+    );
+    console.log("");
+    console.log("  Export:");
+    console.log(
+      "    agent-team sync-vault [SOURCE] [VAULT]               Sync docs to Obsidian vault",
+    );
+    console.log(
+      "    agent-team sync-vault [--source DIR] [--vault DIR]   (agents, specs, or mixed)",
     );
     console.log("");
     console.log("  Monitoring:");

@@ -162,6 +162,52 @@ export async function promptNewTeam(
   };
 }
 
+export interface SyncVaultAnswers {
+  agentsDir: string;
+  vaultDir: string;
+}
+
+export async function promptSyncVault(
+  defaults: Partial<SyncVaultAnswers>,
+): Promise<SyncVaultAnswers | null> {
+  const result = await p.group(
+    {
+      agentsDir: () => {
+        if (defaults.agentsDir) return Promise.resolve(defaults.agentsDir);
+        return p.text({
+          message: "Source directory (agents, specs, or mixed)",
+          placeholder: "./agents",
+          defaultValue: "./agents",
+          validate: (v) => {
+            if (!v?.trim()) return "Path is required";
+            if (!fs.existsSync(v.trim())) return `Directory not found: ${v}`;
+            return undefined;
+          },
+        });
+      },
+      vaultDir: () => {
+        if (defaults.vaultDir) return Promise.resolve(defaults.vaultDir);
+        return p.text({
+          message: "Obsidian vault output directory",
+          placeholder: "./vault",
+          defaultValue: "./vault",
+        });
+      },
+    },
+    {
+      onCancel: () => {
+        p.cancel("Sync cancelled.");
+        process.exit(0);
+      },
+    },
+  );
+
+  return {
+    agentsDir: result.agentsDir as string,
+    vaultDir: result.vaultDir as string,
+  };
+}
+
 export interface ImportAnswers {
   source: string;
 }

@@ -12,3 +12,4 @@ bin/claude
 .claude/settings.json
 tmp/*
 .obsidian
+vault/

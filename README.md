@@ -108,6 +108,9 @@ Teams:
   agent-team new-team --name N --description D --roles R1,R2
   agent-team validate NAME                             Validate team structure
 
+Export:
+  agent-team sync-vault [--agents DIR] [--vault DIR]   Sync agents to Obsidian vault
+
 Monitoring:
   agent-team audit                                     Show audit report
 
@@ -285,6 +288,37 @@ Blocked by default via `permissions.deny`:
 | Environment | `printenv`, `env` |
 | Git destructive | `git push --force`, `git reset --hard`, `git clean -f` |
 | Disk operations | `mkfs`, `fdisk`, `parted` |
+
+## Obsidian Vault Sync
+
+Export agent definitions into an [Obsidian](https://obsidian.md) vault
+with interlinked notes and [Dataview](https://github.com/blacksmithgu/obsidian-dataview) metadata.
+
+```bash
+# Interactive (prompts for paths)
+agent-team sync-vault
+
+# Non-interactive (flags skip prompts)
+agent-team sync-vault --agents ./agents --vault ~/my-vault/agent-team
+```
+
+Generated vault structure:
+
+```text
+vault/
+├── index.md                          # Dataview index of all agents
+└── agents/
+    ├── software development/
+    │   ├── sw-team-lead.md
+    │   ├── sw-architect.md
+    │   └── ...
+    ├── frontend/
+    │   └── ...
+    └── localization/
+        └── ...
+```
+
+Each note includes frontmatter (name, model, tools, tags), team member `[[wikilinks]]`, and skill references — ready for Obsidian graph view.
 
 ## Creating Custom Teams
 

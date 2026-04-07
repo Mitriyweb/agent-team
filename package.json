@@ -1,6 +1,6 @@
 {
   "name": "@mitriyweb/agent-team",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
   "license": "MIT",
   "author": "Mitriyweb",
@@ -25,8 +25,8 @@
     "llm"
   ],
   "scripts": {
-    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\"",
-    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\"",
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\"",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
