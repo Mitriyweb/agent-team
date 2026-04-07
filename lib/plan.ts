@@ -207,7 +207,7 @@ After writing all files, output: PLAN_READY`;
   const stderrChunks: string[] = [];
   const stderrReader = proc.stderr
     ? (async () => {
-        const reader = proc.stderr!.getReader();
+        const reader = proc.stderr?.getReader();
         const decoder = new TextDecoder();
         while (true) {
           const { done, value } = await reader.read();

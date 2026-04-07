@@ -1,104 +1,186 @@
-import { beforeEach, describe, expect, it, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { createTeam, initProject } from "../../lib/team.ts";
+import readline from "node:readline";
+import * as team from "../../lib/team.ts";
 
-vi.mock("node:fs", () => ({
-  default: {
-    existsSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    writeFileSync: vi.fn(),
-    appendFileSync: vi.fn(),
-    readFileSync: vi.fn(),
-    readdirSync: vi.fn(),
-    copyFileSync: vi.fn(),
-    statSync: vi.fn(),
-  },
-  existsSync: vi.fn(),
-  mkdirSync: vi.fn(),
-  writeFileSync: vi.fn(),
-  appendFileSync: vi.fn(),
-  readFileSync: vi.fn(),
-  readdirSync: vi.fn(),
-  copyFileSync: vi.fn(),
-  statSync: vi.fn(),
-}));
-
-vi.mock("../../lib/common.ts", () => ({
-  log: vi.fn(),
-  ok: vi.fn(),
-  warn: vi.fn(),
-  err: vi.fn(),
-  BLUE: "",
-  NC: "",
-  GREEN: "",
-  YELLOW: "",
-  RED: "",
-  configureProvider: vi.fn(),
-  calculateCost: vi.fn(),
-}));
-
-vi.mock("node:path", () => ({
-  default: {
-    join: vi.fn((...args: string[]) => args.join("/")),
-  },
-  join: vi.fn((...args: string[]) => args.join("/")),
-}));
+const PROJECT_ROOT = import.meta.dir.replace(/\/tests\/lib$/, "");
 
 describe("team.ts", () => {
+  let tmpDir: string;
+  let origCwd: string;
+
   beforeEach(() => {
-    vi.resetAllMocks();
+    tmpDir = fs.realpathSync(
+      fs.mkdtempSync(path.join(os.tmpdir(), "agt-team-test-")),
+    );
+    origCwd = PROJECT_ROOT;
+    spyOn(process, "exit").mockImplementation((() => {
+      throw new Error("process.exit");
+    }) as () => never);
   });
 
-  describe("initProject", () => {
-    it("creates necessary directories and updates .gitignore", async () => {
-      const mockMkdirSync = vi.spyOn(fs, "mkdirSync");
-      const mockWriteFileSync = vi.spyOn(fs, "writeFileSync");
-      vi.spyOn(fs, "existsSync").mockReturnValue(false);
-      vi.spyOn(fs, "readdirSync").mockReturnValue([]);
-      vi.spyOn(fs, "readFileSync").mockReturnValue("");
-
-      // Mock appendFileSync for .gitignore
-      const mockAppendFileSync = vi.fn();
-      vi.spyOn(fs, "appendFileSync" as never).mockImplementation(
-        mockAppendFileSync as never,
-      );
-
-      // Mock path.join to return predictable strings
-      vi.spyOn(path, "join").mockImplementation((...args: string[]) =>
-        args.join("/"),
-      );
-
-      await initProject({
-        teamName: "dev",
-        humanReview: true,
-        sourceDir: "/src",
-      });
-
-      expect(mockMkdirSync).toHaveBeenCalledWith(".claude/agents", {
-        recursive: true,
-      });
-      expect(mockMkdirSync).toHaveBeenCalledWith("tasks", { recursive: true });
-      expect(mockWriteFileSync).toHaveBeenCalled();
-    });
+  afterEach(() => {
+    process.chdir(origCwd);
+    try {
+      if (tmpDir && fs.existsSync(tmpDir)) {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    } catch (_e) {}
+    mock.restore();
   });
 
-  describe("createTeam", () => {
-    it("creates a team directory from template", async () => {
-      const mockMkdirSync = vi.spyOn(fs, "mkdirSync");
-      const mockWriteFileSync = vi.spyOn(fs, "writeFileSync");
+  it("covers team creation and initialization", async () => {
+    process.chdir(tmpDir);
+    const originalSpawnSync = Bun.spawnSync;
+    // @ts-expect-error: mock sync subprocess
+    Bun.spawnSync = mock(() => ({ success: true }));
 
-      await createTeam({
-        name: "test-team",
-        description: "Test team",
-        roles: "architect,developer",
-        humanReview: true,
-      });
-
-      expect(mockMkdirSync).toHaveBeenCalledWith(".claude/agents", {
-        recursive: true,
-      });
-      expect(mockWriteFileSync).toHaveBeenCalled();
+    // Create team
+    await team.createTeam({
+      name: "test-team",
+      description: "desc",
+      roles: "lead,dev",
+      humanReview: false,
     });
+    expect(fs.existsSync(".claude/agents/te-PROTOCOL.md")).toBe(true);
+    expect(fs.existsSync(".claude/agents/te-lead.md")).toBe(true);
+    expect(fs.existsSync(".claude/agents/te-dev.md")).toBe(true);
+
+    // Init project with OpenSpec
+    await team.initProject({
+      teamName: "test-team",
+      planner: "openspec",
+      humanReview: false,
+    });
+    expect(fs.readFileSync("agent-team.json", "utf-8")).toContain("openspec");
+
+    // Init with existing team and confirmation
+    fs.writeFileSync("agent-team.json", JSON.stringify({ team: "old-team" }));
+
+    // Mock readline for confirmation
+    const rlMock = {
+      question: mock((_q, cb) => cb("y")),
+      close: mock(() => {}),
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: mock implementation
+    spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
+
+    // Create dummy source agents
+    fs.mkdirSync("agents/test-team", { recursive: true });
+    fs.writeFileSync("agents/test-team/agent.md", "# Agent\n## Instructions\n");
+    fs.writeFileSync("agents/test-team/settings.json", "{}");
+
+    await team.initProject({ teamName: "test-team" });
+
+    // Validate team
+    team.validateTeam("test-team");
+
+    Bun.spawnSync = originalSpawnSync;
+  });
+
+  it("covers update and reconfigure with more branches", async () => {
+    process.chdir(tmpDir);
+    fs.mkdirSync(".claude/agents", { recursive: true });
+    fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test" }));
+    fs.mkdirSync("agents/test/skills", { recursive: true });
+    fs.mkdirSync("agents/test/scripts", { recursive: true });
+    fs.writeFileSync("agents/test/settings.json", "{}");
+    fs.writeFileSync("agents/test/skills/s.md", "skill");
+    fs.writeFileSync("agents/test/scripts/s.sh", "script");
+
+    // Create an agent file with legacy references to test replacement
+    fs.writeFileSync(
+      ".claude/agents/test.md",
+      "# Test\n## Instructions\nRun ./scripts/run.sh and plan.sh\n",
+    );
+
+    await team.updateProject({ sourceDir: "." });
+    expect(fs.readFileSync(".claude/agents/test.md", "utf-8")).toContain(
+      "agent-team run",
+    );
+
+    await team.reconfigureProject({ sourceDir: "." });
+    expect(fs.existsSync(".claude/agents/skills/s.md")).toBe(true);
+    expect(fs.existsSync(".claude/agents/scripts/s.sh")).toBe(true);
+
+    // Test embedded extraction with a known team
+    fs.writeFileSync("agent-team.json", JSON.stringify({ team: "frontend" }));
+    await team.updateProject({});
+    await team.reconfigureProject({});
+    expect(fs.existsSync(".claude/agents/PROTOCOL.md")).toBe(true);
+  });
+
+  it("handles various edge cases and migration", async () => {
+    process.chdir(tmpDir);
+    // Migration with existing content
+    fs.mkdirSync(".claude-loop", { recursive: true });
+    fs.writeFileSync(
+      ".claude-loop/memory.md",
+      "# Project Memory\nExisting decision",
+    );
+    fs.writeFileSync("MEMORY.md", "# Project Memory\nNew decision");
+    await team.initProject({});
+    expect(fs.readFileSync(".claude-loop/memory.md", "utf-8")).toContain(
+      "New decision",
+    );
+
+    // Confirmation rejection
+    fs.writeFileSync("agent-team.json", JSON.stringify({ team: "old" }));
+    fs.mkdirSync(".claude/agents", { recursive: true });
+    const rlMock = {
+      question: mock((_q, cb) => cb("n")),
+      close: mock(() => {}),
+    };
+    // biome-ignore lint/suspicious/noExplicitAny: mock implementation
+    spyOn(readline, "createInterface").mockReturnValue(rlMock as any);
+    await team.initProject({ teamName: "new" });
+    // Should not have deleted .claude/agents if cancelled
+    expect(fs.existsSync(".claude/agents")).toBe(true);
+
+    // Validation failures
+    fs.rmSync(".claude/agents", { recursive: true, force: true });
+    fs.mkdirSync(".claude/agents", { recursive: true });
+    expect(() => team.validateTeam("t")).toThrow("process.exit");
+
+    fs.writeFileSync(".claude/agents/agent.md", "no header");
+    expect(() => team.validateTeam("t")).toThrow("process.exit");
+  });
+
+  it("covers createTeam error cases", async () => {
+    // Missing options — cast to test runtime validation
+    await expect(
+      team.createTeam({ description: "d", roles: "r" } as Parameters<
+        typeof team.createTeam
+      >[0]),
+    ).rejects.toThrow("process.exit");
+    await expect(
+      team.createTeam({ name: "n", roles: "r" } as Parameters<
+        typeof team.createTeam
+      >[0]),
+    ).rejects.toThrow("process.exit");
+    await expect(
+      team.createTeam({ name: "n", description: "d" } as Parameters<
+        typeof team.createTeam
+      >[0]),
+    ).rejects.toThrow("process.exit");
+  });
+
+  it("covers update and reconfigure with no team", async () => {
+    process.chdir(tmpDir);
+    fs.writeFileSync("agent-team.json", JSON.stringify({}));
+    // Ensure the directory exists to avoid findFiles crash
+    fs.mkdirSync(".claude/agents", { recursive: true });
+    await team.updateProject({});
+    await team.reconfigureProject({});
   });
 });

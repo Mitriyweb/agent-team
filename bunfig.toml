@@ -1,0 +1,3 @@
+[test]
+# Run test files serially to avoid process.chdir() interference
+maxConcurrency = 1

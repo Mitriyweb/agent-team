@@ -14,16 +14,12 @@ import {
   warn,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
-// @ts-expect-error
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
  * Port of create_team logic from team.sh
  */
-// @ts-expect-error
 import LIBRARIAN_TEMPLATE from "./templates/librarian.md" with { type: "text" };
-// @ts-expect-error
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
-// @ts-expect-error
 import PROTOCOL_TEMPLATE from "./templates/PROTOCOL.md" with { type: "text" };
 import DEFAULT_SETTINGS from "./templates/settings.json" with { type: "json" };
 
@@ -465,7 +461,8 @@ export function validateTeam(_name: string) {
   }
 
   const agentProfiles = files.filter(
-    (f) => f.endsWith(".md") && !f.endsWith("PROTOCOL.md"),
+    (f) =>
+      f.endsWith(".md") && !f.endsWith("PROTOCOL.md") && f !== "librarian.md",
   );
   if (agentProfiles.length === 0) {
     warn(`No agent profiles found in ${CLAUDE_AGENTS_DIR}`);

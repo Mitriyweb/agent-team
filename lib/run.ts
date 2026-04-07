@@ -25,7 +25,6 @@ import {
   getCurrentBranch,
 } from "./git.ts";
 import { planRoadmap } from "./plan.ts";
-// @ts-expect-error
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import { TerminalUI } from "./ui.ts";
 

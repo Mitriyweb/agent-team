@@ -40,10 +40,11 @@
     "bin": "bun bin/init.ts"
   },
   "overrides": {
-    "picomatch": ">=2.3.2"
+    "picomatch": ">=2.3.2",
+    "vite": "8.0.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
+    "@biomejs/biome": "^2.4.10",
     "@j178/prek": "0.3.8",
     "@types/node": "25.1.0",
     "@vitest/coverage-v8": "^4.1.2",
