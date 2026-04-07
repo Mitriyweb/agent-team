@@ -3,8 +3,20 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "hooks": {
-    "PreToolUse": "agent-team audit-hook PRE",
-    "PostToolUse": "agent-team audit-hook POST"
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{ "type": "command", "command": "agent-team audit-hook PRE" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "agent-team audit-hook POST" }
+        ]
+      }
+    ]
   },
   "permissions": {
     "defaultMode": "auto",

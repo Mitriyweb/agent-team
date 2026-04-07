@@ -23,6 +23,7 @@ function collectFiles(dir: string, base: string): FileEntry[] {
     const fullPath = path.join(dir, item.name);
     const relPath = path.relative(base, fullPath);
     if (item.isDirectory()) {
+      if (item.name === ".obsidian") continue;
       entries.push(...collectFiles(fullPath, base));
     } else {
       const ext = path.extname(item.name).toLowerCase();

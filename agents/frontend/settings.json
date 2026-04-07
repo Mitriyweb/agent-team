@@ -5,8 +5,20 @@
   },
   "plugins": ["playwright@claude-plugins-official"],
   "hooks": {
-    "PreToolUse": "agent-team audit-hook PRE",
-    "PostToolUse": "agent-team audit-hook POST"
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{ "type": "command", "command": "agent-team audit-hook PRE" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "agent-team audit-hook POST" }
+        ]
+      }
+    ]
   },
   "permissions": {
     "defaultMode": "auto",

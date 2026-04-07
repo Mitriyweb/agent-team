@@ -643,6 +643,7 @@ function copyRecursiveSync(src: string, dest: string) {
   if (stats.isDirectory()) {
     if (!fs.existsSync(dest)) fs.mkdirSync(dest);
     fs.readdirSync(src).forEach((childItemName) => {
+      if (childItemName === ".obsidian") return;
       copyRecursiveSync(
         path.join(src, childItemName),
         path.join(dest, childItemName),
