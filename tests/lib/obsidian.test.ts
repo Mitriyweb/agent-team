@@ -10,10 +10,10 @@ import {
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import * as team from "../../lib/team.ts";
-import { TaskRunner } from "../../lib/run.ts";
-import * as common from "../../lib/common.ts";
 import * as p from "@clack/prompts";
+import * as common from "../../lib/common.ts";
+import { TaskRunner } from "../../lib/run.ts";
+import * as team from "../../lib/team.ts";
 
 const PROJECT_ROOT = import.meta.dir.replace(/\/tests\/lib$/, "");
 
@@ -71,9 +71,9 @@ describe("Obsidian Vault Integration", () => {
 
   it("should update .gitignore with .claude/vault during init", async () => {
     await team.initProject({
-        teamName: "software development",
-        vaultPath: vaultDir,
-        sourceDir: PROJECT_ROOT
+      teamName: "software development",
+      vaultPath: vaultDir,
+      sourceDir: PROJECT_ROOT,
     });
 
     const gitignore = fs.readFileSync(".gitignore", "utf-8");
@@ -87,13 +87,19 @@ describe("Obsidian Vault Integration", () => {
 
   it("should allow reconfiguring the vault path", async () => {
     // Initial setup
-    fs.writeFileSync("agent-team.json", JSON.stringify({ team: "software development", planner: "builtin" }));
+    fs.writeFileSync(
+      "agent-team.json",
+      JSON.stringify({ team: "software development", planner: "builtin" }),
+    );
 
     // Mock prompts for reconfigure
-    const newVaultDir = fs.mkdtempSync(path.join(os.tmpdir(), "agt-new-vault-"));
+    const newVaultDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "agt-new-vault-"),
+    );
 
     spyOn(p, "group").mockResolvedValue({
-        vaultPath: newVaultDir
+      vaultPath: newVaultDir,
+      // biome-ignore lint/suspicious/noExplicitAny: mock
     } as any);
 
     await team.reconfigureProject({ sourceDir: PROJECT_ROOT });
@@ -110,16 +116,24 @@ describe("Obsidian Vault Integration", () => {
 
     const agentsDir = path.join(".claude", "agents");
     fs.mkdirSync(agentsDir, { recursive: true });
-    fs.writeFileSync(path.join(agentsDir, "sw-team-lead.md"), "---\nname: sw-team-lead\nmodel: sonnet\n---\n");
+    fs.writeFileSync(
+      path.join(agentsDir, "sw-team-lead.md"),
+      "---\nname: sw-team-lead\nmodel: sonnet\n---\n",
+    );
 
     const roadmapFile = "ROADMAP.md";
-    fs.writeFileSync(roadmapFile, "```\n- [ ] id:1 priority:high agents:sw-developer Test task\n```\n### Task #1 — Test task\nSpec");
+    fs.writeFileSync(
+      roadmapFile,
+      "```\n- [ ] id:1 priority:high agents:sw-developer Test task\n```\n### Task #1 — Test task\nSpec",
+    );
 
     const runner = new TaskRunner({ roadmapFile });
-    // @ts-ignore: accessing private method for testing
-    const prompt = runner.buildPrompt("1", "Test task", "Spec");
+    // biome-ignore lint/suspicious/noExplicitAny: private
+    const prompt = (runner as any).buildPrompt("1", "Test task", "Spec");
 
     expect(prompt).toContain("## Knowledge Base (Obsidian Vault)");
-    expect(prompt).toContain("An Obsidian vault is connected at `.claude/vault`.");
+    expect(prompt).toContain(
+      "An Obsidian vault is connected at `.claude/vault`.",
+    );
   });
 });

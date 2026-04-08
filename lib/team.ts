@@ -594,7 +594,7 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
   }
 
   // 1. Update Obsidian vault path (optional interactive update)
-  const answers = await p.group(
+  const answers = (await p.group(
     {
       vaultPath: () =>
         p.text({
@@ -612,10 +612,12 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
         return;
       },
     },
-  );
+  )) as { vaultPath: string | undefined };
 
-  if (answers && answers.vaultPath) {
-    config.vaultPath = answers.vaultPath;
+  const newVaultPath = answers.vaultPath;
+
+  if (newVaultPath) {
+    config.vaultPath = newVaultPath;
     saveConfig(config);
     manageVaultSymlink(config.vaultPath);
   } else if (!config.vaultPath) {
@@ -732,12 +734,16 @@ export function manageVaultSymlink(vaultPath?: string) {
 
   // Remove existing link/file if it exists
   try {
-    if (fs.existsSync(vaultLink) || fs.lstatSync(vaultLink, { throwIfNoEntry: false })) {
+    if (
+      fs.existsSync(vaultLink) ||
+      fs.lstatSync(vaultLink, { throwIfNoEntry: false })
+    ) {
       fs.unlinkSync(vaultLink);
     }
   } catch (e: unknown) {
     // Ignore error if it doesn't exist, otherwise warn
-    if ((e as any).code !== 'ENOENT') {
+    // biome-ignore lint/suspicious/noExplicitAny: error code check
+    if ((e as any).code !== "ENOENT") {
       warn(`Failed to remove existing vault link: ${(e as Error).message}`);
     }
   }
@@ -746,7 +752,8 @@ export function manageVaultSymlink(vaultPath?: string) {
     const absoluteVaultPath = path.resolve(vaultPath);
     if (fs.existsSync(absoluteVaultPath)) {
       try {
-        if (!fs.existsSync(".claude")) fs.mkdirSync(".claude", { recursive: true });
+        if (!fs.existsSync(".claude"))
+          fs.mkdirSync(".claude", { recursive: true });
         fs.symlinkSync(absoluteVaultPath, vaultLink);
         ok(`Connected Obsidian vault: ${BLUE}${vaultPath}${NC}`);
       } catch (e: unknown) {

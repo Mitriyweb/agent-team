@@ -42,6 +42,12 @@ describe("team.ts", () => {
 
   it("covers team creation and initialization", async () => {
     process.chdir(tmpDir);
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
     const originalSpawnSync = Bun.spawnSync;
     // @ts-expect-error: mock sync subprocess
     Bun.spawnSync = mock(() => ({ success: true }));
@@ -92,8 +98,8 @@ describe("team.ts", () => {
   it("covers update and reconfigure with more branches", async () => {
     process.chdir(tmpDir);
 
+    // biome-ignore lint/suspicious/noExplicitAny: mock
     spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
-
     fs.mkdirSync(".claude/agents", { recursive: true });
     fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test" }));
     fs.mkdirSync("agents/test/skills", { recursive: true });
@@ -181,9 +187,6 @@ describe("team.ts", () => {
 
   it("covers update and reconfigure with no team", async () => {
     process.chdir(tmpDir);
-
-    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
-
     fs.writeFileSync("agent-team.json", JSON.stringify({}));
     // Ensure the directory exists to avoid findFiles crash
     fs.mkdirSync(".claude/agents", { recursive: true });
