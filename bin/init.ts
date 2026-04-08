@@ -63,15 +63,18 @@ async function main() {
       explicitTeam && !explicitTeam.startsWith("-") ? explicitTeam : undefined;
     const explicitPlanner = flagValue("--planner");
     const explicitNoReview = hasFlag("--no-human-review");
+    const explicitVault = flagValue("--vault");
 
     const isNonInteractive =
       teamFromFlag !== undefined ||
       explicitPlanner !== undefined ||
-      explicitNoReview;
+      explicitNoReview ||
+      explicitVault !== undefined;
 
     let teamName: string | undefined;
     let planner: "builtin" | "openspec";
     let humanReview: boolean;
+    let vaultPath: string | undefined;
 
     if (isNonInteractive) {
       // Classic flag-based mode
@@ -79,6 +82,7 @@ async function main() {
       planner =
         explicitPlanner === "openspec" ? "openspec" : ("builtin" as const);
       humanReview = !explicitNoReview;
+      vaultPath = explicitVault;
     } else {
       // Interactive mode
       p.intro("agent-team");
@@ -87,6 +91,7 @@ async function main() {
       teamName = answers.teamName;
       planner = answers.planner;
       humanReview = answers.humanReview;
+      vaultPath = answers.vaultPath;
     }
 
     await initProject({
@@ -94,6 +99,7 @@ async function main() {
       humanReview,
       sourceDir,
       planner,
+      vaultPath,
     });
 
     if (!isNonInteractive)
@@ -229,7 +235,7 @@ async function main() {
       "    agent-team init                                      Interactive setup",
     );
     console.log(
-      "    agent-team init --team NAME [--planner P]            Non-interactive",
+      "    agent-team init --team NAME [--planner P] [--vault V] Non-interactive",
     );
     console.log(
       "    agent-team update                                    Update project configs",

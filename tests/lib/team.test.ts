@@ -11,6 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import * as p from "@clack/prompts";
 import * as team from "../../lib/team.ts";
 
 const PROJECT_ROOT = import.meta.dir.replace(/\/tests\/lib$/, "");
@@ -90,6 +91,9 @@ describe("team.ts", () => {
 
   it("covers update and reconfigure with more branches", async () => {
     process.chdir(tmpDir);
+
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
+
     fs.mkdirSync(".claude/agents", { recursive: true });
     fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test" }));
     fs.mkdirSync("agents/test/skills", { recursive: true });
@@ -177,6 +181,9 @@ describe("team.ts", () => {
 
   it("covers update and reconfigure with no team", async () => {
     process.chdir(tmpDir);
+
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
+
     fs.writeFileSync("agent-team.json", JSON.stringify({}));
     // Ensure the directory exists to avoid findFiles crash
     fs.mkdirSync(".claude/agents", { recursive: true });
