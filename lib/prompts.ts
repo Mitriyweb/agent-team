@@ -109,7 +109,7 @@ export async function promptInit(
       result.teamName === "__skip__" ? undefined : (result.teamName as string),
     planner: result.planner as "builtin" | "openspec",
     humanReview: result.humanReview as boolean,
-    vaultPath: (result as any).vaultPath as string | undefined,
+    vaultPath: (result as { vaultPath?: string }).vaultPath,
   };
 }
 
