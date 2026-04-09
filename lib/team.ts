@@ -84,6 +84,7 @@ interface InitProjectOptions {
   humanReview?: boolean;
   sourceDir?: string;
   planner?: "builtin" | "openspec";
+  vaultPath?: string;
 }
 
 export async function initProject(options: InitProjectOptions) {
@@ -92,6 +93,7 @@ export async function initProject(options: InitProjectOptions) {
     humanReview = true,
     sourceDir = ".",
     planner = "builtin",
+    vaultPath,
   } = options;
 
   log("Initializing agent-team project...");
@@ -107,6 +109,7 @@ export async function initProject(options: InitProjectOptions) {
     ".claude-loop/",
     "tasks/",
     ".agents/",
+    ".claude/vault",
     "*.log",
     ".DS_Store",
     "settings.local.json",
@@ -127,7 +130,11 @@ export async function initProject(options: InitProjectOptions) {
   // Save project config (including team name for detection on re-init)
   const config: ProjectConfig = { ...loadConfig(), planner };
   if (teamName) config.team = teamName;
+  if (vaultPath) config.vaultPath = vaultPath;
   saveConfig(config);
+
+  // Manage Obsidian vault symlink
+  manageVaultSymlink(vaultPath);
   ok(`Planner: ${planner === "openspec" ? "OpenSpec" : "built-in"}`);
 
   // Initialize OpenSpec if selected
@@ -577,7 +584,7 @@ export async function updateProject(options: { sourceDir?: string }) {
 
 export async function reconfigureProject(options: { sourceDir?: string }) {
   const { sourceDir = "." } = options;
-  log("Reconfiguring agent-team skills...");
+  log("Reconfiguring agent-team project...");
 
   const config = loadConfig();
   const teamName = config.team;
@@ -586,7 +593,43 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     return;
   }
 
-  // Update skills and scripts from source
+  // 1. Update Obsidian vault path (optional interactive update)
+  const answers = (await p.group(
+    {
+      vaultPath: () =>
+        p.text({
+          message: "Obsidian vault path for RAG (leave empty to keep current)",
+          placeholder: config.vaultPath || "/path/to/your/vault",
+          validate: (v) => {
+            if (v && !fs.existsSync(v)) return "Path does not exist";
+            return undefined;
+          },
+        }),
+    },
+    {
+      onCancel: () => {
+        p.cancel("Reconfiguration cancelled.");
+        return;
+      },
+    },
+  )) as { vaultPath: string | undefined };
+
+  const newVaultPath = answers.vaultPath;
+
+  if (newVaultPath) {
+    config.vaultPath = newVaultPath;
+    saveConfig(config);
+    manageVaultSymlink(config.vaultPath);
+  } else if (!config.vaultPath) {
+    // If no vault path in config, and none provided, ensure symlink is removed
+    manageVaultSymlink(undefined);
+  } else {
+    // Refresh existing symlink
+    manageVaultSymlink(config.vaultPath);
+  }
+
+  // 2. Update skills and scripts from source
+  log("Updating skills and scripts...");
   const srcTeamDir = path.join(sourceDir, "agents", teamName);
   if (!fs.existsSync(srcTeamDir) && !EMBEDDED_TEAMS[teamName]) {
     warn(`Team source not found: ${teamName}`);
@@ -681,6 +724,45 @@ function listSourceTeams(sourceDir: string): string[] {
     .readdirSync(agentsDir, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name);
+}
+
+/**
+ * Create or update a symlink at .claude/vault pointing to the Obsidian vault.
+ */
+export function manageVaultSymlink(vaultPath?: string) {
+  const vaultLink = path.join(".claude", "vault");
+
+  // Remove existing link/file if it exists
+  try {
+    if (
+      fs.existsSync(vaultLink) ||
+      fs.lstatSync(vaultLink, { throwIfNoEntry: false })
+    ) {
+      fs.unlinkSync(vaultLink);
+    }
+  } catch (e: unknown) {
+    // Ignore error if it doesn't exist, otherwise warn
+    // biome-ignore lint/suspicious/noExplicitAny: error code check
+    if ((e as any).code !== "ENOENT") {
+      warn(`Failed to remove existing vault link: ${(e as Error).message}`);
+    }
+  }
+
+  if (vaultPath) {
+    const absoluteVaultPath = path.resolve(vaultPath);
+    if (fs.existsSync(absoluteVaultPath)) {
+      try {
+        if (!fs.existsSync(".claude"))
+          fs.mkdirSync(".claude", { recursive: true });
+        fs.symlinkSync(absoluteVaultPath, vaultLink);
+        ok(`Connected Obsidian vault: ${BLUE}${vaultPath}${NC}`);
+      } catch (e: unknown) {
+        warn(`Failed to create symlink to vault: ${(e as Error).message}`);
+      }
+    } else {
+      warn(`Obsidian vault path not found: ${vaultPath}`);
+    }
+  }
 }
 
 function findFiles(

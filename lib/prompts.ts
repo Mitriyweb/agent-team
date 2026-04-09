@@ -33,6 +33,7 @@ export interface InitAnswers {
   teamName?: string;
   planner: "builtin" | "openspec";
   humanReview: boolean;
+  vaultPath?: string;
 }
 
 export async function promptInit(
@@ -83,6 +84,17 @@ export async function promptInit(
           initialValue: true,
         });
       },
+      vaultPath: () => {
+        if (defaults.vaultPath) return Promise.resolve(defaults.vaultPath);
+        return p.text({
+          message: "Obsidian vault path for RAG (optional)",
+          placeholder: "/path/to/your/vault",
+          validate: (v) => {
+            if (v && !fs.existsSync(v)) return "Path does not exist";
+            return undefined;
+          },
+        });
+      },
     },
     {
       onCancel: () => {
@@ -97,6 +109,7 @@ export async function promptInit(
       result.teamName === "__skip__" ? undefined : (result.teamName as string),
     planner: result.planner as "builtin" | "openspec",
     humanReview: result.humanReview as boolean,
+    vaultPath: (result as { vaultPath?: string }).vaultPath,
   };
 }
 

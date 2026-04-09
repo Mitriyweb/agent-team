@@ -184,6 +184,7 @@ const CONFIG_FILE = "agent-team.json";
 export interface ProjectConfig {
   planner: "builtin" | "openspec";
   team?: string;
+  vaultPath?: string;
   [key: string]: unknown;
 }
 

@@ -784,6 +784,18 @@ export class TaskRunner {
       }
     }
 
+    // Inject Obsidian vault context if configured
+    let vaultSection = "";
+    if (fs.existsSync(".claude/vault")) {
+      vaultSection = `
+## Knowledge Base (Obsidian Vault)
+
+An Obsidian vault is connected at \`.claude/vault\`.
+You can use it as a RAG source — read documents from there to understand project context,
+business logic, or other relevant information not present in the current repository.
+`;
+    }
+
     return `
 You are the ${team} team-lead orchestrating an autonomous agent team.
 You NEVER write code, tests, or content yourself — you delegate to teammates via the Teammate tool.
@@ -792,7 +804,7 @@ TASK #${taskId}: ${desc}
 
 ## Detailed specification
 ${spec}
-${memorySection}
+${memorySection}${vaultSection}
 ## Instructions
 
 1. Read the specification and PROTOCOL.md to understand the workflow and available teammates.

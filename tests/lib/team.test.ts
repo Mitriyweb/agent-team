@@ -11,6 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import * as p from "@clack/prompts";
 import * as team from "../../lib/team.ts";
 
 const PROJECT_ROOT = import.meta.dir.replace(/\/tests\/lib$/, "");
@@ -41,6 +42,12 @@ describe("team.ts", () => {
 
   it("covers team creation and initialization", async () => {
     process.chdir(tmpDir);
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
     const originalSpawnSync = Bun.spawnSync;
     // @ts-expect-error: mock sync subprocess
     Bun.spawnSync = mock(() => ({ success: true }));
@@ -90,6 +97,9 @@ describe("team.ts", () => {
 
   it("covers update and reconfigure with more branches", async () => {
     process.chdir(tmpDir);
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock
+    spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
     fs.mkdirSync(".claude/agents", { recursive: true });
     fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test" }));
     fs.mkdirSync("agents/test/skills", { recursive: true });
