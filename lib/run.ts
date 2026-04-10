@@ -25,6 +25,7 @@ import {
   getCurrentBranch,
 } from "./git.ts";
 import { planRoadmap } from "./plan.ts";
+import { runAgent } from "./sdk/agent-runner.ts";
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import { TerminalUI } from "./ui.ts";
 
@@ -45,6 +46,8 @@ export interface RunOptions {
   branch?: boolean;
   planFirst?: boolean;
   model?: string;
+  /** Use CLI subprocess instead of Agent SDK (SDK is default) */
+  cli?: boolean;
 }
 
 const AGENTS_DIR = path.join(".claude", "agents");
@@ -301,6 +304,7 @@ export class TaskRunner {
     configureProvider();
 
     if (this.options.dryRun) warn(`${YELLOW}[DRY RUN MODE]${NC}`);
+    if (this.options.cli) log(`Execution mode: ${GREEN}CLI${NC}`);
 
     let allTasks = this.getRoadmapTasks();
 
@@ -363,7 +367,9 @@ export class TaskRunner {
       }
 
       this.currentTaskNum++;
-      const success = await this.runTask(next);
+      const success = this.options.cli
+        ? await this.runTask(next)
+        : await this.runTaskSdk(next);
 
       if (!success && this.options.all !== true) break;
       if (!this.options.all) break;
@@ -547,6 +553,190 @@ export class TaskRunner {
         } else {
           warn(
             `Task #${taskId} failed attempt ${attempt} (exit code: ${exitCode}).`,
+          );
+        }
+      } catch (e) {
+        clearInterval(timer);
+        this.ui.stopProgressBar();
+        warn(`Error in task #${taskId}: ${e}`);
+      }
+      attempt++;
+    }
+
+    this.markStatus(taskId, "~", "!");
+    if (this.options.branch && originalBranch) checkout(originalBranch);
+    return false;
+  }
+
+  /**
+   * Run a task via Agent SDK instead of CLI subprocess.
+   */
+  private async runTaskSdk(taskLine: string): Promise<boolean> {
+    const taskId = this.getTaskId(taskLine);
+    const agents = this.getTaskAgents(taskLine);
+    const desc = taskLine
+      .replace(/^- \[.\] id:\d+\s+/, "")
+      .replace(/priority:\w+\s+/, "")
+      .replace(/type:\w+\s+/, "")
+      .replace(/depends:[\d,]+\s+/, "")
+      .replace(/agents:[a-z,-]+\s+/, "")
+      .trim();
+
+    const agentsLabel = agents.length > 0 ? agents.join(", ") : "team-lead";
+    const modelLabel = this.teamLeadModel || "default";
+
+    log(
+      `Task ${BLUE}#${taskId}${NC} [SDK] → ${CYAN}${agentsLabel}${NC} (model: ${GREEN}${modelLabel}${NC}) — ${desc}`,
+    );
+
+    if (this.options.budget && this.cumulativeCost >= this.options.budget) {
+      err(
+        `Budget exceeded: $${this.cumulativeCost.toFixed(4)} >= $${this.options.budget}`,
+      );
+    }
+
+    if (this.options.dryRun) {
+      warn(`[DRY RUN] Task #${taskId}: ${desc}`);
+      this.markStatus(taskId, " ", "x");
+      return true;
+    }
+
+    let originalBranch = "";
+    const branchName = `task/${taskId}`;
+    if (this.options.branch) {
+      originalBranch = getCurrentBranch();
+      createBranch(branchName);
+    }
+
+    this.markStatus(taskId, " ", "~");
+    const spec = this.getTaskSpec(taskId);
+    const prompt = this.buildPrompt(taskId, desc, spec);
+    const team = this.options.team || "software development";
+
+    let attempt = 0;
+    const retryLimit = this.options.retryLimit || 0;
+
+    while (attempt <= retryLimit) {
+      if (attempt > 0) {
+        const backoff = 10 * 2 ** (attempt - 1);
+        warn(
+          `Retrying task #${taskId} in ${backoff}s (attempt ${attempt}/${retryLimit})...`,
+        );
+        await new Promise((r) => setTimeout(r, backoff * 1000));
+      }
+
+      const timer = setInterval(() => {
+        const counts = {
+          done: this.getRoadmapTasks("x").length,
+          failed: this.getRoadmapTasks("!").length,
+        };
+        this.ui.showProgressBar(
+          taskId,
+          desc,
+          this.currentTaskNum,
+          this.totalTasks,
+          counts,
+        );
+      }, 1000);
+
+      try {
+        const result = await runAgent({
+          team,
+          role: agents[0] || "team-lead",
+          prompt,
+          maxTurns: 30,
+          model: this.teamLeadModel,
+          allowedTools: [
+            "Read",
+            "Write",
+            "Edit",
+            "Bash",
+            "Glob",
+            "Grep",
+            "Agent",
+          ],
+        });
+
+        clearInterval(timer);
+        this.ui.stopProgressBar();
+
+        // Save log
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        const logFile = path.join(LOG_DIR, `task-${taskId}-${ts}.log`);
+        const logContent = [
+          `# Task #${taskId} — SDK mode`,
+          `# ${new Date().toISOString()}`,
+          "",
+          "## RESULT",
+          result.output,
+          "",
+          `## TURNS: ${result.turns}`,
+          `## COST: $${result.cost?.toFixed(4) ?? "?"}`,
+          result.timedOut ? "## TIMED OUT" : "",
+        ].join("\n");
+        fs.writeFileSync(logFile, logContent);
+
+        // Track cost
+        if (result.cost) {
+          this.saveCost(taskId, result.cost);
+          log(
+            `Task cost: ${YELLOW}$${result.cost.toFixed(4)}${NC} (Total: ${YELLOW}$${this.cumulativeCost.toFixed(4)}${NC})`,
+          );
+        }
+
+        const taskStatus = this.extractTaskStatus(result.output);
+
+        if (taskStatus === "HUMAN_REVIEW_NEEDED") {
+          const approved = await this.promptHumanReview(taskId, desc);
+          if (approved) {
+            ok(`Task #${taskId} review approved — continuing.`);
+            this.markStatus(taskId, "~", "x");
+            this.runLibrarian(taskId);
+            if (this.options.branch) {
+              commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
+              createPR(
+                `feat: #${taskId} - ${desc}`,
+                `Automated PR for task #${taskId}`,
+              );
+              checkout(originalBranch);
+            }
+            return true;
+          }
+          warn(`Task #${taskId} review rejected.`);
+          this.markStatus(taskId, "~", "!", "human review rejected");
+          if (this.options.branch && originalBranch) checkout(originalBranch);
+          return false;
+        }
+
+        if (
+          !result.timedOut &&
+          (taskStatus === "SUCCESS" || taskStatus === "MISSING")
+        ) {
+          if (taskStatus === "MISSING") {
+            warn(
+              `Task #${taskId} — no TASK_STATUS line found, treating as success.`,
+            );
+          }
+          ok(`Task #${taskId} completed.`);
+          this.markStatus(taskId, "~", "x");
+          this.runLibrarian(taskId);
+
+          if (this.options.branch) {
+            commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
+            createPR(
+              `feat: #${taskId} - ${desc}`,
+              `Automated PR for task #${taskId}`,
+            );
+            checkout(originalBranch);
+          }
+          return true;
+        }
+
+        if (taskStatus.startsWith("FAILED")) {
+          warn(`Task #${taskId} agent reported failure: ${taskStatus}`);
+        } else {
+          warn(
+            `Task #${taskId} failed attempt ${attempt} (timedOut: ${result.timedOut}).`,
           );
         }
       } catch (e) {

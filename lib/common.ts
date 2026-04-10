@@ -185,6 +185,8 @@ export interface ProjectConfig {
   planner: "builtin" | "openspec";
   team?: string;
   vaultPath?: string;
+  /** Extra regex patterns to block in Bash (added to built-in defaults) */
+  blockedBashPatterns?: string[];
   [key: string]: unknown;
 }
 

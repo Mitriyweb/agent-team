@@ -1,0 +1,21 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Node.js required for Claude CLI (used by the SDK transport)
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Dependencies
+COPY package.json bun.lockb* ./
+RUN bun install
+
+# Set Claude CLI path from node_modules
+ENV CLAUDE_CLI_PATH=/app/node_modules/.bin/claude
+
+# Source code
+COPY . .
+
+# Default: run tasks in SDK mode
+CMD ["bun", "run", "bin/init.ts", "run", "--all", "--sdk"]

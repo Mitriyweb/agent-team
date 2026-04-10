@@ -82,9 +82,10 @@ This will:
 Then run:
 
 ```bash
-agent-team run --all     # execute all tasks in sequence
+agent-team run --all     # execute all tasks via Agent SDK (default)
 agent-team run           # execute one task (highest priority)
 agent-team run --dry-run # preview without running
+agent-team run --cli     # use CLI subprocess instead of SDK
 ```
 
 ## CLI Commands
@@ -98,9 +99,10 @@ Setup:
   agent-team import [path]                             Import rules (interactive if no path)
 
 Execution:
-  agent-team run [--all] [--plan] [--dry-run]          Execute tasks
+  agent-team run [--all] [--plan] [--dry-run]          Execute tasks (SDK mode)
                  [--team NAME] [--model MODEL]
                  [--budget N] [--resume ID] [--branch]
+                 [--cli]                               Use CLI subprocess instead of SDK
   agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks
 
 Teams:
@@ -197,6 +199,46 @@ agent-team import /path/to/project  # Auto-detect from project root
 ```
 
 Always-on rules are added to `CLAUDE.md`. Glob/manual rules go to `.claude/rules/`.
+
+## Execution Modes
+
+### SDK mode (default)
+
+Tasks run via `@anthropic-ai/claude-agent-sdk` — a programmatic API that streams messages in-process.
+Agent definitions are read from `.claude/agents/` (or `agents/`), frontmatter is parsed for tools, model, and permissions, and safety hooks block dangerous commands.
+
+```bash
+agent-team run --all              # SDK mode (default)
+```
+
+### CLI mode
+
+Falls back to spawning `claude` as a subprocess (the original behavior). Useful when the SDK is unavailable or for debugging.
+
+```bash
+agent-team run --all --cli        # CLI subprocess mode
+```
+
+### Docker (SDK)
+
+```bash
+docker build -f Dockerfile.sdk -t agent-team-sdk .
+docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
+```
+
+### Configuration
+
+`agent-team.json` supports project-level settings:
+
+```json
+{
+  "planner": "builtin",
+  "team": "software development",
+  "blockedBashPatterns": ["docker\\s+system\\s+prune", "DROP\\s+TABLE"]
+}
+```
+
+`blockedBashPatterns` adds regex patterns to the built-in safety hooks (on top of the defaults: `rm -rf /`, `/dev/` redirects, `curl | sh`, `wget | bash`).
 
 ## How It Works
 
@@ -340,6 +382,7 @@ Creates agents in `.claude/agents/` with a PROTOCOL.md and profiles for each rol
 | Tool | Required | Install |
 |------|----------|---------|
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` |
+| Claude Agent SDK | bundled | Included in dependencies (`@anthropic-ai/claude-agent-sdk`) |
 | Bun / npm | no | [bun.sh](https://bun.sh) (for dev tooling) |
 | OpenSpec | no | `npm i -g @fission-ai/openspec` (if `--planner openspec`) |
 

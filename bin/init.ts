@@ -111,6 +111,7 @@ async function main() {
       approvePlan: args.includes("--approve-plan"),
       branch: args.includes("--branch"),
       planFirst: args.includes("--plan"),
+      cli: args.includes("--cli"),
     };
 
     const resumeIdx = args.indexOf("--resume");
@@ -253,6 +254,9 @@ async function main() {
     );
     console.log("                  [--team NAME] [--model MODEL]");
     console.log("                  [--budget N] [--resume ID] [--branch]");
+    console.log(
+      "                  [--cli]                               Use CLI subprocess instead of SDK",
+    );
     console.log(
       "    agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks",
     );

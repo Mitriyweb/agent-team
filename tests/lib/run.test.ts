@@ -65,7 +65,7 @@ describe("run.ts", () => {
       exited: Promise.resolve(0),
     }));
 
-    const runner = new TaskRunner({ all: true });
+    const runner = new TaskRunner({ all: true, cli: true });
     await runner.run();
     expect(fs.readFileSync(planFile, "utf-8")).toContain("[x] id:1");
 
