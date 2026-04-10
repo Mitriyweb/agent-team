@@ -5,15 +5,20 @@ All localization agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```text
-ROADMAP.md → agent-team plan (loc-team-lead creates tasks/plan.md)
+ROADMAP.md → agent-team plan (creates task list)
                          ↓
-tasks/plan.md → agent-team run (executes tasks one by one)
+task list → agent-team run (executes tasks one by one)
                          ↓
-           loc-team-lead → loc-agents (per task spec)
+       loc-team-lead → loc-agents (per task spec)
 ```
 
-1. **Planning**: `agent-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `agent-team run` picks tasks from `tasks/plan.md` by priority and dependencies
+Task sources (detected automatically by `agent-team run`):
+
+- **OpenSpec mode**: `openspec/changes/<name>/tasks.md` (format: `- [ ] 1.1 Description`)
+- **Built-in planner**: `tasks/plan.md` (format: `- [ ] id:N priority:high ...`)
+
+1. **Planning**: `agent-team plan` decomposes ROADMAP.md into a task list
+2. **Execution**: `agent-team run` picks tasks by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format

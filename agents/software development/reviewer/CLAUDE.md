@@ -4,7 +4,11 @@ Reviewer for software development tasks.
 
 ## Responsibilities
 
-- Review code style, security, and best practices.
+- Follow **Project Rules Discovery** from `sw-PROTOCOL.md` before starting any review.
+
+- Run the project's linter. Lint errors are **Critical** findings.
+
+- Review code style, security, and best practices against the project's actual rules.
 
 - Check compliance with the project's design system and standards.
 

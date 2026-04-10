@@ -82,10 +82,11 @@ This will:
 Then run:
 
 ```bash
-agent-team run --all     # execute all tasks via Agent SDK (default)
-agent-team run           # execute one task (highest priority)
-agent-team run --dry-run # preview without running
-agent-team run --cli     # use CLI subprocess instead of SDK
+agent-team run --all          # execute all tasks via Agent SDK (default)
+agent-team run                # execute one task (highest priority)
+agent-team run --dry-run      # preview without running
+agent-team run --cli          # use CLI subprocess instead of SDK
+agent-team run --all --stop-at 1.3  # execute tasks and stop after task 1.3
 ```
 
 ## CLI Commands
@@ -101,8 +102,8 @@ Setup:
 Execution:
   agent-team run [--all] [--plan] [--dry-run]          Execute tasks (SDK mode)
                  [--team NAME] [--model MODEL]
-                 [--budget N] [--resume ID] [--branch]
-                 [--cli]                               Use CLI subprocess instead of SDK
+                 [--budget N] [--resume ID] [--stop-at ID]
+                 [--branch] [--cli]                    Use CLI subprocess instead of SDK
   agent-team plan [FILE] [--model MODEL]               Decompose roadmap into tasks
 
 Teams:
@@ -154,8 +155,9 @@ agent-team run --all     # Interactive: select which change to execute
 
 1. `agent-team plan` prompts to select an existing OpenSpec change or create a new one
 2. New changes prompt for a descriptive kebab-case name (e.g., `add-test-coverage`)
-3. Only missing artifacts are generated — if a change already has `proposal.md`, only `design.md` and `tasks.md` are created
-4. Artifacts stay in `openspec/changes/NAME/` (no intermediate `tasks/plan.md`)
+3. Each missing artifact is generated using `openspec instructions <artifact>` for enriched prompts
+4. After generation, `openspec validate --strict` validates the complete change
+5. Artifacts stay in `openspec/changes/NAME/` (no intermediate `tasks/plan.md`)
 
 **Execution flow:**
 
@@ -163,6 +165,17 @@ agent-team run --all     # Interactive: select which change to execute
 2. Tasks are read directly from `openspec/changes/NAME/tasks.md`
 3. Proposal and design are injected as context into each task's spec
 4. Task status is tracked in-place (`[x]`, `[~]`, `[!]`) within `tasks.md`
+5. When all tasks complete, `openspec validate` + `openspec archive` run automatically
+
+**Change lifecycle:**
+
+```text
+plan → validate → run → validate → archive
+```
+
+- **Validation** runs automatically after planning and after all tasks complete
+- **Archiving** moves the completed change to `openspec/changes/archive/` and updates main specs
+- If validation fails, archiving is skipped with instructions for manual resolution
 
 **Change structure:**
 
@@ -273,6 +286,31 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
 `blockedBashPatterns` adds regex patterns to the built-in safety hooks (on top of the defaults: `rm -rf /`, `/dev/` redirects, `curl | sh`, `wget | bash`).
 
 ## How It Works
+
+### Quality Gates
+
+Every task must pass three mandatory quality gates before it can be marked as done.
+No agent may report `DONE` or `verdict: PASS` while any gate is failing.
+
+| Gate | What it checks |
+|------|----------------|
+| **Tests** | All tests pass, coverage thresholds met |
+| **Lint** | Zero lint errors |
+| **Build** | Compiles without errors |
+
+Gate enforcement by role:
+
+- **Developer** discovers project rules (lint config, test config, coding guidelines)
+  at task start, runs lint and fixes errors before requesting review
+- **Reviewer** runs the linter as part of review; lint errors are Critical findings
+- **QA** runs all three gates; any failure = `verdict: FAIL`;
+  iterates with developer until all gates pass
+- **Team Lead** independently verifies all three gates before accepting DONE
+
+Agents discover tooling dynamically — no hardcoded tool names.
+The PROTOCOL's "Project Rules Discovery" procedure detects
+the package manager, lint/test/build commands, and coding guidelines
+from project files.
 
 ### Model Resolution
 

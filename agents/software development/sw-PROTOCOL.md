@@ -5,15 +5,20 @@ All agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```text
-ROADMAP.md → agent-team plan (team-lead creates tasks/plan.md)
+ROADMAP.md → agent-team plan (creates task list)
                          ↓
-tasks/plan.md → agent-team run (executes tasks one by one)
+task list → agent-team run (executes tasks one by one)
                          ↓
-           sw-team-lead → sw-agents (per task spec)
+       sw-team-lead → sw-agents (per task spec)
 ```
 
-1. **Planning**: `agent-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `agent-team run` picks tasks from `tasks/plan.md` by priority and dependencies
+Task sources (detected automatically by `agent-team run`):
+
+- **OpenSpec mode**: `openspec/changes/<name>/tasks.md` (format: `- [ ] 1.1 Description`)
+- **Built-in planner**: `tasks/plan.md` (format: `- [ ] id:N priority:high ...`)
+
+1. **Planning**: `agent-team plan` decomposes ROADMAP.md into a task list
+2. **Execution**: `agent-team run` picks tasks by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format
@@ -68,11 +73,57 @@ sw-team-lead ──► sw-architect ◄──► sw-developer ◄──► sw-re
 - `qa` reports bugs to `developer`, developer fixes and re-submits to `qa`
 - Final status from `qa` goes to `team-lead`
 
-## Tool Detection
+## Project Rules Discovery (MANDATORY)
 
-Agents must detect the project's tooling before running commands.
-Check `package.json` for `lint`, `test`, `build`, `format` scripts.
-Do NOT assume any specific tool is installed.
+Every agent MUST discover and read the target project's configuration before starting work. Do NOT assume any specific files, tools, or frameworks exist.
+
+### Discovery procedure
+
+```bash
+# 1. Find project documentation and coding rules
+ls -la *.md CLAUDE.md .claude/ .github/ docs/ 2>/dev/null
+# Read any files that describe coding standards, guidelines, or contribution rules
+
+# 2. Detect package manager and available scripts
+ls package.json pyproject.toml Cargo.toml go.mod Makefile Gemfile build.gradle pom.xml 2>/dev/null
+# Read the detected manifest to find lint, test, build, format commands
+
+# 3. Detect lint configuration
+ls .eslintrc* .prettierrc* biome.json tslint.json .pylintrc .flake8 .golangci.yml .rubocop.yml 2>/dev/null
+# Read whichever exist to understand the project's lint rules
+
+# 4. Detect test configuration
+ls jest.config* vitest.config* .mocharc* pytest.ini setup.cfg tox.ini 2>/dev/null
+# Read whichever exist to understand coverage thresholds and test patterns
+```
+
+The discovered rules are the **source of truth** for code quality standards. Agents must follow them, not invent their own.
+
+## Quality Gates — Definition of Done (MANDATORY)
+
+A task is NOT done until ALL three gates pass. No agent may report `DONE` or `verdict: PASS` while any gate is red.
+
+| Gate | Command (detect from project) | Criteria |
+|------|-------------------------------|----------|
+| **Tests** | `npm test` / `pytest` / etc. | All tests pass, coverage thresholds met |
+| **Lint** | `npm run lint` / `eslint` / etc. | Zero errors (warnings acceptable per project config) |
+| **Build** | `npm run build` / `tsc --noEmit` / etc. | Compiles without errors |
+
+### Enforcement rules
+
+- **Developer**: Must run lint and fix errors BEFORE requesting architect review.
+- **Reviewer**: Must run lint as part of review. Lint errors are **Critical** findings.
+- **QA**: Must run all three gates. Any gate failure = `verdict: FAIL`. Iterate with developer until all gates pass.
+- **Team Lead**: Must independently verify all three gates before accepting a task as DONE.
+
+### Gate failure flow
+
+```text
+Gate fails → QA/Reviewer reports failure to developer
+         → Developer fixes and re-submits
+         → QA/Reviewer re-runs gates
+         → Repeat until all gates pass
+```
 
 ## Handoff Summary
 

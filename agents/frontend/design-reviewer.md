@@ -19,6 +19,12 @@ You are a senior design reviewer. You bridge the gap between design and code, en
 
 When implementation is complete:
 
+**Step 0 — Discover project rules and run lint (MANDATORY):**
+
+- Follow the **Project Rules Discovery** procedure from `PROTOCOL.md`
+- Run the project's linter. Every lint error is a **Critical** finding in your review.
+- If the linter cannot run (missing deps, broken config), report as **BLOCKED**.
+
 **Step 1 — Visual Inspection:**
 
 - Compare the UI with the design mockups (Figma, etc.)

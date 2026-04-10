@@ -219,6 +219,58 @@ async function promptNewChangeName(roadmapContent: string): Promise<{
   return { changeDir, changeName: name, isNew: true, roadmapContent };
 }
 
+/**
+ * Get enriched instructions from OpenSpec for a specific artifact.
+ * Returns the instruction text or empty string on failure.
+ */
+function getOpenSpecInstructions(artifact: string, changeName: string): string {
+  const proc = Bun.spawnSync(
+    [
+      "npx",
+      "@fission-ai/openspec",
+      "instructions",
+      artifact,
+      "--change",
+      changeName,
+    ],
+    { stderr: "pipe" },
+  );
+  if (!proc.success) return "";
+  return new TextDecoder().decode(proc.stdout).trim();
+}
+
+/**
+ * Run `openspec validate` on a change. Returns true if valid.
+ */
+export function validateOpenSpecChange(
+  changeName: string,
+  strict = false,
+): boolean {
+  const args = [
+    "npx",
+    "@fission-ai/openspec",
+    "validate",
+    changeName,
+    "--no-interactive",
+  ];
+  if (strict) args.push("--strict");
+  const proc = Bun.spawnSync(args, {
+    stdio: ["inherit", "inherit", "inherit"],
+  });
+  return proc.success;
+}
+
+/**
+ * Run `openspec archive` on a completed change.
+ */
+export function archiveOpenSpecChange(changeName: string): boolean {
+  const proc = Bun.spawnSync(
+    ["npx", "@fission-ai/openspec", "archive", changeName, "--yes"],
+    { stdio: ["inherit", "inherit", "inherit"] },
+  );
+  return proc.success;
+}
+
 async function planWithOpenSpec(inputFile: string) {
   if (!fs.existsSync(inputFile)) {
     err(`Input file not found: ${inputFile}`);
@@ -233,9 +285,12 @@ async function planWithOpenSpec(inputFile: string) {
   const hasDesign = fs.existsSync(path.join(changeDir, "design.md"));
   const hasTasks = fs.existsSync(path.join(changeDir, "tasks.md"));
 
-  // If existing change already has all artifacts, just show summary
+  // If existing change already has all artifacts, validate and show summary
   if (!isNew && hasProposal && hasDesign && hasTasks) {
     ok(`Change ${BLUE}${changeName}${NC} is ready (proposal + design + tasks)`);
+    if (!validateOpenSpecChange(changeName)) {
+      warn("Validation failed — run openspec validate to see details.");
+    }
     showOpenSpecTaskSummary(path.join(changeDir, "tasks.md"));
     return;
   }
@@ -253,108 +308,113 @@ async function planWithOpenSpec(inputFile: string) {
     }
   }
 
-  // Build prompt — only generate missing artifacts
-  const missingArtifacts: string[] = [];
-  if (!hasProposal)
-    missingArtifacts.push(
-      "### proposal.md\nWrite a clear proposal with:\n- Summary of what needs to be done\n- Goals and non-goals\n- Motivation and context\n- Scope boundaries",
-    );
-  if (!hasDesign)
-    missingArtifacts.push(
-      "### design.md\nWrite architectural decisions:\n- Technical approach\n- Key components and their responsibilities\n- Dependencies and risks",
-    );
-  if (!hasTasks)
-    missingArtifacts.push(
-      "### tasks.md\nWrite a DETAILED implementation checklist using this EXACT format:\n\n## 1. Section Name\n- [ ] 1.1 Detailed task description with specific files/components\n- [ ] 1.2 Another task\n\n## 2. Next Section\n- [ ] 2.1 Task\n\nRules for tasks.md:\n- Group tasks into numbered sections\n- Each task is a checkbox: - [ ] N.M Description\n- Order tasks by dependency (earlier tasks first)\n- Be VERY specific — include file paths, function names, exact changes needed\n- Each task should be independently executable by a developer agent",
-    );
+  // Determine which artifacts to generate (in schema order: proposal → design → tasks)
+  const artifactQueue: { name: string; file: string; exists: boolean }[] = [
+    {
+      name: "proposal",
+      file: "proposal.md",
+      exists: hasProposal,
+    },
+    {
+      name: "design",
+      file: "design.md",
+      exists: hasDesign,
+    },
+    {
+      name: "tasks",
+      file: "tasks.md",
+      exists: hasTasks,
+    },
+  ];
 
-  if (missingArtifacts.length === 0) {
+  const missing = artifactQueue.filter((a) => !a.exists);
+  if (missing.length === 0) {
     ok(`Change ${BLUE}${changeName}${NC} already has all artifacts.`);
     showOpenSpecTaskSummary(path.join(changeDir, "tasks.md"));
     return;
   }
 
-  // Include existing artifacts as context
-  let existingContext = "";
-  if (hasProposal) {
-    const proposal = fs.readFileSync(
-      path.join(changeDir, "proposal.md"),
-      "utf-8",
-    );
-    existingContext += `\n## Existing proposal\n\n${proposal}\n`;
-  }
-  if (hasDesign) {
-    const design = fs.readFileSync(path.join(changeDir, "design.md"), "utf-8");
-    existingContext += `\n## Existing design\n\n${design}\n`;
-  }
-
   const rawModel = findTeamLeadModel() || "sonnet";
   const resolvedModel = resolveModelAlias(rawModel);
   log(
-    `Planning ${BLUE}${changeName}${NC} (model: ${GREEN}${resolvedModel}${NC}, generating: ${missingArtifacts.length} artifact(s))...`,
+    `Planning ${BLUE}${changeName}${NC} (model: ${GREEN}${resolvedModel}${NC}, generating: ${missing.length} artifact(s))...`,
   );
   const startTime = Date.now();
 
-  const proposePrompt = `You are an autonomous planner. Read the task description and create OpenSpec artifacts.
+  // Generate each missing artifact sequentially using OpenSpec instructions
+  for (const artifact of missing) {
+    log(`Generating ${CYAN}${artifact.name}${NC} via OpenSpec instructions...`);
 
-## Task description
+    const instructions = getOpenSpecInstructions(artifact.name, changeName);
 
-${roadmapContent}
-${existingContext}
+    const prompt = instructions
+      ? `You are an autonomous planner.\n\n## Task description\n\n${roadmapContent}\n\n## OpenSpec instructions for ${artifact.name}\n\n${instructions}\n\nWrite the ${artifact.file} file in ${changeDir}/. After writing, output: ARTIFACT_READY`
+      : `You are an autonomous planner.\n\n## Task description\n\n${roadmapContent}\n\nCreate ${changeDir}/${artifact.file}. After writing, output: ARTIFACT_READY`;
 
-## Instructions
+    if (!instructions) {
+      warn(
+        `No OpenSpec instructions for ${artifact.name} — falling back to generic prompt.`,
+      );
+    }
 
-Create the following files in ${changeDir}/:
+    const cliArgs = [
+      "claude",
+      "-p",
+      prompt,
+      "--max-turns",
+      "25",
+      "--output-format",
+      "json",
+      "--model",
+      resolvedModel,
+      "--allowedTools",
+      "Read,Write,Edit,Glob,Grep,Bash",
+    ];
 
-${missingArtifacts.join("\n\n")}
+    const proc = Bun.spawn(cliArgs, { stderr: "pipe" });
 
-After writing all files, output: PLAN_READY`;
+    const stderrChunks: string[] = [];
+    const stderrReader = proc.stderr
+      ? (async () => {
+          const reader = proc.stderr?.getReader();
+          const decoder = new TextDecoder();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(value);
+            stderrChunks.push(text);
+            process.stderr.write(text);
+          }
+        })()
+      : Promise.resolve();
 
-  const cliArgs = [
-    "claude",
-    "-p",
-    proposePrompt,
-    "--max-turns",
-    "25",
-    "--output-format",
-    "json",
-    "--model",
-    resolvedModel,
-    "--allowedTools",
-    "Read,Write,Edit,Glob,Grep,Bash",
-  ];
+    const [response] = await Promise.all([
+      new Response(proc.stdout).text(),
+      stderrReader,
+    ]);
+    const exitCode = await proc.exited;
 
-  const proc = Bun.spawn(cliArgs, { stderr: "pipe" });
+    if (exitCode !== 0) {
+      const logDir = ".claude-loop/logs";
+      if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(logDir, "plan-error.log"),
+        `# OpenSpec ${artifact.name} failed — exit code: ${exitCode}\n# ${new Date().toISOString()}\n\n## STDERR\n${stderrChunks.join("")}\n\n## STDOUT\n${response}\n`,
+      );
+      err(`OpenSpec ${artifact.name} generation failed via Claude CLI.`);
+    }
 
-  const stderrChunks: string[] = [];
-  const stderrReader = proc.stderr
-    ? (async () => {
-        const reader = proc.stderr?.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value);
-          stderrChunks.push(text);
-          process.stderr.write(text);
-        }
-      })()
-    : Promise.resolve();
+    ok(`Generated ${CYAN}${artifact.name}${NC}`);
+  }
 
-  const [response] = await Promise.all([
-    new Response(proc.stdout).text(),
-    stderrReader,
-  ]);
-  const exitCode = await proc.exited;
-
-  if (exitCode !== 0) {
-    const logDir = ".claude-loop/logs";
-    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(logDir, "plan-error.log"),
-      `# OpenSpec plan failed — exit code: ${exitCode}\n# ${new Date().toISOString()}\n\n## STDERR\n${stderrChunks.join("")}\n\n## STDOUT\n${response}\n`,
+  // Validate the complete change with OpenSpec
+  log(`Validating change ${BLUE}${changeName}${NC}...`);
+  if (validateOpenSpecChange(changeName, true)) {
+    ok("OpenSpec validation passed.");
+  } else {
+    warn(
+      "OpenSpec strict validation failed — review issues before proceeding.",
     );
-    err("OpenSpec planning failed via Claude CLI.");
   }
 
   const elapsed = Date.now() - startTime;

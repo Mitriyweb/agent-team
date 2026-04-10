@@ -5,15 +5,20 @@ All frontend agents must use this protocol for inter-agent messaging.
 ## Execution Flow
 
 ```text
-ROADMAP.md → agent-team plan (fe-team-lead creates tasks/plan.md)
+ROADMAP.md → agent-team plan (creates task list)
                          ↓
-tasks/plan.md → agent-team run (executes tasks one by one)
+task list → agent-team run (executes tasks one by one)
                          ↓
-           fe-team-lead → fe-agents (per task spec)
+       fe-team-lead → fe-agents (per task spec)
 ```
 
-1. **Planning**: `agent-team plan` runs team-lead to decompose ROADMAP.md into `tasks/plan.md`
-2. **Execution**: `agent-team run` picks tasks from `tasks/plan.md` by priority and dependencies
+Task sources (detected automatically by `agent-team run`):
+
+- **OpenSpec mode**: `openspec/changes/<name>/tasks.md` (format: `- [ ] 1.1 Description`)
+- **Built-in planner**: `tasks/plan.md` (format: `- [ ] id:N priority:high ...`)
+
+1. **Planning**: `agent-team plan` decomposes ROADMAP.md into a task list
+2. **Execution**: `agent-team run` picks tasks by priority and dependencies
 3. **Coordination**: team-lead spawns agents per task spec, coordinates via protocol below
 
 ## Message Format
@@ -69,12 +74,60 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-reviewer
 - `fe-qa` reports bugs to `fe-dev`, developer fixes and re-submits to `fe-qa`
 - Final status from `fe-qa` goes to `fe-team-lead`
 
-## Tool Detection
+## Project Rules Discovery (MANDATORY)
 
-Agents must detect the project's tooling before running commands.
-Check `package.json` for `lint`, `test`, `build`, `dev` scripts.
-Check for framework-specific tools: `vite`, `next`, `playwright`, etc.
-Do NOT assume any specific tool is installed.
+Every agent MUST discover and read the target project's configuration before starting work. Do NOT assume any specific files, tools, or frameworks exist.
+
+### Discovery procedure
+
+```bash
+# 1. Find project documentation and coding rules
+ls -la *.md CLAUDE.md .claude/ .github/ docs/ 2>/dev/null
+# Read any files that describe coding standards, guidelines, or contribution rules
+
+# 2. Detect package manager and available scripts
+ls package.json pyproject.toml Cargo.toml go.mod Makefile 2>/dev/null
+# Read the detected manifest to find lint, test, build, dev, format commands
+
+# 3. Detect lint configuration
+ls .eslintrc* .prettierrc* biome.json tslint.json stylelint* 2>/dev/null
+# Read whichever exist to understand the project's lint rules
+
+# 4. Detect test configuration
+ls jest.config* vitest.config* playwright.config* cypress.config* 2>/dev/null
+# Read whichever exist to understand coverage thresholds and test patterns
+
+# 5. Detect framework-specific tools
+ls vite.config* next.config* nuxt.config* svelte.config* angular.json 2>/dev/null
+```
+
+The discovered rules are the **source of truth** for code quality standards. Agents must follow them, not invent their own.
+
+## Quality Gates — Definition of Done (MANDATORY)
+
+A task is NOT done until ALL three gates pass. No agent may report `DONE` or `verdict: PASS` while any gate is red.
+
+| Gate | Command (detect from project) | Criteria |
+|------|-------------------------------|----------|
+| **Tests** | detected test command | All tests pass, coverage thresholds met |
+| **Lint** | detected lint command | Zero errors (warnings acceptable per project config) |
+| **Build** | detected build command | Compiles without errors |
+
+### Enforcement rules
+
+- **Developer**: Must run lint and fix errors BEFORE requesting architect review.
+- **Reviewer**: Must run lint as part of review. Lint errors are **Critical** findings.
+- **QA**: Must run all three gates. Any gate failure = `verdict: FAIL`. Iterate with developer until all gates pass.
+- **Team Lead**: Must independently verify all three gates before accepting a task as DONE.
+
+### Gate failure flow
+
+```text
+Gate fails → QA/Reviewer reports failure to developer
+         → Developer fixes and re-submits
+         → QA/Reviewer re-runs gates
+         → Repeat until all gates pass
+```
 
 ## Handoff Summary
 

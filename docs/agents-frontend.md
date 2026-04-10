@@ -42,7 +42,10 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 
 - **Model:** claude-sonnet
 
-- **Responsibility:** Implements UI components and views according to `UI_SPEC.md`. Framework and styling aware.
+- **Step 0:** Discovers project rules (lint config, test config, coding guidelines)
+
+- **Responsibility:** Implements UI components per `UI_SPEC.md`.
+  Runs lint self-check before requesting review. Framework and styling aware.
 
 - **Out of Scope:** Backend logic, unit tests.
 
@@ -50,7 +53,10 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 
 - **Model:** claude-sonnet
 
-- **Responsibility:** Performs visual review for pixel-perfection and ensures WCAG 2.1 AA accessibility compliance.
+- **Step 0:** Discovers project rules, runs linter
+
+- **Responsibility:** Runs lint (errors = Critical), performs visual review
+  for pixel-perfection, ensures WCAG 2.1 AA accessibility compliance.
 
 - **Out of Scope:** Architectural changes, functional testing.
 
@@ -58,9 +64,12 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 
 - **Model:** claude-sonnet
 
-- **Responsibility:** Writes and executes E2E tests (Playwright/Cypress), visual regression, and performance monitoring.
+- **Step 0:** Discovers project rules (lint config, test config, coding guidelines)
 
-- **Out of Scope:** Fixing UI code, accessibility review.
+- **Responsibility:** Writes lint-compliant tests, runs all three quality gates
+  (tests + lint + build), E2E tests, visual regression, performance monitoring.
+
+- **Out of Scope:** Fixing production UI code, accessibility review.
 
 ## Environment Configuration
 
@@ -78,9 +87,13 @@ The frontend team relies on the following configuration in `.env` (see `config/f
 ## Pipeline Flow
 
 1. **Design:** `fe-team-lead` tasks `fe-architect` to create `UI_SPEC.md`.
-2. **Implementation:** `fe-dev` builds components based on the spec.
+2. **Implementation:** `fe-dev` discovers project rules, builds components, runs lint self-check.
 3. **Architectural Review:** `fe-architect` reviews the code for architectural integrity.
-4. **Visual & A11y Review:** `fe-reviewer` checks for visual matches and accessibility.
-5. **Functional QA:** `fe-qa` runs E2E and visual regression tests.
-6. **Delivery:** `fe-team-lead` synthesizes the `SUMMARY.md` and marks the task as complete.
-7. **Memory curation:** `librarian` extracts findings from the task report into structured `memory.md`.
+4. **Visual & A11y Review:** `fe-reviewer` discovers project rules, runs linter
+   (lint errors = Critical), checks for visual matches and accessibility.
+5. **Quality Gates:** `fe-qa` discovers project rules, writes lint-compliant tests,
+   runs all three gates (tests + lint + build). Iterates with `fe-dev` until all pass.
+6. **Independent Verification:** `fe-team-lead` independently verifies all three gates.
+7. **Delivery:** `fe-team-lead` synthesizes the `SUMMARY.md` and marks the task as complete.
+8. **Memory curation:** `librarian` extracts findings from the task report
+   into structured `memory.md`.

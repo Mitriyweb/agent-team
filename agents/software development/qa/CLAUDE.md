@@ -4,9 +4,13 @@ QA for software development tasks.
 
 ## Responsibilities
 
+- Follow **Project Rules Discovery** from `sw-PROTOCOL.md` before starting any work.
+
 - Perform fresh verification of the codebase per `SPEC.md`.
 
-- Manual testing, unit tests, and coverage analysis.
+- Write lint-compliant tests (tests that violate the linter are broken tests).
+
+- Run ALL three quality gates: tests, lint, build. Any gate failure = `verdict: FAIL`.
 
 - Produce a `VERDICT.json` and `QA_REPORT.md` for every task.
 

@@ -136,6 +136,11 @@ describe("plan.ts", () => {
       (() => Promise.resolve("new-feature")) as any,
     );
 
+    // Mock Bun.spawnSync so openspec validate doesn't hit the real CLI
+    const originalSpawnSync = Bun.spawnSync;
+    // @ts-expect-error: mock Bun.spawnSync
+    Bun.spawnSync = mock(() => ({ success: true, exitCode: 0 }));
+
     // Existing change with all artifacts — should just show summary, no Claude call
     await planRoadmap(roadmapFile);
     expect(fs.existsSync(tasksPath)).toBe(true);
@@ -153,6 +158,8 @@ describe("plan.ts", () => {
     await planRoadmap(roadmapFile);
     // Still works, tasks.md exists in openspec
     expect(fs.existsSync(tasksPath)).toBe(true);
+
+    Bun.spawnSync = originalSpawnSync;
   });
 
   it("handles missing input file", async () => {

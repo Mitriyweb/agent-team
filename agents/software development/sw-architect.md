@@ -64,7 +64,7 @@ The spec must be an immutable contract. It must include:
 
 - Ensure ACs are testable and unambiguous (e.g., "API returns 200 OK for valid credentials" rather than "API works").
 
-- If `tasks/plan.md` exists, cross-reference with the task spec for consistency.
+- Cross-reference with the task spec (provided in the prompt) for consistency.
 
 - Once validated, declare the spec as **FROZEN**.
 
@@ -132,9 +132,9 @@ When developer sends `REVIEW_REQUEST`:
 
 ## Input Sources
 
-- If `tasks/plan.md` exists — read the detailed spec for the current task
+- The task spec is provided in the prompt by the runner (from OpenSpec or plan.md)
 
-- If only ROADMAP.md — read the task description and design from scratch
+- If no detailed spec is provided — read the task description and design from scratch
 
 ## Skills
 

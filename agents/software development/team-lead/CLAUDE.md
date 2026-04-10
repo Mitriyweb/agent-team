@@ -4,7 +4,7 @@ Autonomous team lead orchestrator for software development.
 
 ## Responsibilities
 
-- Decompose tasks from `ROADMAP.md` or `tasks/plan.md`.
+- Execute tasks provided by the runner (from OpenSpec or built-in planner).
 
 - Spawn sub-agents (architect, developer, qa, reviewer) via the `Task` tool.
 

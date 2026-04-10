@@ -24,11 +24,11 @@ You are the team lead. You coordinate the team — you never write code or tests
 
 Tasks come from one of:
 
-- `tasks/plan.md` — structured plan created by `plan.sh` from ROADMAP.md
+- Task list from `agent-team run` (injected as prompt with task spec)
+- OpenSpec: `openspec/changes/<name>/tasks.md` with proposal + design context
+- Built-in: `tasks/plan.md` with structured specs per task
 
-- Direct prompt from `run.sh` with task description
-
-If `tasks/plan.md` exists, each task has a detailed spec section with agents, dependencies, input/output, and acceptance criteria. Follow it.
+The task spec is injected into your prompt by the runner. Follow it.
 
 ## Team
 
@@ -44,7 +44,7 @@ If `tasks/plan.md` exists, each task has a detailed spec section with agents, de
 
 ### Phase 0 — Planning (handled by plan.sh, before you start)
 
-`plan.sh` reads ROADMAP.md and creates `tasks/plan.md` with structured tasks and specs. You receive individual tasks from `run.sh`.
+Planning is handled before you start. You receive individual tasks with specs from the runner.
 
 ### Phase 0.5 — Memory Check
 
@@ -84,23 +84,44 @@ Spawn a `sw-reviewer` and `sw-qa` via the `Task` tool.
 
 - **Working Directory**: `agents/software development/reviewer`
 
-- **Instruction**: "Review the code style and security per SPEC.md. Output: REVIEW.md"
+- **Instruction**: "Follow Project Rules Discovery from sw-PROTOCOL.md first.
+  Run the linter. Review code style and security per SPEC.md and
+  discovered project rules. Output: REVIEW.md"
 
-- **Permission Mode**: `readOnly`
+- **Permission Mode**: `default`
 
-- **Allowed Tools**: `Read`, `Glob`, `Grep`
+- **Allowed Tools**: `Read`, `Glob`, `Grep`, `Bash`
 
 **QA**:
 
 - **Working Directory**: `agents/software development/qa`
 
-- **Instruction**: "Perform fresh verification of the codebase. Output: VERDICT.json and QA_REPORT.md"
+- **Instruction**: "Follow Project Rules Discovery from sw-PROTOCOL.md first.
+  Write lint-compliant tests. Run ALL three quality gates
+  (tests, lint, build). Output: VERDICT.json and QA_REPORT.md"
 
-- **Permission Mode**: `testOnly`
+- **Permission Mode**: `default`
 
-- **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
+- **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`
 
-Iterate with the developer if bugs are found (VERDICT.json contains FAIL).
+Iterate with the developer if any quality gate fails (VERDICT.json contains FAIL).
+
+### Phase 3.5 — Independent Gate Verification (MANDATORY)
+
+Before accepting DONE from QA or Reviewer, team-lead MUST independently verify:
+
+```bash
+# Detect lint/test/build commands from the project manifest (package.json, Makefile, etc.)
+# Run all three gates yourself — do NOT trust agent reports blindly
+<detected-lint-command> 2>&1 | tail -5     # Check for zero errors
+<detected-test-command> 2>&1 | tail -10    # Check for zero failures
+<detected-build-command> 2>&1 | tail -5    # Check for successful build
+```
+
+If any gate fails despite QA reporting PASS:
+
+1. Send QA a `BUG_REPORT` with the gate output
+2. Do NOT proceed to Phase 4
 
 ### Phase 4 — Summary
 

@@ -66,33 +66,54 @@ Spawn `fe-reviewer`, `fe-qa`, and `fe-aqa` via the `Task` tool.
 
 - **Working Directory**: `agents/frontend/design-reviewer`
 
-- **Instruction**: "Perform visual review for consistency, responsiveness, and WCAG 2.1 AA compliance. Output: VISUAL_REVIEW.md"
+- **Instruction**: "Follow Project Rules Discovery from PROTOCOL.md first.
+  Run the linter. Perform visual review for consistency, responsiveness,
+  and WCAG 2.1 AA compliance. Lint errors are Critical. Output: VISUAL_REVIEW.md"
 
-- **Permission Mode**: `readOnly`
+- **Permission Mode**: `default`
 
-- **Allowed Tools**: `Read`, `Glob`, `Grep`
+- **Allowed Tools**: `Read`, `Glob`, `Grep`, `Bash`
 
 **QA**:
 
 - **Working Directory**: `agents/frontend/fe-qa`
 
-- **Instruction**: "Run manual UI/UX and functional tests. Output: QA_REPORT.md"
+- **Instruction**: "Follow Project Rules Discovery from PROTOCOL.md first.
+  Write lint-compliant tests. Run ALL three quality gates (tests, lint, build).
+  Output: VERDICT.json and QA_REPORT.md"
 
-- **Permission Mode**: `testOnly`
+- **Permission Mode**: `default`
 
-- **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
+- **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`
 
 **AQA**:
 
 - **Working Directory**: `agents/frontend/fe-aqa`
 
-- **Instruction**: "Run automated E2E, visual regression, and performance audits. Output: AQA_REPORT.md"
+- **Instruction**: "Follow Project Rules Discovery from PROTOCOL.md first. Run automated E2E, visual regression, and performance audits. Output: AQA_REPORT.md"
 
-- **Permission Mode**: `testOnly`
+- **Permission Mode**: `default`
 
-- **Allowed Tools**: `Read`, `Bash`, `Glob`, `Grep`
+- **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`
 
 Iterate with the developer if issues are found.
+
+### Phase 3.5 — Independent Gate Verification (MANDATORY)
+
+Before accepting DONE from QA or Reviewer, team-lead MUST independently verify:
+
+```bash
+# Detect lint/test/build commands from the project manifest
+# Run all three gates yourself — do NOT trust agent reports blindly
+<detected-lint-command> 2>&1 | tail -5     # Check for zero errors
+<detected-test-command> 2>&1 | tail -10    # Check for zero failures
+<detected-build-command> 2>&1 | tail -5    # Check for successful build
+```
+
+If any gate fails despite QA reporting PASS:
+
+1. Send QA a `BUG_REPORT` with the gate output
+2. Do NOT proceed to Phase 4
 
 ### Phase 4 — Summary
 

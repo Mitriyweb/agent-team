@@ -127,6 +127,9 @@ async function main() {
     const modelIdx = args.indexOf("--model");
     if (modelIdx !== -1) options.model = args[modelIdx + 1] ?? "";
 
+    const stopAtIdx = args.indexOf("--stop-at");
+    if (stopAtIdx !== -1) options.stopAt = args[stopAtIdx + 1] ?? "";
+
     const runner = new TaskRunner(options);
     await runner.run();
   } else if (command === "plan") {
@@ -253,7 +256,9 @@ async function main() {
       "    agent-team run [--all] [--plan] [--dry-run]          Execute tasks",
     );
     console.log("                  [--team NAME] [--model MODEL]");
-    console.log("                  [--budget N] [--resume ID] [--branch]");
+    console.log(
+      "                  [--budget N] [--resume ID] [--stop-at ID] [--branch]",
+    );
     console.log(
       "                  [--cli]                               Use CLI subprocess instead of SDK",
     );

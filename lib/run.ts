@@ -26,7 +26,11 @@ import {
   createPR,
   getCurrentBranch,
 } from "./git.ts";
-import { planRoadmap } from "./plan.ts";
+import {
+  archiveOpenSpecChange,
+  planRoadmap,
+  validateOpenSpecChange,
+} from "./plan.ts";
 import { runAgent } from "./sdk/agent-runner.ts";
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import { TerminalUI } from "./ui.ts";
@@ -50,6 +54,8 @@ export interface RunOptions {
   model?: string;
   /** Use CLI subprocess instead of Agent SDK (SDK is default) */
   cli?: boolean;
+  /** Stop after completing this task id */
+  stopAt?: string;
 }
 
 const AGENTS_DIR = path.join(".claude", "agents");
@@ -555,11 +561,46 @@ export class TaskRunner {
         ? await this.runTask(next)
         : await this.runTaskSdk(next);
 
+      if (this.options.stopAt && tid === this.options.stopAt) {
+        log(`Reached stop-at task ${BLUE}#${tid}${NC} — stopping.`);
+        break;
+      }
+
       if (!success && this.options.all !== true) break;
       if (!this.options.all) break;
     }
 
     this.ui.stopProgressBar();
+
+    // OpenSpec post-run: validate and archive if all tasks are done
+    if (this.openspecMode) {
+      const changeName = path.dirname(this.roadmap).split("/").pop() || "";
+      const pending = this.getRoadmapTasks(" ");
+      const failed = this.getRoadmapTasks("!");
+
+      if (pending.length === 0 && failed.length === 0 && changeName) {
+        log(`All tasks done — validating change ${BLUE}${changeName}${NC}...`);
+        if (validateOpenSpecChange(changeName)) {
+          ok("OpenSpec validation passed. Archiving...");
+          if (archiveOpenSpecChange(changeName)) {
+            ok(
+              `Change ${BLUE}${changeName}${NC} archived to openspec/changes/archive/`,
+            );
+          } else {
+            warn(
+              "OpenSpec archive failed — archive manually with: openspec archive " +
+                changeName,
+            );
+          }
+        } else {
+          warn(
+            "OpenSpec validation failed — skipping archive. Fix issues and run: openspec archive " +
+              changeName,
+          );
+        }
+      }
+    }
+
     log("Loop finished.");
   }
 

@@ -48,7 +48,10 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 - **Model:** claude-sonnet
 
-- **Responsibilities:** Implements per SPEC.md, iterates on architect feedback, fixes QA bugs
+- **Step 0:** Discovers project rules (lint config, test config, coding guidelines)
+
+- **Responsibilities:** Implements per SPEC.md, runs lint self-check before review,
+  iterates on architect feedback, fixes QA bugs
 
 - **Communicates with:** architect (review loop), qa (bug fix loop)
 
@@ -56,23 +59,31 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 ### reviewer
 
-- **Model:** claude-sonnet
+- **Model:** claude-opus
 
-- **Focus:** Style, security, best practices (not architecture — architect owns that)
+- **Step 0:** Discovers project rules, runs linter
+
+- **Focus:** Lint compliance (Critical), style, security, best practices
+  (not architecture — architect owns that)
 
 - **Runs:** In parallel with qa after developer finishes
 
-- **Output:** REVIEW.md → reports to team-lead
+- **Output:** REVIEW.md (lint errors = Critical findings) → reports to team-lead
 
 ### qa
 
 - **Model:** claude-sonnet
 
-- **Responsibilities:** Writes unit + integration tests, reports bugs to developer, iterates to green
+- **Step 0:** Discovers project rules (lint config, test config, coding guidelines)
+
+- **Responsibilities:** Writes lint-compliant tests, runs all three quality gates
+  (tests + lint + build), reports failures to developer, iterates until all gates pass
+
+- **Lint errors in own tests:** QA fixes these itself (not the developer's job)
 
 - **Runs:** In parallel with reviewer after developer finishes
 
-- **Output:** QA_REPORT.md → reports to team-lead
+- **Output:** VERDICT.json + QA_REPORT.md → reports to team-lead
 
 ### librarian (cross-team)
 
@@ -91,7 +102,7 @@ team-lead ──► architect ◄──► developer ◄──► qa
 ## Task Flow
 
 ```
-1. team-lead receives task from run.sh
+1. team-lead receives task from agent-team run
 2. team-lead → architect: "Design this"
 3. architect → developer: "Questions about codebase?"
 4. developer → architect: "Here's what you need to know"
@@ -99,24 +110,29 @@ team-lead ──► architect ◄──► developer ◄──► qa
 6. architect → team-lead: "Spec ready"
 
 7. team-lead → developer: "Implement per SPEC.md"
-8. developer → architect: "Done, please review"
-9. architect → developer: "Found issues: ..."
-10. [iterate until architect approves]
-11. architect → team-lead: "Implementation approved"
+8. developer discovers project rules (lint, test, build config)
+9. developer implements, runs lint self-check, fixes errors
+10. developer → architect: "Done, lint clean, please review"
+11. architect → developer: "Found issues: ..."
+12. [iterate until architect approves]
+13. architect → team-lead: "Implementation approved"
 
-12. team-lead → reviewer: "Review the code"      ┐ parallel
-13. team-lead → qa: "Write tests and verify"      ┘
+14. team-lead → reviewer: "Discover project rules, run lint, review" ┐ parallel
+15. team-lead → qa: "Discover rules, write lint-compliant tests"     ┘
 
-14. qa → developer: "Bug found: ..."
-15. developer → qa: "Fixed, re-run tests"
-16. [iterate until tests are green]
+16. reviewer runs linter → lint errors are Critical findings
+17. qa runs all 3 quality gates (tests, lint, build)
+18. qa → developer: "Gate failed: lint 5 errors / test 2 failures"
+19. developer → qa: "Fixed, re-run all gates"
+20. [iterate until all 3 gates pass]
 
-17. reviewer → team-lead: "Review done: REVIEW.md"
-18. qa → team-lead: "Tests green, coverage X%"
+21. team-lead independently verifies all 3 gates
+22. reviewer → team-lead: "Review done: REVIEW.md"
+23. qa → team-lead: "All gates pass, coverage X%"
 
-19. team-lead writes SUMMARY.md
-20. task marked as done in ROADMAP.md
-21. librarian curates memory.md from task report
+24. team-lead writes SUMMARY.md
+25. task marked as done
+26. librarian curates memory.md from task report
 ```
 
 ## Handoff Summaries
