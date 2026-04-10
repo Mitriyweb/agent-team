@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Agent Team</title>
+    <meta name="description" content="Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        :root {
+            --primary: #007bff;
+        }
+        header {
+            padding: 2rem 0;
+            text-align: center;
+        }
+        pre {
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #1a1a1a;
+            color: #f8f8f2;
+        }
+        .container {
+            max-width: 900px;
+        }
+        section {
+            margin-bottom: 3rem;
+        }
+        .hero {
+            background-color: var(--secondary-background);
+            padding: 4rem 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="container">
+        <ul>
+            <li><strong>Claude Code Agent Team</strong></li>
+        </ul>
+        <ul>
+            <li><a href="https://github.com/Mitriyweb/agent-team">GitHub</a></li>
+            <li><a href="#installation" class="contrast">Install</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <header class="hero">
+            <h1>Claude Code Agent Team</h1>
+            <p>Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.</p>
+            <div class="grid">
+                <a href="#installation" role="button">Get Started</a>
+                <a href="https://github.com/Mitriyweb/agent-team" role="button" class="secondary">View Source</a>
+            </div>
+        </header>
+
+        <section id="features">
+            <h2>Why Agent Team?</h2>
+            <div class="grid">
+                <article>
+                    <h3>Autonomous</h3>
+                    <p>Agents work through your roadmap automatically, from architecture to testing.</p>
+                </article>
+                <article>
+                    <h3>Framework Aware</h3>
+                    <p>Works with any project structure. Detects your tech stack and adapts.</p>
+                </article>
+                <article>
+                    <h3>Human-in-the-loop</h3>
+                    <p>Keeps you in control with interactive approvals for critical steps.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="installation">
+            <h2>Installation</h2>
+
+            <h3>Option 1: One-line install (Recommended)</h3>
+            <p>Detects your platform, downloads the binary, and installs to <code>~/.local/bin/</code>.</p>
+            <pre><code>curl -fsSL https://raw.githubusercontent.com/Mitriyweb/agent-team/main/install.sh | bash</code></pre>
+
+            <h3>Option 2: npx (no install)</h3>
+            <pre><code>npx @mitriyweb/agent-team init</code></pre>
+
+            <h3>Option 3: Clone from source</h3>
+            <pre><code>git clone https://github.com/Mitriyweb/agent-team.git
+cd agent-team && bun install && bun run build
+ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
+        </section>
+
+        <section id="quickstart">
+            <h2>Quickstart</h2>
+            <p>1. Initialize your project:</p>
+            <pre><code>agent-team init</code></pre>
+            <p>2. Run your tasks:</p>
+            <pre><code>agent-team run --all</code></pre>
+        </section>
+
+        <section id="teams">
+            <h2>Ready-to-use Teams</h2>
+            <ul>
+                <li><strong>Software Development:</strong> Team Lead, Architect, Developer, Reviewer, QA.</li>
+                <li><strong>Frontend:</strong> Focused on UI components, design tokens, and accessibility.</li>
+                <li><strong>Localization:</strong> Technical Writer, Localizer, SEO Specialist.</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="container">
+        <small>
+            Built with ❤️ for the developer community. Licensed under MIT.
+        </small>
+    </footer>
+</body>
+</html>
