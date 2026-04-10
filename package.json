@@ -1,6 +1,6 @@
 {
   "name": "@mitriyweb/agent-team",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
   "license": "MIT",
   "author": "Mitriyweb",
@@ -41,7 +41,8 @@
   },
   "overrides": {
     "picomatch": ">=2.3.2",
-    "vite": "8.0.5"
+    "vite": "8.0.5",
+    "axios": "1.15.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

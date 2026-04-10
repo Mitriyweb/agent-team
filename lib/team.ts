@@ -14,6 +14,7 @@ import {
   warn,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
+import { promptVault } from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
  * Port of create_team logic from team.sh
@@ -596,20 +597,20 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
   // 1. Update Obsidian vault path (optional interactive update)
   const answers = (await p.group(
     {
-      vaultPath: () =>
-        p.text({
-          message: "Obsidian vault path for RAG (leave empty to keep current)",
-          placeholder: config.vaultPath || "/path/to/your/vault",
-          validate: (v) => {
-            if (v && !fs.existsSync(v)) return "Path does not exist";
-            return undefined;
-          },
-        }),
+      vaultPath: async () => {
+        const result = await promptVault(
+          "Obsidian vault path for RAG (optional):",
+          config.vaultPath,
+          true,
+        );
+        if (p.isCancel(result)) return p.cancel();
+        return result as string | undefined;
+      },
     },
     {
       onCancel: () => {
         p.cancel("Reconfiguration cancelled.");
-        return;
+        process.exit(0);
       },
     },
   )) as { vaultPath: string | undefined };
