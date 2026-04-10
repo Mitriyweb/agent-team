@@ -152,6 +152,28 @@ function resolveTools(fm: AgentFrontmatter): string[] {
   return DEFAULT_TOOLS;
 }
 
+/**
+ * Find globally installed claude CLI binary.
+ * The SDK needs pathToClaudeCodeExecutable when the native binary
+ * for the current platform isn't bundled in node_modules.
+ */
+function findGlobalClaude(): string | undefined {
+  const candidates = [
+    path.join(process.env.HOME || "", ".local", "bin", "claude"),
+    "/usr/local/bin/claude",
+    "/opt/homebrew/bin/claude",
+  ];
+  // Also try `which claude` via sync exec
+  try {
+    const result = Bun.spawnSync(["which", "claude"], { stdout: "pipe" });
+    const whichPath = new TextDecoder().decode(result.stdout).trim();
+    if (whichPath) candidates.unshift(whichPath);
+  } catch {
+    // ignore
+  }
+  return candidates.find((p) => fs.existsSync(p));
+}
+
 export async function runAgent(
   opts: AgentRunnerOptions,
 ): Promise<AgentRunResult> {
@@ -195,12 +217,12 @@ export async function runAgent(
   const resolvedPermission = (frontmatter.permission_mode ??
     "acceptEdits") as PermissionMode;
 
-  // CLI path: env > local node_modules > global
+  // CLI path: env > local node_modules > global which(claude)
   const cliPath =
     process.env.CLAUDE_CLI_PATH ??
     (fs.existsSync("./node_modules/.bin/claude")
       ? "./node_modules/.bin/claude"
-      : undefined);
+      : findGlobalClaude());
 
   const hooks = createHooks(logger, role);
 

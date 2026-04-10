@@ -75,6 +75,7 @@
 
         <section id="installation">
             <h2>Installation</h2>
+            <p><mark>macOS only</mark> (Apple Silicon &amp; Intel). Linux and Windows support is planned.</p>
 
             <h3>Option 1: One-line install (Recommended)</h3>
             <p>Detects your platform, downloads the binary, and installs to <code>~/.local/bin/</code>.</p>
@@ -93,17 +94,48 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <h2>Quickstart</h2>
             <p>1. Initialize your project:</p>
             <pre><code>agent-team init</code></pre>
-            <p>2. Run your tasks:</p>
+            <p>2. Create a plan (interactive — select or create OpenSpec change):</p>
+            <pre><code>agent-team plan</code></pre>
+            <p>3. Execute tasks (interactive — select which change to run):</p>
             <pre><code>agent-team run --all</code></pre>
+        </section>
+
+        <section id="planners">
+            <h2>Planning Modes</h2>
+            <div class="grid">
+                <article>
+                    <h3>Built-in</h3>
+                    <p>Write a <code>ROADMAP.md</code>, run <code>agent-team plan</code>. Tasks decomposed into <code>tasks/plan.md</code> with priorities and dependencies.</p>
+                </article>
+                <article>
+                    <h3>OpenSpec</h3>
+                    <p>Structured spec-driven planning. Each change gets a proposal, design, and task checklist. Agents execute directly from <code>openspec/changes/NAME/tasks.md</code>.</p>
+                </article>
+            </div>
         </section>
 
         <section id="teams">
             <h2>Ready-to-use Teams</h2>
-            <ul>
-                <li><strong>Software Development:</strong> Team Lead, Architect, Developer, Reviewer, QA.</li>
-                <li><strong>Frontend:</strong> Focused on UI components, design tokens, and accessibility.</li>
-                <li><strong>Localization:</strong> Technical Writer, Localizer, SEO Specialist.</li>
-            </ul>
+            <div class="grid">
+                <article>
+                    <h3>Software Development</h3>
+                    <p>Team Lead, Architect, Developer, Reviewer, QA. Full lifecycle from design to testing.</p>
+                </article>
+                <article>
+                    <h3>Frontend</h3>
+                    <p>UI Architect, Frontend Dev, Design Reviewer, QA. Focused on components, accessibility, and visual quality.</p>
+                </article>
+                <article>
+                    <h3>Localization</h3>
+                    <p>Technical Writer, Localizer, SEO Specialist, QA. Content creation and translation pipeline.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="monitoring">
+            <h2>Monitoring</h2>
+            <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>
+            <pre><code>agent-team audit    # Show audit report</code></pre>
         </section>
     </main>
 

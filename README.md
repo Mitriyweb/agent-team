@@ -142,15 +142,37 @@ Task format:
 
 ### OpenSpec planner
 
-[OpenSpec](https://github.com/Fission-AI/OpenSpec) separates planning from execution.
+[OpenSpec](https://github.com/Fission-AI/OpenSpec) separates planning from execution with structured specs.
 
 ```bash
 agent-team init --team "software development" --planner openspec
-agent-team plan
+agent-team plan          # Interactive: select existing change or create new
+agent-team run --all     # Interactive: select which change to execute
 ```
 
-Creates a structured proposal in `openspec/changes/` with `proposal.md`, `design.md`, `tasks.md`.
-Tasks are automatically converted to agent-team format in `tasks/plan.md`.
+**Planning flow:**
+
+1. `agent-team plan` prompts to select an existing OpenSpec change or create a new one
+2. New changes prompt for a descriptive kebab-case name (e.g., `add-test-coverage`)
+3. Only missing artifacts are generated — if a change already has `proposal.md`, only `design.md` and `tasks.md` are created
+4. Artifacts stay in `openspec/changes/NAME/` (no intermediate `tasks/plan.md`)
+
+**Execution flow:**
+
+1. `agent-team run` prompts to select which OpenSpec change to execute (or create new)
+2. Tasks are read directly from `openspec/changes/NAME/tasks.md`
+3. Proposal and design are injected as context into each task's spec
+4. Task status is tracked in-place (`[x]`, `[~]`, `[!]`) within `tasks.md`
+
+**Change structure:**
+
+```text
+openspec/changes/add-test-coverage/
+├── .openspec.yaml    # Metadata
+├── proposal.md       # What and why
+├── design.md         # Technical approach
+└── tasks.md          # Actionable checklist (source of truth for execution)
+```
 
 Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`).
 
@@ -161,10 +183,10 @@ your-project/
 ├── CLAUDE.md                    # Project instructions (with agent-team managed block)
 ├── .claude-loop/
 │   ├── memory.md                # Structured knowledge base (curated by librarian)
-│   ├── logs/                    # Task execution logs
+│   ├── logs/                    # Task execution logs (task-{id}-{ts}.log)
 │   ├── reports/                 # Task reports and cost summary
-│   └── audit/                   # Tool call audit trail
-├── ROADMAP.md                   # Task descriptions (builtin planner)
+│   └── audit/
+│       └── audit.jsonl          # Tool call audit trail (role, agent, tool, phase)
 ├── agent-team.json              # Project config (planner, team name)
 ├── .claude/
 │   ├── settings.json            # Permissions, profiles, hooks
@@ -181,8 +203,18 @@ your-project/
 │       ├── architect/
 │       │   └── CLAUDE.md
 │       └── skills/              # Agent skills and references
-└── tasks/
-    └── plan.md                  # Decomposed task plan
+├── ROADMAP.md                   # Task descriptions (builtin planner)
+├── tasks/
+│   └── plan.md                  # Decomposed task plan (builtin planner only)
+└── openspec/                    # (OpenSpec planner only)
+    ├── config.yaml              # OpenSpec project config
+    ├── project.md               # Project context
+    ├── specs/                   # Permanent specifications
+    └── changes/                 # Active changes
+        └── NAME/
+            ├── proposal.md      # What and why
+            ├── design.md        # Technical approach
+            └── tasks.md         # Execution checklist (source of truth)
 ```
 
 ## Importing Rules
@@ -268,7 +300,7 @@ After each completed task, the **librarian** agent runs automatically to curate 
 
 The librarian keeps `memory.md` under 300 lines, summarizing older entries into an archive section when needed.
 
-### Logging
+### Logging & Audit
 
 Every task produces:
 
@@ -277,6 +309,18 @@ Every task produces:
 - `.claude-loop/audit/audit.jsonl` — tool call audit trail (via hooks)
 
 Plan failures are saved to `.claude-loop/logs/plan-error.log` with stderr and stdout.
+
+**Audit trail** records every tool call with structured metadata:
+
+```json
+{"ts":"2026-04-10T14:53:44Z","role":"frontend-qa","agent":"Write tests for M365","tool":"Bash","phase":"PRE"}
+```
+
+Fields are auto-detected from Claude Code hook context:
+
+- `tool` — tool name (Read, Write, Bash, Glob, Agent, etc.)
+- `role` — agent profile or subagent type
+- `agent` — agent name or task description
 
 ## Agent Teams
 
@@ -379,8 +423,11 @@ Creates agents in `.claude/agents/` with a PROTOCOL.md and profiles for each rol
 
 ## Requirements
 
+> **Platform:** macOS only (Apple Silicon & Intel). Linux and Windows support is planned.
+
 | Tool | Required | Install |
 |------|----------|---------|
+| macOS | **yes** | Apple Silicon (arm64) or Intel (x64) |
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` |
 | Claude Agent SDK | bundled | Included in dependencies (`@anthropic-ai/claude-agent-sdk`) |
 | Bun / npm | no | [bun.sh](https://bun.sh) (for dev tooling) |

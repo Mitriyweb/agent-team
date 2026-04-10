@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import * as p from "@clack/prompts";
 import {
   BLUE,
   CYAN,
@@ -100,91 +101,212 @@ export async function planRoadmap(inputFile = "ROADMAP.md", model?: string) {
   }
 }
 
+/**
+ * List existing OpenSpec changes with their status.
+ */
+function listOpenSpecChanges(): {
+  name: string;
+  dir: string;
+  hasProposal: boolean;
+  hasTasks: boolean;
+  hasDesign: boolean;
+}[] {
+  const changesDir = path.join("openspec", "changes");
+  if (!fs.existsSync(changesDir)) return [];
+
+  return fs
+    .readdirSync(changesDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && e.name !== "archive")
+    .map((e) => {
+      const dir = path.join(changesDir, e.name);
+      return {
+        name: e.name,
+        dir,
+        hasProposal: fs.existsSync(path.join(dir, "proposal.md")),
+        hasTasks: fs.existsSync(path.join(dir, "tasks.md")),
+        hasDesign: fs.existsSync(path.join(dir, "design.md")),
+      };
+    });
+}
+
+/**
+ * Interactive prompt: select an existing OpenSpec change or create a new one.
+ * Returns { changeDir, changeName, isNew, roadmapContent }.
+ */
+async function selectOrCreateChange(inputFile: string): Promise<{
+  changeDir: string;
+  changeName: string;
+  isNew: boolean;
+  roadmapContent: string;
+}> {
+  const roadmapContent = fs.readFileSync(inputFile, "utf-8");
+  const existing = listOpenSpecChanges();
+
+  // If no existing changes, go straight to creation
+  if (existing.length === 0) {
+    return promptNewChangeName(roadmapContent);
+  }
+
+  // Interactive: show existing changes + option to create new
+  const options = existing.map((c) => {
+    const artifacts: string[] = [];
+    if (c.hasProposal) artifacts.push("proposal");
+    if (c.hasDesign) artifacts.push("design");
+    if (c.hasTasks) artifacts.push("tasks");
+    const hint =
+      artifacts.length > 0 ? artifacts.join(", ") : "empty — no artifacts";
+    return { value: c.name, label: c.name, hint };
+  });
+
+  options.push({
+    value: "__new__",
+    label: "Create new change",
+    hint: `from ${inputFile}`,
+  });
+
+  const selected = await p.select({
+    message: "Select an OpenSpec change or create new",
+    options,
+  });
+
+  if (p.isCancel(selected)) {
+    p.cancel("Planning cancelled.");
+    process.exit(0);
+  }
+
+  if (selected === "__new__") {
+    return promptNewChangeName(roadmapContent);
+  }
+
+  // Use existing change
+  const change = existing.find((c) => c.name === selected);
+  if (!change) return promptNewChangeName(roadmapContent);
+  return {
+    changeDir: change.dir,
+    changeName: change.name,
+    isNew: false,
+    roadmapContent,
+  };
+}
+
+async function promptNewChangeName(roadmapContent: string): Promise<{
+  changeDir: string;
+  changeName: string;
+  isNew: boolean;
+  roadmapContent: string;
+}> {
+  const changeName = await p.text({
+    message: "Change name (kebab-case, descriptive)",
+    placeholder: "add-test-coverage",
+    validate: (v) => {
+      if (!v?.trim()) return "Name is required";
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(v.trim()))
+        return "Use kebab-case: lowercase letters, numbers, hyphens";
+      const dir = path.join("openspec", "changes", v.trim());
+      if (fs.existsSync(dir)) return `Change "${v.trim()}" already exists`;
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(changeName)) {
+    p.cancel("Planning cancelled.");
+    process.exit(0);
+  }
+
+  const name = (changeName as string).trim();
+  const changeDir = path.join("openspec", "changes", name);
+
+  return { changeDir, changeName: name, isNew: true, roadmapContent };
+}
+
 async function planWithOpenSpec(inputFile: string) {
   if (!fs.existsSync(inputFile)) {
     err(`Input file not found: ${inputFile}`);
   }
 
-  // If inputFile is inside an existing openspec change with tasks.md, just convert
-  const existingChangeDir = path.dirname(inputFile);
-  const existingTasks = path.join(existingChangeDir, "tasks.md");
-  if (inputFile.includes("openspec/changes/") && fs.existsSync(existingTasks)) {
-    log(
-      `Converting existing OpenSpec change: ${BLUE}${existingChangeDir}${NC}`,
-    );
-    const tasksDir = "tasks";
-    if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
-    const planFile = path.join(tasksDir, "plan.md");
-    const converted = convertOpenSpecTasks(existingTasks, existingChangeDir);
-    fs.writeFileSync(planFile, converted);
-    ok(`Converted OpenSpec tasks → ${planFile}`);
-    showTaskSummary(planFile);
+  // Interactive: select existing change or create new
+  const { changeDir, changeName, isNew, roadmapContent } =
+    await selectOrCreateChange(inputFile);
+
+  // Determine which artifacts need generation
+  const hasProposal = fs.existsSync(path.join(changeDir, "proposal.md"));
+  const hasDesign = fs.existsSync(path.join(changeDir, "design.md"));
+  const hasTasks = fs.existsSync(path.join(changeDir, "tasks.md"));
+
+  // If existing change already has all artifacts, just show summary
+  if (!isNew && hasProposal && hasDesign && hasTasks) {
+    ok(`Change ${BLUE}${changeName}${NC} is ready (proposal + design + tasks)`);
+    showOpenSpecTaskSummary(path.join(changeDir, "tasks.md"));
     return;
+  }
+
+  // Create change directory if new
+  if (isNew) {
+    const newChangeProc = Bun.spawnSync(
+      ["npx", "@fission-ai/openspec", "new", "change", changeName],
+      { stdio: ["inherit", "inherit", "inherit"] },
+    );
+    if (!newChangeProc.success) {
+      err(
+        "Failed to create OpenSpec change. Is @fission-ai/openspec installed?",
+      );
+    }
+  }
+
+  // Build prompt — only generate missing artifacts
+  const missingArtifacts: string[] = [];
+  if (!hasProposal)
+    missingArtifacts.push(
+      "### proposal.md\nWrite a clear proposal with:\n- Summary of what needs to be done\n- Goals and non-goals\n- Motivation and context\n- Scope boundaries",
+    );
+  if (!hasDesign)
+    missingArtifacts.push(
+      "### design.md\nWrite architectural decisions:\n- Technical approach\n- Key components and their responsibilities\n- Dependencies and risks",
+    );
+  if (!hasTasks)
+    missingArtifacts.push(
+      "### tasks.md\nWrite a DETAILED implementation checklist using this EXACT format:\n\n## 1. Section Name\n- [ ] 1.1 Detailed task description with specific files/components\n- [ ] 1.2 Another task\n\n## 2. Next Section\n- [ ] 2.1 Task\n\nRules for tasks.md:\n- Group tasks into numbered sections\n- Each task is a checkbox: - [ ] N.M Description\n- Order tasks by dependency (earlier tasks first)\n- Be VERY specific — include file paths, function names, exact changes needed\n- Each task should be independently executable by a developer agent",
+    );
+
+  if (missingArtifacts.length === 0) {
+    ok(`Change ${BLUE}${changeName}${NC} already has all artifacts.`);
+    showOpenSpecTaskSummary(path.join(changeDir, "tasks.md"));
+    return;
+  }
+
+  // Include existing artifacts as context
+  let existingContext = "";
+  if (hasProposal) {
+    const proposal = fs.readFileSync(
+      path.join(changeDir, "proposal.md"),
+      "utf-8",
+    );
+    existingContext += `\n## Existing proposal\n\n${proposal}\n`;
+  }
+  if (hasDesign) {
+    const design = fs.readFileSync(path.join(changeDir, "design.md"), "utf-8");
+    existingContext += `\n## Existing design\n\n${design}\n`;
   }
 
   const rawModel = findTeamLeadModel() || "sonnet";
   const resolvedModel = resolveModelAlias(rawModel);
   log(
-    `Planning with ${BLUE}OpenSpec${NC} from ${BLUE}${inputFile}${NC} (model: ${GREEN}${resolvedModel}${NC})...`,
+    `Planning ${BLUE}${changeName}${NC} (model: ${GREEN}${resolvedModel}${NC}, generating: ${missingArtifacts.length} artifact(s))...`,
   );
   const startTime = Date.now();
 
-  const roadmapContent = fs.readFileSync(inputFile, "utf-8");
-  const changeName = `roadmap-${Date.now()}`;
-
-  // Step 1: Create OpenSpec change directory
-  const newChangeProc = Bun.spawnSync(
-    ["npx", "@fission-ai/openspec", "new", "change", changeName],
-    { stdio: ["inherit", "inherit", "inherit"] },
-  );
-  if (!newChangeProc.success) {
-    err("Failed to create OpenSpec change. Is @fission-ai/openspec installed?");
-  }
-
-  const changeDir = path.join("openspec", "changes", changeName);
-
-  // Step 2: Use Claude to populate the change artifacts
   const proposePrompt = `You are an autonomous planner. Read the task description and create OpenSpec artifacts.
 
 ## Task description
 
 ${roadmapContent}
+${existingContext}
 
 ## Instructions
 
 Create the following files in ${changeDir}/:
 
-### 1. proposal.md
-Write a clear proposal with:
-- Summary of what needs to be done
-- Motivation and context
-- Scope boundaries
-
-### 2. design.md
-Write architectural decisions:
-- Technical approach
-- Key components and their responsibilities
-- Dependencies and risks
-
-### 3. tasks.md
-Write an implementation checklist using this EXACT format:
-
-## 1. Setup
-- [ ] 1.1 First setup task
-- [ ] 1.2 Second setup task
-
-## 2. Implementation
-- [ ] 2.1 First implementation task
-- [ ] 2.2 Second implementation task
-
-## 3. Verification
-- [ ] 3.1 Run tests and verify
-
-Rules for tasks.md:
-- Group tasks into numbered sections
-- Each task is a checkbox: - [ ] N.M Description
-- Order tasks by dependency (earlier tasks first)
-- Be specific — each task should be actionable by a developer
+${missingArtifacts.join("\n\n")}
 
 After writing all files, output: PLAN_READY`;
 
@@ -235,110 +357,43 @@ After writing all files, output: PLAN_READY`;
     err("OpenSpec planning failed via Claude CLI.");
   }
 
-  ok(`OpenSpec proposal created: ${changeDir}/`);
-
-  // Step 3: Convert OpenSpec tasks.md → our tasks/plan.md format
-  const tasksDir = "tasks";
-  if (!fs.existsSync(tasksDir)) fs.mkdirSync(tasksDir, { recursive: true });
-  const planFile = path.join(tasksDir, "plan.md");
-
-  const openspecTasks = path.join(changeDir, "tasks.md");
-  if (fs.existsSync(openspecTasks)) {
-    const converted = convertOpenSpecTasks(openspecTasks, changeDir);
-    fs.writeFileSync(planFile, converted);
-    ok(`Converted OpenSpec tasks → ${planFile}`);
-  } else {
-    warn(`No tasks.md found in ${changeDir}. Create it manually.`);
-  }
-
   const elapsed = Date.now() - startTime;
   const mins = Math.floor(elapsed / 60000);
   const secs = Math.floor((elapsed % 60000) / 1000);
-  ok(`OpenSpec plan created in ${CYAN}${mins}m ${secs}s${NC}`);
-  showTaskSummary(planFile);
+  ok(
+    `Created change ${BLUE}${changeName}${NC} in ${CYAN}${mins}m ${secs}s${NC}`,
+  );
+
+  const tasksFile = path.join(changeDir, "tasks.md");
+  if (fs.existsSync(tasksFile)) {
+    showOpenSpecTaskSummary(tasksFile);
+  } else {
+    warn(`No tasks.md in ${changeDir}. Create it manually or re-run plan.`);
+  }
 }
 
 /**
- * Convert OpenSpec tasks.md format to agent-team plan.md format.
- *
- * OpenSpec: `- [ ] 1.1 Description`
- * Agent-team: `- [ ] id:N priority:high type:feature agents:developer Description`
+ * Show task summary from an OpenSpec tasks.md file (native format).
  */
-function convertOpenSpecTasks(tasksFile: string, changeDir: string): string {
+function showOpenSpecTaskSummary(tasksFile: string) {
+  if (!fs.existsSync(tasksFile)) return;
   const content = fs.readFileSync(tasksFile, "utf-8");
-  const lines = content.split("\n");
+  const taskLines = content.match(/^- \[[ x]\] \d+\.\d+\s+.*/gm) || [];
 
-  let header = "# Execution Plan (from OpenSpec)\n\n";
-  header += `> Source: ${changeDir}\n\n`;
+  console.log("");
+  console.log(`  ${CYAN}Tasks:${NC}  ${taskLines.length}`);
+  console.log(`  ${CYAN}Source:${NC} ${tasksFile}`);
+  console.log("");
 
-  // Read proposal for context if available
-  const proposalFile = path.join(changeDir, "proposal.md");
-  if (fs.existsSync(proposalFile)) {
-    const proposal = fs.readFileSync(proposalFile, "utf-8").trim();
-    header += `## Proposal\n\n${proposal}\n\n`;
+  for (const line of taskLines) {
+    const idMatch = line.match(/(\d+\.\d+)/);
+    const isChecked = line.includes("[x]");
+    const desc = line.replace(/^- \[[ x]\] \d+\.\d+\s+/, "").trim();
+    const id = idMatch ? idMatch[1] : "?";
+    const status = isChecked ? `${GREEN}✓${NC}` : `${BLUE}○${NC}`;
+    console.log(`  ${status} ${BLUE}${id}${NC} ${desc}`);
   }
-
-  // Read design for context if available
-  const designFile = path.join(changeDir, "design.md");
-  if (fs.existsSync(designFile)) {
-    const design = fs.readFileSync(designFile, "utf-8").trim();
-    header += `## Design\n\n${design}\n\n`;
-  }
-
-  header += "## Section 1: Structured tasks for agent-team run\n\n```\n";
-
-  const taskLines: string[] = [];
-  const specBlocks: string[] = [];
-  let taskId = 0;
-  let currentSection = "";
-  let prevTaskId = 0;
-
-  for (const line of lines) {
-    // Track section headers
-    const sectionMatch = line.match(/^##\s+\d+\.\s+(.+)/);
-    if (sectionMatch?.[1]) {
-      currentSection = sectionMatch[1].trim();
-      continue;
-    }
-
-    // Parse task checkboxes: - [ ] 1.1 Description or - [ ] Description
-    const taskMatch = line.match(/^-\s+\[[ x]\]\s+(?:\d+\.\d+\s+)?(.+)/);
-    if (taskMatch?.[1]) {
-      taskId++;
-      const desc = taskMatch[1].trim();
-      const isChecked = line.includes("[x]");
-
-      // Assign priority based on section position
-      const priority = taskId <= 2 ? "high" : taskId <= 5 ? "high" : "medium";
-      // Default agents — team-lead will delegate
-      const agents = "developer";
-      const depends =
-        prevTaskId > 0 && taskId > 1 ? ` depends:${prevTaskId}` : "";
-      const status = isChecked ? "x" : " ";
-
-      taskLines.push(
-        `- [${status}] id:${taskId} priority:${priority} type:feature agents:${agents}${depends} ${desc}`,
-      );
-
-      specBlocks.push(
-        `### Task #${taskId} — ${desc}\n` +
-          `**Agents:** ${agents}\n` +
-          (depends ? `**Depends on:** #${prevTaskId}\n` : "") +
-          `**Section:** ${currentSection || "General"}\n` +
-          "**Output:** As specified in task description\n" +
-          `**Details:**\n${desc}\n`,
-      );
-
-      prevTaskId = taskId;
-    }
-  }
-
-  let result = header;
-  result += taskLines.join("\n");
-  result += "\n```\n\n---\n\n## Section 2: Detailed spec per task\n\n";
-  result += specBlocks.join("\n---\n\n");
-
-  return result;
+  console.log("");
 }
 
 async function planWithBuiltin(inputFile: string, model?: string) {

@@ -15,8 +15,6 @@ const LOG_DIR = ".claude-loop/audit";
 export async function runAuditHook(phase: string) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
 
-  const role = process.env.ROLE || "unknown";
-  const agent = process.env.AGENT || "unknown";
   const timestamp = new Date().toISOString();
 
   const input = await new Response(Bun.stdin.stream()).text();
@@ -28,7 +26,17 @@ export async function runAuditHook(phase: string) {
     // Ignore parse errors
   }
 
-  const tool = (parsed.tool as string) || "unknown";
+  // Claude Code hooks pass tool_name (not tool) in stdin JSON
+  const tool =
+    (parsed.tool_name as string) || (parsed.tool as string) || "unknown";
+
+  // Detect role/agent from Claude Code environment
+  // CLAUDE_AGENT_PROFILE is set when running under a profile (team-lead, developer, etc.)
+  const role =
+    process.env.CLAUDE_AGENT_PROFILE || process.env.ROLE || detectRole(parsed);
+  const agent =
+    process.env.CLAUDE_AGENT_NAME || process.env.AGENT || detectAgent(parsed);
+
   const logFile = path.join(LOG_DIR, "audit.jsonl");
 
   if (phase === "PRE") {
@@ -41,7 +49,9 @@ export async function runAuditHook(phase: string) {
     });
     fs.appendFileSync(logFile, `${entry}\n`);
   } else {
-    const status = (parsed.status as string) || "success";
+    // Claude Code PostToolUse hooks may include tool_output or error
+    const hasError = !!parsed.tool_error;
+    const status = hasError ? "error" : (parsed.status as string) || "success";
     const durationMs = (parsed.duration_ms as number) || 0;
     const entry = JSON.stringify({
       ts: timestamp,
@@ -54,4 +64,22 @@ export async function runAuditHook(phase: string) {
     });
     fs.appendFileSync(logFile, `${entry}\n`);
   }
+}
+
+/** Try to detect role from hook context (e.g. Agent tool spawns with subagent_type). */
+function detectRole(parsed: Record<string, unknown>): string {
+  // Check if the tool input contains subagent_type (Agent tool calls)
+  const input = parsed.tool_input as Record<string, unknown> | undefined;
+  if (input?.subagent_type) return String(input.subagent_type);
+  // Fallback: check for profile in the session
+  if (process.env.USER_PROFILE) return process.env.USER_PROFILE;
+  return "main";
+}
+
+/** Try to detect agent name from hook context. */
+function detectAgent(parsed: Record<string, unknown>): string {
+  const input = parsed.tool_input as Record<string, unknown> | undefined;
+  if (input?.name) return String(input.name);
+  if (input?.description) return String(input.description);
+  return "claude";
 }

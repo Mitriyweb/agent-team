@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import * as p from "@clack/prompts";
 import {
   BLUE,
   CYAN,
@@ -8,6 +9,7 @@ import {
   configureProvider,
   err,
   GREEN,
+  loadConfig,
   log,
   NC,
   notifyReview,
@@ -53,23 +55,93 @@ export interface RunOptions {
 const AGENTS_DIR = path.join(".claude", "agents");
 
 /**
- * Find the latest active OpenSpec change that has a proposal.md.
- * Returns the path to proposal.md or undefined.
+ * Find or interactively select an OpenSpec change with tasks.md.
+ * If only one change exists, uses it automatically.
+ * If multiple, prompts the user to pick one.
  */
-function findLatestOpenSpecChange(): string | undefined {
+async function selectOpenSpecTasks(): Promise<string | undefined> {
   const changesDir = path.join("openspec", "changes");
   if (!fs.existsSync(changesDir)) return undefined;
   const entries = fs.readdirSync(changesDir, { withFileTypes: true });
   const changes = entries
     .filter((e) => e.isDirectory() && e.name !== "archive")
-    .map((e) => ({
-      name: e.name,
-      proposal: path.join(changesDir, e.name, "proposal.md"),
-    }))
-    .filter((c) => fs.existsSync(c.proposal));
+    .map((e) => {
+      const dir = path.join(changesDir, e.name);
+      const tasksFile = path.join(dir, "tasks.md");
+      const hasTasks = fs.existsSync(tasksFile);
+      // Count pending/done tasks
+      let pending = 0;
+      let done = 0;
+      if (hasTasks) {
+        const content = fs.readFileSync(tasksFile, "utf-8");
+        const lines = content.match(/^- \[[ x~!]\] \d+\.\d+/gm) || [];
+        for (const l of lines) {
+          if (l.includes("[x]")) done++;
+          else pending++;
+        }
+      }
+      return { name: e.name, dir, tasks: tasksFile, hasTasks, pending, done };
+    })
+    .filter((c) => c.hasTasks);
+
   if (changes.length === 0) return undefined;
-  // Return the most recent (by dir name, which includes timestamp)
-  return changes[changes.length - 1]?.proposal;
+
+  // Always ask which change to execute
+  const options = [
+    ...changes.map((c) => ({
+      value: c.tasks,
+      label: c.name,
+      hint: `${c.done}/${c.done + c.pending} done`,
+    })),
+    {
+      value: "__new__" as string,
+      label: "Create new change",
+      hint: "run planner first",
+    },
+  ];
+
+  const selected = await p.select({
+    message: "Select OpenSpec change to execute",
+    options,
+  });
+
+  if (p.isCancel(selected)) {
+    p.cancel("Run cancelled.");
+    process.exit(0);
+  }
+
+  if (selected === "__new__") {
+    // Run planner to create a new change, then find it
+    const inputFile = fs.existsSync("ROADMAP.md") ? "ROADMAP.md" : undefined;
+    if (inputFile) {
+      await planRoadmap(inputFile);
+    } else {
+      warn("No ROADMAP.md found. Create one or run: agent-team plan");
+      return undefined;
+    }
+    // After planning, find the newly created change
+    return selectOpenSpecTasks();
+  }
+
+  return selected as string;
+}
+
+/**
+ * Build context from an OpenSpec change directory (proposal + design)
+ * to provide rich specs per task.
+ */
+function loadOpenSpecContext(tasksFile: string): string {
+  const changeDir = path.dirname(tasksFile);
+  let ctx = "";
+  const proposalFile = path.join(changeDir, "proposal.md");
+  if (fs.existsSync(proposalFile)) {
+    ctx += `## Proposal\n\n${fs.readFileSync(proposalFile, "utf-8").trim()}\n\n`;
+  }
+  const designFile = path.join(changeDir, "design.md");
+  if (fs.existsSync(designFile)) {
+    ctx += `## Design\n\n${fs.readFileSync(designFile, "utf-8").trim()}\n\n`;
+  }
+  return ctx;
 }
 
 function findMdFiles(dir: string): string[] {
@@ -93,6 +165,10 @@ export class TaskRunner {
   private totalTasks = 0;
   private cumulativeCost = 0;
   private teamLeadModel: string | undefined;
+  /** When true, tasks are in OpenSpec native format (- [ ] 1.1 Desc) */
+  private openspecMode = false;
+  /** Extra context from openspec proposal/design */
+  private openspecContext = "";
 
   constructor(options: RunOptions) {
     this.options = options;
@@ -201,17 +277,30 @@ export class TaskRunner {
     if (!fs.existsSync(this.roadmap)) return [];
     const content = fs.readFileSync(this.roadmap, "utf-8");
     const tasks: string[] = [];
-    let inBlock = false;
 
-    for (const line of content.split("\n")) {
-      if (line.trim().startsWith("```")) {
-        inBlock = !inBlock;
-        continue;
-      }
-      if (inBlock) {
-        const regex = new RegExp(`^- \\[${statusFilter}\\] id:(\\d+)`);
-        if (regex.test(line)) {
+    if (this.openspecMode) {
+      // OpenSpec native format: - [ ] 1.1 Description  or  - [x] 1.1 Description
+      for (const line of content.split("\n")) {
+        const match = line.match(/^- \[([x !~])\] (\d+\.\d+)\s+(.+)/);
+        if (!match) continue;
+        const status = match[1];
+        if (statusFilter === "." || status === statusFilter) {
           tasks.push(line);
+        }
+      }
+    } else {
+      // Legacy plan.md format: code block with id:N
+      let inBlock = false;
+      for (const line of content.split("\n")) {
+        if (line.trim().startsWith("```")) {
+          inBlock = !inBlock;
+          continue;
+        }
+        if (inBlock) {
+          const regex = new RegExp(`^- \\[${statusFilter}\\] id:(\\d+)`);
+          if (regex.test(line)) {
+            tasks.push(line);
+          }
         }
       }
     }
@@ -228,8 +317,12 @@ export class TaskRunner {
     const lines = content.split("\n");
     let done = false;
 
+    const needle = this.openspecMode
+      ? `[${from}] ${taskId} `
+      : `[${from}] id:${taskId} `;
+
     const newLines = lines.map((line) => {
-      if (!done && line.includes(`[${from}] id:${taskId} `)) {
+      if (!done && line.includes(needle)) {
         done = true;
         let newLine = line.replace(`[${from}]`, `[${to}]`);
         if (to === "!" && failureReason) {
@@ -244,14 +337,46 @@ export class TaskRunner {
   }
 
   private getTaskId(line: string): string {
-    const match = line.match(/id:(\d+)/);
-    if (match?.[1]) return match[1];
+    if (this.openspecMode) {
+      // OpenSpec format: - [ ] 1.1 Description → id = "1.1"
+      const match = line.match(/^- \[.\] (\d+\.\d+)/);
+      if (match?.[1]) return match[1];
+    } else {
+      const match = line.match(/id:(\d+)/);
+      if (match?.[1]) return match[1];
+    }
     return "";
   }
 
   private getTaskSpec(taskId: string): string {
     if (!fs.existsSync(this.roadmap)) return "";
     const content = fs.readFileSync(this.roadmap, "utf-8");
+
+    if (this.openspecMode) {
+      // For openspec, spec = section header + task line + proposal/design context
+      const lines = content.split("\n");
+      let currentSection = "";
+      let taskLine = "";
+
+      for (const line of lines) {
+        const sectionMatch = line.match(/^##\s+\d+\.\s+(.+)/);
+        if (sectionMatch?.[1]) {
+          currentSection = sectionMatch[1].trim();
+        }
+        if (line.includes(`] ${taskId} `)) {
+          taskLine = line.replace(/^- \[.\] \d+\.\d+\s+/, "").trim();
+          break;
+        }
+      }
+
+      let spec = `**Section:** ${currentSection}\n**Task:** ${taskLine}\n\n`;
+      if (this.openspecContext) {
+        spec += this.openspecContext;
+      }
+      return spec;
+    }
+
+    // Legacy plan.md format
     const lines = content.split("\n");
     let inBlock = false;
     let spec = "";
@@ -270,13 +395,58 @@ export class TaskRunner {
     return spec;
   }
 
-  private pickNextTask(): string | null {
-    const doneTasks = this.getRoadmapTasks("x");
-    const failedTasks = this.getRoadmapTasks("!");
-    const pendingTasks = this.getRoadmapTasks(" ");
+  /**
+   * Recover stuck [~] tasks from a previous crashed/killed run.
+   * Checks logs to determine if a task actually completed or truly stalled.
+   */
+  private recoverStuckTasks() {
+    if (!fs.existsSync(this.roadmap)) return;
+    const stuckTasks = this.getRoadmapTasks("~");
+    if (stuckTasks.length === 0) return;
 
+    log(
+      `Found ${stuckTasks.length} stuck task(s) from previous run — checking...`,
+    );
+
+    for (const line of stuckTasks) {
+      const tid = this.getTaskId(line);
+      const hasLog = this.taskHasLog(tid);
+      const hasReport = fs.existsSync(path.join(REPORTS_DIR, `task-${tid}.md`));
+
+      if (hasLog || hasReport) {
+        // Evidence of completion found — mark done
+        this.markStatus(tid, "~", "x");
+        ok(`Task #${tid} — log found, marking completed`);
+      } else {
+        // No evidence — reset to pending
+        this.markStatus(tid, "~", " ");
+        warn(`Task #${tid} — no log found, resetting to pending`);
+      }
+    }
+  }
+
+  /** Check if a task has a log file in .claude-loop/logs/ */
+  private taskHasLog(taskId: string): boolean {
+    if (!fs.existsSync(LOG_DIR)) return false;
+    const files = fs.readdirSync(LOG_DIR);
+    // Normalize: openspec ids like "1.1" → match "task-1.1-" in filename
+    return files.some(
+      (f) => f.startsWith(`task-${taskId}-`) && f.endsWith(".log"),
+    );
+  }
+
+  private pickNextTask(): string | null {
+    const pendingTasks = this.getRoadmapTasks(" ");
     if (pendingTasks.length === 0) return null;
 
+    if (this.openspecMode) {
+      // OpenSpec: sequential execution, return first pending
+      return pendingTasks[0] ?? null;
+    }
+
+    // Legacy plan.md: priority + dependency ordering
+    const doneTasks = this.getRoadmapTasks("x");
+    const failedTasks = this.getRoadmapTasks("!");
     const doneIds = doneTasks.map((t) => this.getTaskId(t));
     const failedIds = failedTasks.map((t) => this.getTaskId(t));
 
@@ -306,6 +476,22 @@ export class TaskRunner {
     if (this.options.dryRun) warn(`${YELLOW}[DRY RUN MODE]${NC}`);
     if (this.options.cli) log(`Execution mode: ${GREEN}CLI${NC}`);
 
+    // Detect openspec mode (interactive selection if multiple changes)
+    const config = loadConfig();
+    if (config.planner === "openspec" && !this.options.roadmapFile) {
+      const openspecTasks = await selectOpenSpecTasks();
+      if (openspecTasks) {
+        this.roadmap = openspecTasks;
+        this.openspecMode = true;
+        this.openspecContext = loadOpenSpecContext(openspecTasks);
+        const changeName = path.dirname(openspecTasks).split("/").pop();
+        log(`OpenSpec change: ${BLUE}${changeName}${NC}`);
+      }
+    }
+
+    // Recover any stuck [~] tasks from previous crashed runs
+    this.recoverStuckTasks();
+
     let allTasks = this.getRoadmapTasks();
 
     // Auto-plan if --plan flag set or no structured tasks found
@@ -313,18 +499,16 @@ export class TaskRunner {
       if (fs.existsSync("ROADMAP.md")) {
         log("No structured tasks found. Running planner on ROADMAP.md...");
         await planRoadmap("ROADMAP.md");
-      } else if (fs.existsSync("openspec/changes")) {
-        // OpenSpec mode: find the latest active change with tasks
-        const latestChange = findLatestOpenSpecChange();
-        if (latestChange) {
-          log(
-            `No structured tasks found. Converting OpenSpec change: ${latestChange}...`,
-          );
-          await planRoadmap(latestChange);
-        }
       }
-      // Reload roadmap source after planning
-      if (fs.existsSync("tasks/plan.md")) {
+      // After planning, re-detect openspec
+      if (config.planner === "openspec") {
+        const openspecTasks = await selectOpenSpecTasks();
+        if (openspecTasks) {
+          this.roadmap = openspecTasks;
+          this.openspecMode = true;
+          this.openspecContext = loadOpenSpecContext(openspecTasks);
+        }
+      } else if (fs.existsSync("tasks/plan.md")) {
         this.roadmap = "tasks/plan.md";
       }
       allTasks = this.getRoadmapTasks();
