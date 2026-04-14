@@ -108,8 +108,17 @@ The `librarian` agent runs automatically after each completed task.
 It reads the task report and updates `memory.md` with extracted decisions, errors, patterns, and gotchas.
 Agent-specific gotchas are synced to the relevant `skills/*/references/gotchas.md`.
 
+## External Review (optional)
+
+When configured (`agent-team.json` → `externalReview`), an external CLI agent
+runs automatically after each completed task. It reviews changes independently
+and saves findings to `.claude-loop/reports/task-{id}-external-review.md`.
+
+Configure via `agent-team init` or `agent-team reconfigure`.
+
 ## Reports and Logs
 
 - Task reports: `.claude-loop/reports/task-{id}.md`
+- External reviews: `.claude-loop/reports/task-{id}-external-review.md`
 - Task logs: `.claude-loop/logs/`
 - Audit trail: `.claude-loop/audit/audit.jsonl`

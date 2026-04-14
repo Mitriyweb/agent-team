@@ -181,12 +181,30 @@ export function configureProvider() {
 
 const CONFIG_FILE = "agent-team.json";
 
+/** Supported external CLI agents for external review */
+export enum ExternalReviewAgent {
+  Codex = "codex",
+  Devin = "devin",
+  Aider = "aider",
+  Claude = "claude",
+  Gemini = "gemini",
+}
+
+export interface ExternalReviewConfig {
+  /** Which CLI agent to use */
+  agent: ExternalReviewAgent;
+  /** Custom command override (default: auto-detected from agent) */
+  command?: string;
+}
+
 export interface ProjectConfig {
   planner: "builtin" | "openspec";
   team?: string;
   vaultPath?: string;
   /** Extra regex patterns to block in Bash (added to built-in defaults) */
   blockedBashPatterns?: string[];
+  /** External CLI agent for spec/implementation review */
+  externalReview?: ExternalReviewConfig;
   [key: string]: unknown;
 }
 

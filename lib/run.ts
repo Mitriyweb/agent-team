@@ -7,6 +7,8 @@ import {
   CYAN,
   calculateCost,
   configureProvider,
+  ExternalReviewAgent,
+  type ExternalReviewConfig,
   err,
   GREEN,
   loadConfig,
@@ -527,9 +529,14 @@ export class TaskRunner {
       return;
     }
 
+    // Initialize counter to already-completed tasks so progress resumes correctly
+    const doneTasks = this.getRoadmapTasks("x");
+    const failedTasks = this.getRoadmapTasks("!");
+    this.currentTaskNum = doneTasks.length + failedTasks.length;
+
     TerminalUI.printDashboard({
-      done: this.getRoadmapTasks("x").length,
-      failed: this.getRoadmapTasks("!").length,
+      done: doneTasks.length,
+      failed: failedTasks.length,
       pending: this.getRoadmapTasks(" ").length,
       running: this.getRoadmapTasks("~").length,
       total: this.totalTasks,
@@ -733,6 +740,7 @@ export class TaskRunner {
             ok(`Task #${taskId} review approved — continuing.`);
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
+            this.runExternalReview(taskId, desc);
             if (this.options.branch) {
               commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
               createPR(
@@ -917,6 +925,7 @@ export class TaskRunner {
             ok(`Task #${taskId} review approved — continuing.`);
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
+            this.runExternalReview(taskId, desc);
             if (this.options.branch) {
               commitAndPush(branchName, `feat: #${taskId} - ${desc}`);
               createPR(
@@ -1183,6 +1192,114 @@ export class TaskRunner {
       }
     } catch (e) {
       warn(`Librarian error: ${e}`);
+    }
+  }
+
+  /**
+   * Run external CLI agent for review (codex, devin, aider, claude).
+   * Invoked after task completion when externalReview is configured.
+   */
+  private runExternalReview(taskId: string, desc: string) {
+    const config = loadConfig();
+    const reviewConfig = config.externalReview;
+    if (!reviewConfig) return;
+
+    const cmd = this.resolveExternalCommand(reviewConfig);
+    if (!cmd) {
+      warn(`External review agent "${reviewConfig.agent}" not found in PATH.`);
+      return;
+    }
+
+    log(
+      `Running external review via ${CYAN}${reviewConfig.agent}${NC} for task #${taskId}...`,
+    );
+
+    // Build review prompt
+    const reportFile = path.join(REPORTS_DIR, `task-${taskId}.md`);
+    const reportExists = fs.existsSync(reportFile);
+    const reviewPrompt = [
+      `Review the changes for task #${taskId}: ${desc}.`,
+      "Focus on: correctness, security, edge cases, and code quality.",
+      reportExists ? `Task report: ${reportFile}` : "",
+      "Output a concise review with findings.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const args = this.buildExternalArgs(reviewConfig, reviewPrompt);
+      const proc = Bun.spawnSync(args, {
+        stdio: ["inherit", "pipe", "pipe"],
+        timeout: 300_000, // 5 min
+      });
+
+      const stdout = new TextDecoder().decode(proc.stdout).trim();
+      const stderr = new TextDecoder().decode(proc.stderr).trim();
+
+      // Save review output
+      const reviewFile = path.join(
+        REPORTS_DIR,
+        `task-${taskId}-external-review.md`,
+      );
+      const content = [
+        `# External Review — Task #${taskId}`,
+        `**Agent:** ${reviewConfig.agent}`,
+        `**Date:** ${new Date().toISOString()}`,
+        "",
+        stdout || "(no output)",
+        stderr ? `\n## Stderr\n${stderr}` : "",
+      ].join("\n");
+      fs.writeFileSync(reviewFile, content);
+
+      if (proc.success) {
+        ok(`External review saved: ${BLUE}${reviewFile}${NC}`);
+      } else {
+        warn(
+          `External review exited with code ${proc.exitCode} — output saved to ${reviewFile}`,
+        );
+      }
+    } catch (e) {
+      warn(`External review error: ${e}`);
+    }
+  }
+
+  private resolveExternalCommand(config: ExternalReviewConfig): string | null {
+    if (config.command) return config.command;
+    // Enum values are the CLI command names
+    const cmd = config.agent as string;
+    if (!cmd) return null;
+    const which = Bun.spawnSync(["which", cmd], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return which.success ? cmd : null;
+  }
+
+  private buildExternalArgs(
+    config: ExternalReviewConfig,
+    prompt: string,
+  ): string[] {
+    const cmd = config.command || config.agent;
+    switch (config.agent) {
+      case ExternalReviewAgent.Codex:
+        return [cmd, "-q", prompt];
+      case ExternalReviewAgent.Claude:
+        return [
+          cmd,
+          "-p",
+          prompt,
+          "--max-turns",
+          "10",
+          "--output-format",
+          "text",
+        ];
+      case ExternalReviewAgent.Devin:
+        return [cmd, "run", prompt];
+      case ExternalReviewAgent.Aider:
+        return [cmd, "--message", prompt, "--yes"];
+      case ExternalReviewAgent.Gemini:
+        return [cmd, "-p", prompt];
+      default:
+        return [cmd, prompt];
     }
   }
 

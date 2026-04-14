@@ -159,8 +159,17 @@ It reads the task report from `.claude-loop/reports/` and:
 - Syncs agent-specific gotchas to the relevant `skills/*/references/gotchas.md`
 - Keeps `memory.md` structured and under 300 lines
 
+## External Review (optional)
+
+When configured (`agent-team.json` → `externalReview`), an external CLI agent
+runs automatically after each completed task. It reviews changes independently
+and saves findings to `.claude-loop/reports/task-{id}-external-review.md`.
+
+Configure via `agent-team init` or `agent-team reconfigure`.
+
 ## Reports and Logs
 
 - Task reports: `.claude-loop/reports/task-{id}.md`
+- External reviews: `.claude-loop/reports/task-{id}-external-review.md`
 - Task logs: `.claude-loop/logs/`
 - Audit trail: `.claude-loop/audit/audit.jsonl`

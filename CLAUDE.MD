@@ -1,3 +1,12 @@
+# Coding Rules
+
+@.agents/rules/typescript.md
+@.agents/rules/dependencies.md
+@.agents/rules/testing.md
+@.agents/rules/code-style.md
+
+---
+
 # Workflow Orchestration
 
 ## 1. Plan Node Default

@@ -279,11 +279,38 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
 {
   "planner": "builtin",
   "team": "software development",
-  "blockedBashPatterns": ["docker\\s+system\\s+prune", "DROP\\s+TABLE"]
+  "blockedBashPatterns": ["docker\\s+system\\s+prune", "DROP\\s+TABLE"],
+  "externalReview": { "agent": "codex" }
 }
 ```
 
-`blockedBashPatterns` adds regex patterns to the built-in safety hooks (on top of the defaults: `rm -rf /`, `/dev/` redirects, `curl | sh`, `wget | bash`).
+- `blockedBashPatterns` — regex patterns added to built-in safety hooks
+- `externalReview` — optional external CLI agent for independent review after each task
+
+### External Review
+
+Configure an external CLI agent to independently review specs and implementations after each task completes.
+
+Supported agents: `codex`, `devin`, `aider`, `claude`, `gemini`.
+
+```bash
+# Interactive setup
+agent-team init                                      # select from list
+agent-team reconfigure                               # change existing config
+
+# Non-interactive
+agent-team init --team "software development" --external-review codex
+```
+
+When configured, the runner automatically invokes the external agent after each successful task. Review output is saved to `.claude-loop/reports/task-{id}-external-review.md`.
+
+To use a custom command or path, set `command` in the config:
+
+```json
+{
+  "externalReview": { "agent": "codex", "command": "/usr/local/bin/codex" }
+}
+```
 
 ## How It Works
 

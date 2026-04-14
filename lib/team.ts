@@ -3,6 +3,7 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import {
   BLUE,
+  type ExternalReviewAgent,
   err,
   GREEN,
   loadConfig,
@@ -14,7 +15,7 @@ import {
   warn,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
-import { promptVault } from "./prompts.ts";
+import { promptExternalReview, promptVault } from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
  * Port of create_team logic from team.sh
@@ -86,6 +87,7 @@ interface InitProjectOptions {
   sourceDir?: string;
   planner?: "builtin" | "openspec";
   vaultPath?: string;
+  externalReview?: string;
 }
 
 export async function initProject(options: InitProjectOptions) {
@@ -95,6 +97,7 @@ export async function initProject(options: InitProjectOptions) {
     sourceDir = ".",
     planner = "builtin",
     vaultPath,
+    externalReview,
   } = options;
 
   log("Initializing agent-team project...");
@@ -132,6 +135,9 @@ export async function initProject(options: InitProjectOptions) {
   const config: ProjectConfig = { ...loadConfig(), planner };
   if (teamName) config.team = teamName;
   if (vaultPath) config.vaultPath = vaultPath;
+  if (externalReview) {
+    config.externalReview = { agent: externalReview as ExternalReviewAgent };
+  }
   saveConfig(config);
 
   // Manage Obsidian vault symlink
@@ -594,7 +600,7 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     return;
   }
 
-  // 1. Update Obsidian vault path (optional interactive update)
+  // 1. Update Obsidian vault path and external review (optional interactive update)
   const answers = (await p.group(
     {
       vaultPath: async () => {
@@ -606,6 +612,9 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
         if (p.isCancel(result)) return p.cancel();
         return result as string | undefined;
       },
+      externalReview: async () => {
+        return promptExternalReview(config.externalReview?.agent);
+      },
     },
     {
       onCancel: () => {
@@ -613,21 +622,29 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
         process.exit(0);
       },
     },
-  )) as { vaultPath: string | undefined };
+  )) as {
+    vaultPath: string | undefined;
+    externalReview: ExternalReviewAgent | undefined;
+  };
 
   const newVaultPath = answers.vaultPath;
 
   if (newVaultPath) {
     config.vaultPath = newVaultPath;
-    saveConfig(config);
     manageVaultSymlink(config.vaultPath);
   } else if (!config.vaultPath) {
-    // If no vault path in config, and none provided, ensure symlink is removed
     manageVaultSymlink(undefined);
   } else {
-    // Refresh existing symlink
     manageVaultSymlink(config.vaultPath);
   }
+
+  // Update external review config
+  if (answers.externalReview) {
+    config.externalReview = { agent: answers.externalReview };
+  } else {
+    delete config.externalReview;
+  }
+  saveConfig(config);
 
   // 2. Update skills and scripts from source
   log("Updating skills and scripts...");

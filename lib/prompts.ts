@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
-import { warn } from "./common.ts";
+import { ExternalReviewAgent, warn } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES } from "./embedded-agents.ts";
 
 function listSourceTeams(sourceDir: string): string[] {
@@ -31,7 +31,7 @@ const TEAM_DESCRIPTIONS: Record<string, string> = {
   localization: "team-lead → tech-writer → localizer → seo → qa",
 };
 
-export function getObsidianVaults(): {
+function getObsidianVaults(): {
   label: string;
   value: string;
   hint: string;
@@ -148,11 +148,64 @@ export async function promptVault(
   return selected;
 }
 
+const EXTERNAL_REVIEW_AGENTS: {
+  value: ExternalReviewAgent | "__none__";
+  label: string;
+  hint: string;
+}[] = [
+  { value: "__none__", label: "None", hint: "no external review" },
+  {
+    value: ExternalReviewAgent.Codex,
+    label: "Codex",
+    hint: "OpenAI Codex CLI (codex)",
+  },
+  {
+    value: ExternalReviewAgent.Devin,
+    label: "Devin",
+    hint: "Devin CLI (devin)",
+  },
+  {
+    value: ExternalReviewAgent.Aider,
+    label: "Aider",
+    hint: "Aider CLI (aider)",
+  },
+  {
+    value: ExternalReviewAgent.Claude,
+    label: "Claude Code",
+    hint: "Claude Code CLI (claude)",
+  },
+  {
+    value: ExternalReviewAgent.Gemini,
+    label: "Gemini CLI",
+    hint: "Google Gemini CLI (gemini)",
+  },
+];
+
+export async function promptExternalReview(
+  current?: ExternalReviewAgent,
+): Promise<ExternalReviewAgent | undefined> {
+  const selected = await p.select({
+    message: "External review agent (optional)",
+    options: EXTERNAL_REVIEW_AGENTS,
+    initialValue: current ?? ("__none__" as const),
+  });
+
+  if (p.isCancel(selected)) {
+    p.cancel("Setup cancelled.");
+    process.exit(0);
+  }
+
+  return selected === "__none__"
+    ? undefined
+    : (selected as ExternalReviewAgent);
+}
+
 export interface InitAnswers {
   teamName?: string;
   planner: "builtin" | "openspec";
   humanReview: boolean;
   vaultPath?: string;
+  externalReview?: ExternalReviewAgent;
 }
 
 export async function promptInit(
@@ -216,6 +269,11 @@ export async function promptInit(
         }
         return result as string | undefined;
       },
+      externalReview: async () => {
+        if (defaults.externalReview !== undefined)
+          return Promise.resolve(defaults.externalReview);
+        return promptExternalReview();
+      },
     },
     {
       onCancel: () => {
@@ -231,6 +289,7 @@ export async function promptInit(
     planner: result.planner as "builtin" | "openspec",
     humanReview: result.humanReview as boolean,
     vaultPath: (result as { vaultPath?: string }).vaultPath,
+    externalReview: result.externalReview as ExternalReviewAgent | undefined,
   };
 }
 

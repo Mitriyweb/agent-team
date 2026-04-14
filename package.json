@@ -1,6 +1,6 @@
 {
   "name": "@mitriyweb/agent-team",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Autonomous development team powered by Claude Code — drop into any project and let agents work through your roadmap.",
   "license": "MIT",
   "author": "Mitriyweb",
@@ -30,10 +30,13 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "knip": "bunx knip-bun",
     "fix": "bun run lint:fix && bun run check:fix",
+    "preinstall": "test -d node_modules && bun scripts/check-package-age.ts || true",
+    "check-deps": "bun scripts/check-package-age.ts",
     "prepare": "prek install",
     "test": "bun test",
-    "validate": "bun run lint && bun run check && bun run typecheck && bun run test",
+    "validate": "bun run lint && bun run check && bun run typecheck && bun run knip && bun run test",
     "prebuild": "bun lib/bundle-agents.ts",
     "build": "mkdir -p tmp && cd tmp && bun build ../bin/init.ts --compile --outfile ../dist/agent-team",
     "build:local": "bun run build && ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team",
@@ -51,12 +54,17 @@
     "@vitest/coverage-v8": "4.1.2",
     "bats": "1.13.0",
     "bun-types": "1.3.11",
+    "knip": "6.4.1",
     "markdownlint-cli2": "0.22.0",
     "typescript": "6.0.2",
     "vitest": "4.1.2"
   },
+  "trustedPackages": [
+    "@anthropic-ai/claude-agent-sdk",
+    "knip"
+  ],
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "latest",
+    "@anthropic-ai/claude-agent-sdk": "0.2.98",
     "@clack/prompts": "1.2.0"
   }
 }

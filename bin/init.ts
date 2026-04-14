@@ -64,17 +64,20 @@ async function main() {
     const explicitPlanner = flagValue("--planner");
     const explicitNoReview = hasFlag("--no-human-review");
     const explicitVault = flagValue("--vault");
+    const explicitExternalReview = flagValue("--external-review");
 
     const isNonInteractive =
       teamFromFlag !== undefined ||
       explicitPlanner !== undefined ||
       explicitNoReview ||
-      explicitVault !== undefined;
+      explicitVault !== undefined ||
+      explicitExternalReview !== undefined;
 
     let teamName: string | undefined;
     let planner: "builtin" | "openspec";
     let humanReview: boolean;
     let vaultPath: string | undefined;
+    let externalReview: string | undefined;
 
     if (isNonInteractive) {
       // Classic flag-based mode
@@ -83,6 +86,7 @@ async function main() {
         explicitPlanner === "openspec" ? "openspec" : ("builtin" as const);
       humanReview = !explicitNoReview;
       vaultPath = explicitVault;
+      externalReview = explicitExternalReview;
     } else {
       // Interactive mode
       p.intro("agent-team");
@@ -92,6 +96,7 @@ async function main() {
       planner = answers.planner;
       humanReview = answers.humanReview;
       vaultPath = answers.vaultPath;
+      externalReview = answers.externalReview;
     }
 
     await initProject({
@@ -100,6 +105,7 @@ async function main() {
       sourceDir,
       planner,
       vaultPath,
+      externalReview,
     });
 
     if (!isNonInteractive)
@@ -239,7 +245,10 @@ async function main() {
       "    agent-team init                                      Interactive setup",
     );
     console.log(
-      "    agent-team init --team NAME [--planner P] [--vault V] Non-interactive",
+      "    agent-team init --team NAME [--planner P] [--vault V]  Non-interactive",
+    );
+    console.log(
+      "                    [--external-review codex|devin|aider|claude|gemini]",
     );
     console.log(
       "    agent-team update                                    Update project configs",
