@@ -170,6 +170,24 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <pre><code>agent-team init --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
         </section>
 
+        <section id="examples">
+            <h2>Use Cases & Examples</h2>
+            <div class="grid">
+                <article>
+                    <h3>Reliable Features</h3>
+                    <p><strong>Software Development:</strong> Uses the Proof-Loop methodology. Architect freezes <code>SPEC.md</code>, Developer provides <code>EVIDENCE.md</code>, and QA issues a <code>VERDICT.json</code> after fresh verification.</p>
+                </article>
+                <article>
+                    <h3>Accessible UI</h3>
+                    <p><strong>Frontend:</strong> Team ensures WCAG 2.1 AA compliance. UI Architect defines tokens, Dev builds components, and AQA runs visual regression and performance audits.</p>
+                </article>
+                <article>
+                    <h3>Multi-language Support</h3>
+                    <p><strong>Localization:</strong> Synchronized workflow where Technical Writer, Localizer, and SEO Specialist work in parallel to keep global documentation up-to-date.</p>
+                </article>
+            </div>
+        </section>
+
         <section id="monitoring">
             <h2>Monitoring</h2>
             <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>
