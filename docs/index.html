@@ -132,6 +132,22 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             </div>
         </section>
 
+        <section id="notifications">
+            <h2>Telegram Notifications</h2>
+            <p>Get real-time task updates on your phone. Configure during <code>agent-team init</code> or <code>agent-team reconfigure</code>.</p>
+            <div class="grid">
+                <article>
+                    <h3>Setup</h3>
+                    <p>Create a bot via <a href="https://t.me/BotFather">@BotFather</a>, get your chat ID from <a href="https://t.me/userinfobot">@userinfobot</a>, and enter both during init.</p>
+                </article>
+                <article>
+                    <h3>Events</h3>
+                    <p>Notifies on task <strong>started</strong>, <strong>done</strong>, <strong>failed</strong>, and <strong>human review needed</strong>. Fire-and-forget &mdash; never blocks execution.</p>
+                </article>
+            </div>
+            <pre><code>agent-team init --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
+        </section>
+
         <section id="monitoring">
             <h2>Monitoring</h2>
             <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>

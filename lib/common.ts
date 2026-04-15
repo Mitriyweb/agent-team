@@ -197,6 +197,13 @@ export interface ExternalReviewConfig {
   command?: string;
 }
 
+export interface TelegramConfig {
+  /** Bot token from @BotFather */
+  botToken: string;
+  /** Chat ID for notifications */
+  chatId: string;
+}
+
 export interface ProjectConfig {
   planner: "builtin" | "openspec";
   team?: string;
@@ -205,6 +212,8 @@ export interface ProjectConfig {
   blockedBashPatterns?: string[];
   /** External CLI agent for spec/implementation review */
   externalReview?: ExternalReviewConfig;
+  /** Telegram notifications for task lifecycle */
+  telegram?: TelegramConfig;
   [key: string]: unknown;
 }
 

@@ -94,7 +94,8 @@ agent-team run --all --stop-at 1.3  # execute tasks and stop after task 1.3
 ```text
 Setup:
   agent-team init                                      Interactive setup
-  agent-team init --team NAME [--planner P]            Non-interactive
+  agent-team init --team NAME [--planner P]             Non-interactive
+                 [--telegram-token T --telegram-chat C]
   agent-team update                                    Update project configs
   agent-team reconfigure                               Update skills & workflows
   agent-team import [path]                             Import rules (interactive if no path)
@@ -280,12 +281,14 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
   "planner": "builtin",
   "team": "software development",
   "blockedBashPatterns": ["docker\\s+system\\s+prune", "DROP\\s+TABLE"],
-  "externalReview": { "agent": "codex" }
+  "externalReview": { "agent": "codex" },
+  "telegram": { "botToken": "7xxx:AAF...", "chatId": "123456789" }
 }
 ```
 
 - `blockedBashPatterns` — regex patterns added to built-in safety hooks
 - `externalReview` — optional external CLI agent for independent review after each task
+- `telegram` — optional Telegram notifications for task lifecycle events
 
 ### External Review
 
@@ -311,6 +314,38 @@ To use a custom command or path, set `command` in the config:
   "externalReview": { "agent": "codex", "command": "/usr/local/bin/codex" }
 }
 ```
+
+### Telegram Notifications
+
+Get real-time task status updates in Telegram.
+
+```bash
+# Interactive setup
+agent-team init                  # prompts for bot token + chat ID
+agent-team reconfigure           # update existing config
+
+# Non-interactive
+agent-team init --team frontend \
+  --telegram-token 7xxx:AAF... --telegram-chat 123456789
+```
+
+**Setup:**
+
+1. Create a bot via [@BotFather](https://t.me/BotFather) — get the token
+2. Get your chat ID from [@userinfobot](https://t.me/userinfobot)
+3. Run `agent-team init` or `agent-team reconfigure`
+
+**Notifications sent:**
+
+| Event | When |
+|-------|------|
+| Started | Task execution begins |
+| Done | Task completed successfully |
+| Failed | Task failed after all retries |
+| Review | Human review requested |
+
+Notifications are fire-and-forget — network errors are logged
+but never block task execution.
 
 ## How It Works
 
@@ -423,7 +458,7 @@ Fields are auto-detected from Claude Code hook context:
 
 Agents can request human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED`.
 
-1. Audio notification plays
+1. Audio notification plays (+ Telegram notification if configured)
 2. Visual banner appears with task details
 3. User approves (`y`) or rejects (`n`)
 

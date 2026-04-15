@@ -9,7 +9,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
-import { ExternalReviewAgent, warn } from "./common.ts";
+import { ExternalReviewAgent, type TelegramConfig, warn } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES } from "./embedded-agents.ts";
 
 function listSourceTeams(sourceDir: string): string[] {
@@ -200,12 +200,74 @@ export async function promptExternalReview(
     : (selected as ExternalReviewAgent);
 }
 
+export async function promptTelegram(
+  current?: TelegramConfig,
+): Promise<TelegramConfig | undefined> {
+  const enable = await p.confirm({
+    message: "Enable Telegram notifications?",
+    initialValue: !!current,
+  });
+
+  if (p.isCancel(enable)) {
+    p.cancel("Setup cancelled.");
+    process.exit(0);
+  }
+
+  if (!enable) {
+    return undefined;
+  }
+
+  const result = await p.group(
+    {
+      botToken: () =>
+        p.text({
+          message: "Telegram bot token (from @BotFather)",
+          placeholder: "7xxxxxxx:AAF...",
+          initialValue: current?.botToken,
+          validate: (v) => {
+            if (!v?.trim()) {
+              return "Bot token is required";
+            }
+            if (!v.includes(":")) {
+              return "Invalid token format (expected id:hash)";
+            }
+            return undefined;
+          },
+        }),
+      chatId: () =>
+        p.text({
+          message: "Telegram chat ID (from @userinfobot)",
+          placeholder: "123456789",
+          initialValue: current?.chatId,
+          validate: (v) => {
+            if (!v?.trim()) {
+              return "Chat ID is required";
+            }
+            return undefined;
+          },
+        }),
+    },
+    {
+      onCancel: () => {
+        p.cancel("Setup cancelled.");
+        process.exit(0);
+      },
+    },
+  );
+
+  return {
+    botToken: (result.botToken as string).trim(),
+    chatId: (result.chatId as string).trim(),
+  };
+}
+
 export interface InitAnswers {
   teamName?: string;
   planner: "builtin" | "openspec";
   humanReview: boolean;
   vaultPath?: string;
   externalReview?: ExternalReviewAgent;
+  telegram?: TelegramConfig;
 }
 
 export async function promptInit(
@@ -283,6 +345,8 @@ export async function promptInit(
     },
   );
 
+  const telegram = await promptTelegram(defaults.telegram);
+
   return {
     teamName:
       result.teamName === "__skip__" ? undefined : (result.teamName as string),
@@ -290,6 +354,7 @@ export async function promptInit(
     humanReview: result.humanReview as boolean,
     vaultPath: (result as { vaultPath?: string }).vaultPath,
     externalReview: result.externalReview as ExternalReviewAgent | undefined,
+    telegram,
   };
 }
 

@@ -25,8 +25,8 @@
     "llm"
   ],
   "scripts": {
-    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\"",
-    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\"",
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\" \"#TMP\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#dist\" \"#vault\" \"#TMP\"",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",

@@ -101,6 +101,7 @@ describe("Obsidian Vault Integration", () => {
       vaultPath: newVaultDir,
       // biome-ignore lint/suspicious/noExplicitAny: mock
     } as any);
+    spyOn(p, "confirm").mockResolvedValue(false);
 
     await team.reconfigureProject({ sourceDir: PROJECT_ROOT });
 

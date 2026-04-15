@@ -65,19 +65,23 @@ async function main() {
     const explicitNoReview = hasFlag("--no-human-review");
     const explicitVault = flagValue("--vault");
     const explicitExternalReview = flagValue("--external-review");
+    const explicitTelegramToken = flagValue("--telegram-token");
+    const explicitTelegramChat = flagValue("--telegram-chat");
 
     const isNonInteractive =
       teamFromFlag !== undefined ||
       explicitPlanner !== undefined ||
       explicitNoReview ||
       explicitVault !== undefined ||
-      explicitExternalReview !== undefined;
+      explicitExternalReview !== undefined ||
+      explicitTelegramToken !== undefined;
 
     let teamName: string | undefined;
     let planner: "builtin" | "openspec";
     let humanReview: boolean;
     let vaultPath: string | undefined;
     let externalReview: string | undefined;
+    let telegram: { botToken: string; chatId: string } | undefined;
 
     if (isNonInteractive) {
       // Classic flag-based mode
@@ -87,6 +91,12 @@ async function main() {
       humanReview = !explicitNoReview;
       vaultPath = explicitVault;
       externalReview = explicitExternalReview;
+      if (explicitTelegramToken && explicitTelegramChat) {
+        telegram = {
+          botToken: explicitTelegramToken,
+          chatId: explicitTelegramChat,
+        };
+      }
     } else {
       // Interactive mode
       p.intro("agent-team");
@@ -97,6 +107,7 @@ async function main() {
       humanReview = answers.humanReview;
       vaultPath = answers.vaultPath;
       externalReview = answers.externalReview;
+      telegram = answers.telegram;
     }
 
     await initProject({
@@ -106,6 +117,7 @@ async function main() {
       planner,
       vaultPath,
       externalReview,
+      telegram,
     });
 
     if (!isNonInteractive)
@@ -249,6 +261,9 @@ async function main() {
     );
     console.log(
       "                    [--external-review codex|devin|aider|claude|gemini]",
+    );
+    console.log(
+      "                    [--telegram-token TOKEN --telegram-chat CHAT_ID]",
     );
     console.log(
       "    agent-team update                                    Update project configs",

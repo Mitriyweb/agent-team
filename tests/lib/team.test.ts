@@ -100,6 +100,7 @@ describe("team.ts", () => {
 
     // biome-ignore lint/suspicious/noExplicitAny: mock
     spyOn(p, "group").mockResolvedValue({ vaultPath: "" } as any);
+    spyOn(p, "confirm").mockResolvedValue(false);
     fs.mkdirSync(".claude/agents", { recursive: true });
     fs.writeFileSync("agent-team.json", JSON.stringify({ team: "test" }));
     fs.mkdirSync("agents/test/skills", { recursive: true });

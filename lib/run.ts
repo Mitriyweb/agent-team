@@ -18,6 +18,7 @@ import {
   ok,
   RED,
   resolveModelAlias,
+  type TelegramConfig,
   warn,
   YELLOW,
 } from "./common.ts";
@@ -28,6 +29,7 @@ import {
   createPR,
   getCurrentBranch,
 } from "./git.ts";
+import { tg } from "./notify.ts";
 import {
   archiveOpenSpecChange,
   planRoadmap,
@@ -173,6 +175,8 @@ export class TaskRunner {
   private totalTasks = 0;
   private cumulativeCost = 0;
   private teamLeadModel: string | undefined;
+  /** Telegram config loaded from agent-team.json */
+  private telegramConfig: TelegramConfig | undefined;
   /** When true, tasks are in OpenSpec native format (- [ ] 1.1 Desc) */
   private openspecMode = false;
   /** Extra context from openspec proposal/design */
@@ -486,6 +490,8 @@ export class TaskRunner {
 
     // Detect openspec mode (interactive selection if multiple changes)
     const config = loadConfig();
+    this.telegramConfig = config.telegram;
+
     if (config.planner === "openspec" && !this.options.roadmapFile) {
       const openspecTasks = await selectOpenSpecTasks();
       if (openspecTasks) {
@@ -633,6 +639,7 @@ export class TaskRunner {
     log(
       `Task ${BLUE}#${taskId}${NC} → ${CYAN}${agentsLabel}${NC} (model: ${GREEN}${modelLabel}${NC}) — ${desc}`,
     );
+    tg.started(agentsLabel, `#${taskId} ${desc}`, this.telegramConfig);
 
     if (this.options.budget && this.cumulativeCost >= this.options.budget) {
       err(
@@ -767,6 +774,12 @@ export class TaskRunner {
             );
           }
           ok(`Task #${taskId} completed.`);
+          tg.done(
+            agentsLabel,
+            `#${taskId} ${desc}`,
+            undefined,
+            this.telegramConfig,
+          );
           this.markStatus(taskId, "~", "x");
           this.runLibrarian(taskId);
 
@@ -796,6 +809,12 @@ export class TaskRunner {
       attempt++;
     }
 
+    tg.failed(
+      agentsLabel,
+      `#${taskId} ${desc}`,
+      "max retries exceeded",
+      this.telegramConfig,
+    );
     this.markStatus(taskId, "~", "!");
     if (this.options.branch && originalBranch) checkout(originalBranch);
     return false;
@@ -821,6 +840,7 @@ export class TaskRunner {
     log(
       `Task ${BLUE}#${taskId}${NC} [SDK] → ${CYAN}${agentsLabel}${NC} (model: ${GREEN}${modelLabel}${NC}) — ${desc}`,
     );
+    tg.started(agentsLabel, `#${taskId} ${desc}`, this.telegramConfig);
 
     if (this.options.budget && this.cumulativeCost >= this.options.budget) {
       err(
@@ -952,6 +972,12 @@ export class TaskRunner {
             );
           }
           ok(`Task #${taskId} completed.`);
+          tg.done(
+            agentsLabel,
+            `#${taskId} ${desc}`,
+            undefined,
+            this.telegramConfig,
+          );
           this.markStatus(taskId, "~", "x");
           this.runLibrarian(taskId);
 
@@ -981,6 +1007,12 @@ export class TaskRunner {
       attempt++;
     }
 
+    tg.failed(
+      agentsLabel,
+      `#${taskId} ${desc}`,
+      "max retries exceeded",
+      this.telegramConfig,
+    );
     this.markStatus(taskId, "~", "!");
     if (this.options.branch && originalBranch) checkout(originalBranch);
     return false;
@@ -1095,6 +1127,7 @@ export class TaskRunner {
     desc: string,
   ): Promise<boolean> {
     notifyReview();
+    tg.review("team-lead", `#${taskId} ${desc}`, this.telegramConfig);
 
     console.log("");
     console.log(

@@ -12,10 +12,15 @@ import {
   ok,
   type ProjectConfig,
   saveConfig,
+  type TelegramConfig,
   warn,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
-import { promptExternalReview, promptVault } from "./prompts.ts";
+import {
+  promptExternalReview,
+  promptTelegram,
+  promptVault,
+} from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 /**
  * Port of create_team logic from team.sh
@@ -88,6 +93,7 @@ interface InitProjectOptions {
   planner?: "builtin" | "openspec";
   vaultPath?: string;
   externalReview?: string;
+  telegram?: TelegramConfig;
 }
 
 export async function initProject(options: InitProjectOptions) {
@@ -98,6 +104,7 @@ export async function initProject(options: InitProjectOptions) {
     planner = "builtin",
     vaultPath,
     externalReview,
+    telegram,
   } = options;
 
   log("Initializing agent-team project...");
@@ -137,6 +144,9 @@ export async function initProject(options: InitProjectOptions) {
   if (vaultPath) config.vaultPath = vaultPath;
   if (externalReview) {
     config.externalReview = { agent: externalReview as ExternalReviewAgent };
+  }
+  if (telegram) {
+    config.telegram = telegram;
   }
   saveConfig(config);
 
@@ -600,7 +610,7 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     return;
   }
 
-  // 1. Update Obsidian vault path and external review (optional interactive update)
+  // 1. Update vault, external review, and telegram (interactive)
   const answers = (await p.group(
     {
       vaultPath: async () => {
@@ -627,6 +637,8 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     externalReview: ExternalReviewAgent | undefined;
   };
 
+  const telegramConfig = await promptTelegram(config.telegram);
+
   const newVaultPath = answers.vaultPath;
 
   if (newVaultPath) {
@@ -643,6 +655,14 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     config.externalReview = { agent: answers.externalReview };
   } else {
     delete config.externalReview;
+  }
+
+  // Update telegram config
+  if (telegramConfig) {
+    config.telegram = telegramConfig;
+    ok("Telegram notifications enabled");
+  } else {
+    delete config.telegram;
   }
   saveConfig(config);
 
