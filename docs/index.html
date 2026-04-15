@@ -47,8 +47,14 @@
 
     <main class="container">
         <header class="hero">
-            <h1>Claude Code Agent Team</h1>
-            <p>Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.</p>
+            <h1>Hire Your Own AI Development Team in One Command <span style="font-size: 0.5em; vertical-align: middle; background: #ff4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 10px;">macOS Only</span></h1>
+            <p>Transform your <code>ROADMAP.md</code> into reality. A fully autonomous team of Claude-powered agents that architect, code, and test your project from start to finish.</p>
+
+            <!-- Replace with real GIF/Video of agents in action -->
+            <div style="margin: 2rem 0; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px dashed #444;">
+                <p style="margin: 0; color: #888;">[Agent Team in action GIF placeholder]</p>
+            </div>
+
             <div class="grid">
                 <a href="#installation" role="button">Get Started</a>
                 <a href="https://github.com/Mitriyweb/agent-team" role="button" class="secondary">View Source</a>
@@ -74,7 +80,7 @@
         </section>
 
         <section id="installation">
-            <h2>Installation</h2>
+            <h2>Installation (macOS Only)</h2>
             <p><mark>macOS only</mark> (Apple Silicon &amp; Intel). Linux and Windows support is planned.</p>
 
             <h3>Option 1: One-line install (Recommended)</h3>
@@ -188,6 +194,15 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             </div>
         </section>
 
+        <section id="roadmap">
+            <h2>Status & Roadmap</h2>
+            <p><strong>Current Status:</strong> <mark>Alpha</mark></p>
+            <ul>
+                <li><strong>Linux & Windows support:</strong> Planned and in development.</li>
+                <li><strong>Agent Team specialized roles:</strong> Ongoing expansion of available teams.</li>
+            </ul>
+        </section>
+
         <section id="monitoring">
             <h2>Monitoring</h2>
             <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>
@@ -197,7 +212,7 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
 
     <footer class="container">
         <small>
-            Built with ❤️ for the developer community. Licensed under MIT.
+            Maintained by Mitriyweb. Licensed under MIT.
         </small>
     </footer>
 </body>
