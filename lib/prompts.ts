@@ -28,6 +28,7 @@ function getAvailableTeams(sourceDir: string): string[] {
 const TEAM_DESCRIPTIONS: Record<string, string> = {
   "software development": "team-lead → architect → developer → reviewer → qa",
   frontend: "team-lead → ui-architect → frontend-dev → design-reviewer → qa",
+  fullstack: "team-lead → architect → fe-dev + be-dev → reviewer → qa",
   localization: "team-lead → tech-writer → localizer → seo → qa",
 };
 

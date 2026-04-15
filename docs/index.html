@@ -126,10 +126,32 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                     <p>UI Architect, Frontend Dev, Design Reviewer, QA. Focused on components, accessibility, and visual quality.</p>
                 </article>
                 <article>
+                    <h3>Fullstack</h3>
+                    <p>Architect, Frontend Dev, Backend Dev, Reviewer, QA. Team lead routes tasks to the right developer based on scope.</p>
+                </article>
+                <article>
                     <h3>Localization</h3>
                     <p>Technical Writer, Localizer, SEO Specialist, QA. Content creation and translation pipeline.</p>
                 </article>
             </div>
+
+            <h3>Fullstack Task Routing</h3>
+            <p>The fullstack team lead classifies every task before spawning agents:</p>
+            <div class="grid">
+                <article>
+                    <h3>Frontend</h3>
+                    <p>Components, views, CSS, design tokens &rarr; routed to <code>fe-dev</code></p>
+                </article>
+                <article>
+                    <h3>Backend</h3>
+                    <p>APIs, services, DB, migrations &rarr; routed to <code>be-dev</code></p>
+                </article>
+                <article>
+                    <h3>Fullstack</h3>
+                    <p>Features spanning both stacks &rarr; architect defines API contract, then <code>be-dev</code> + <code>fe-dev</code> in sequence</p>
+                </article>
+            </div>
+            <pre><code>agent-team init --team fullstack</code></pre>
         </section>
 
         <section id="notifications">

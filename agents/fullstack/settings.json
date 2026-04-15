@@ -1,0 +1,114 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD": "1"
+  },
+  "plugins": ["playwright@claude-plugins-official"],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{ "type": "command", "command": "agent-team audit-hook PRE" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "agent-team audit-hook POST" }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": ["Bash(npx playwright*)"],
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(printenv*)",
+      "Bash(env)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)",
+      "Bash(git clean -f*)",
+      "Bash(mkfs*)",
+      "Bash(fdisk*)",
+      "Bash(parted*)",
+      "Bash(shred*)",
+      "Bash(find * -delete*)"
+    ]
+  },
+  "profiles": {
+    "team-lead": {
+      "permissions": {
+        "defaultMode": "default",
+        "allow": [
+          "Bash(agent-team *)",
+          "Bash(bun bin/init.ts *)",
+          "Bash(npx playwright*)",
+          "Bash(git *)"
+        ]
+      }
+    },
+    "architect": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
+        "allow": ["Bash(agent-team plan *)", "Bash(bun bin/init.ts plan *)"]
+      }
+    },
+    "frontend-developer": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "allow": [
+          "Bash(agent-team run *)",
+          "Bash(bun bin/init.ts run *)",
+          "Bash(npx playwright*)",
+          "Bash(git add *)",
+          "Bash(git commit *)"
+        ]
+      }
+    },
+    "backend-developer": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "allow": [
+          "Bash(agent-team run *)",
+          "Bash(bun bin/init.ts run *)",
+          "Bash(git add *)",
+          "Bash(git commit *)",
+          "Bash(npx prisma *)",
+          "Bash(npx drizzle-kit *)",
+          "Bash(npm run migrate*)",
+          "Bash(bun run migrate*)"
+        ]
+      }
+    },
+    "reviewer": {
+      "permissions": {
+        "defaultMode": "manual",
+        "deny": ["Write(*)", "Edit(*)", "Bash(*)"],
+        "allow": [
+          "Bash(agent-team validate *)",
+          "Bash(bun bin/init.ts validate *)",
+          "Bash(git diff *)",
+          "Bash(git log *)"
+        ]
+      }
+    },
+    "qa": {
+      "permissions": {
+        "defaultMode": "acceptEdits",
+        "deny": ["Write(src/*)", "Edit(src/*)"],
+        "allow": [
+          "Bash(agent-team run --dry-run*)",
+          "Bash(bun bin/init.ts run --dry-run*)",
+          "Bash(npx playwright*)",
+          "Bash(bun test*)",
+          "Bash(npm test*)"
+        ]
+      }
+    }
+  }
+}

@@ -19,6 +19,15 @@ team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-reviewer
                                    └── fe-qa ◄──► fe-aqa ◄┘
 ```
 
+**Fullstack**
+
+```text
+team-lead ──┬──► architect ◄──► fe-dev ◄──► reviewer
+            │                     ▲             │ approved
+            │                     │ API sync    ▼
+            └──► architect ◄──► be-dev      qa ◄──► aqa
+```
+
 **Localization**
 
 ```text
@@ -62,6 +71,7 @@ agent-team init
 # Non-interactive (flags skip prompts)
 agent-team init --team "software development"
 agent-team init --team frontend --no-human-review
+agent-team init --team fullstack
 agent-team init --team "software development" --planner openspec
 
 # Import rules (interactive if no path given)
@@ -443,6 +453,27 @@ Fields are auto-detected from Claude Code hook context:
 | `fe-dev` | sonnet | Implements UI components per spec |
 | `fe-reviewer` | sonnet | Visual review, WCAG 2.1 AA accessibility |
 | `fe-aqa` | sonnet | E2E tests, visual regression, performance |
+
+### Fullstack
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `fs-team-lead` | opus | Routes tasks to fe-dev or be-dev based on scope |
+| `fs-architect` | sonnet | Designs UI + API contracts + DB schema |
+| `fe-dev` | sonnet | Implements UI components, consumes APIs |
+| `be-dev` | sonnet | Implements APIs, services, DB, migrations |
+| `fs-reviewer` | sonnet | Reviews both frontend and backend code |
+| `fs-aqa` | sonnet | E2E, visual regression, API integration tests |
+
+The team-lead classifies each task as **frontend**, **backend**, or **fullstack** before routing:
+
+- Frontend signals: `*.tsx`, `*.css`, components, views, design tokens
+- Backend signals: `*.controller.*`, `*.service.*`, routes, models, migrations
+- Fullstack: features spanning both stacks (e.g., "add user settings page")
+
+For fullstack tasks, the architect defines an **API contract** in SPEC.md.
+be-dev implements the API first, then fe-dev consumes it.
+If the contract changes, be-dev notifies fe-dev via `API_ISSUE` message.
 
 ### Localization
 
