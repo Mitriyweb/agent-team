@@ -129,6 +129,10 @@ Fix issues from architect (`REVIEW_FEEDBACK`) and QA
 ## Skills
 
 Activate `skills/backend-development/` for all backend tasks.
+Activate `skills/python-backend/` for Python backend tasks
+(Django, FastAPI, Flask, SQLAlchemy, Alembic, etc.).
 Activate `skills/code-implementation/` for general coding context.
+Load `skills/python-backend/references/gotchas.md` when
+working with Python projects.
 Load `skills/code-implementation/references/gotchas.md` when
 working with shell scripts, YAML files, or directory paths.
