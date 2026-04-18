@@ -386,6 +386,14 @@ The **librarian** agent runs automatically after each completed task to curate m
 - Updates structured sections in \`memory.md\` (Patterns & Decisions, Known Errors & Gotchas, Session Log)
 - Syncs agent-specific gotchas to \`.claude/agents/skills/\`
 
+## External Review
+${(() => {
+  const cfg = loadConfig();
+  if (cfg.externalReview) {
+    return `\nAll code produced by agents will be independently reviewed by agent ${cfg.externalReview.agent} after each task completion.\nDo NOT skip or bypass this review step — it is mandatory when external review is enabled.\n`;
+  }
+  return "";
+})()}
 ## Reports
 
 - Task reports: .claude-loop/reports/task-{id}.md
@@ -714,6 +722,9 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     }
     ok("Updated skills and scripts from bundle");
   }
+
+  // Regenerate CLAUDE.md with updated config (e.g. external review)
+  generateClaudeMd(teamName);
 
   ok("Project reconfigured successfully.");
 }

@@ -9,7 +9,7 @@ import * as p from "@clack/prompts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
-import { err } from "../lib/common.ts";
+import { err, loadConfig } from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import {
@@ -98,9 +98,16 @@ async function main() {
         };
       }
     } else {
-      // Interactive mode
+      // Interactive mode — pre-fill from existing config
       p.intro("agent-team");
-      const answers = await promptInit(sourceDir, {});
+      const existingConfig = loadConfig();
+      const answers = await promptInit(sourceDir, {
+        teamName: existingConfig.team,
+        planner: existingConfig.planner,
+        vaultPath: existingConfig.vaultPath,
+        externalReview: existingConfig.externalReview?.agent,
+        telegram: existingConfig.telegram,
+      });
       if (!answers) return;
       teamName = answers.teamName;
       planner = answers.planner;

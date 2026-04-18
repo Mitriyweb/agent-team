@@ -6,10 +6,9 @@
  */
 
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
-import { ExternalReviewAgent, type TelegramConfig, warn } from "./common.ts";
+import { ExternalReviewAgent, type TelegramConfig } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES } from "./embedded-agents.ts";
 
 function listSourceTeams(sourceDir: string): string[] {
@@ -32,121 +31,33 @@ const TEAM_DESCRIPTIONS: Record<string, string> = {
   localization: "team-lead → tech-writer → localizer → seo → qa",
 };
 
-function getObsidianVaults(): {
-  label: string;
-  value: string;
-  hint: string;
-}[] {
-  const vaults: { label: string; value: string; hint: string }[] = [];
-  try {
-    const homedir = os.homedir();
-    let obsidianJsonPath = "";
-    if (process.platform === "darwin") {
-      obsidianJsonPath = path.join(
-        homedir,
-        "Library",
-        "Application Support",
-        "obsidian",
-        "obsidian.json",
-      );
-    } else if (process.platform === "win32") {
-      obsidianJsonPath = path.join(
-        process.env.APPDATA || path.join(homedir, "AppData", "Roaming"),
-        "obsidian",
-        "obsidian.json",
-      );
-    } else {
-      obsidianJsonPath = path.join(
-        homedir,
-        ".config",
-        "obsidian",
-        "obsidian.json",
-      );
-    }
-
-    if (fs.existsSync(obsidianJsonPath)) {
-      const data = JSON.parse(fs.readFileSync(obsidianJsonPath, "utf-8"));
-      if (data.vaults) {
-        for (const key of Object.keys(data.vaults)) {
-          const vPath = data.vaults[key].path;
-          if (vPath && fs.existsSync(vPath)) {
-            vaults.push({
-              label: path.basename(vPath),
-              value: vPath,
-              hint: vPath,
-            });
-          }
-        }
-      }
-    }
-  } catch (e: unknown) {
-    warn(`Failed to read Obsidian vaults: ${(e as Error).message}`);
-  }
-  return vaults.sort((a, b) => a.label.localeCompare(b.label));
-}
-
 export async function promptVault(
   message: string,
   defaultValue?: string,
   allowSkip = true,
 ): Promise<string | symbol | undefined> {
-  const vaults = getObsidianVaults();
-
-  if (vaults.length === 0) {
-    return p.text({
-      message,
-      placeholder: defaultValue || "/path/to/your/vault",
-      initialValue: defaultValue,
-      validate: (v) => {
-        if (v && !fs.existsSync(v)) return "Path does not exist";
-        return undefined;
-      },
-    });
-  }
-
-  const options = [
-    ...vaults,
-    { value: "__custom__", label: "Enter path manually...", hint: "" },
-  ];
-
   if (allowSkip) {
-    if (!defaultValue) {
-      options.push({
-        value: "__none__",
-        label: "Skip",
-        hint: "do not integrate with a vault",
-      });
-    } else {
-      options.push({
-        value: "__none__",
-        label: "Remove",
-        hint: "clear current vault integration",
-      });
-    }
-  }
-
-  let selected = await p.select({
-    message,
-    options,
-  });
-
-  if (p.isCancel(selected)) return selected;
-
-  if (selected === "__none__") return undefined;
-
-  if (selected === "__custom__") {
-    selected = await p.text({
-      message: "Enter Obsidian vault path:",
-      placeholder: defaultValue || "/path/to/your/vault",
-      initialValue: defaultValue,
-      validate: (v) => {
-        if (v && !fs.existsSync(v)) return "Path does not exist";
-        return undefined;
-      },
+    const enable = await p.confirm({
+      message: defaultValue
+        ? `Keep vault integration? (${defaultValue})`
+        : "Enable Obsidian vault for RAG?",
+      initialValue: !!defaultValue,
     });
+
+    if (p.isCancel(enable)) return enable;
+    if (!enable) return undefined;
   }
 
-  return selected;
+  return p.text({
+    message,
+    placeholder: defaultValue || "./vault",
+    initialValue: defaultValue,
+    validate: (v) => {
+      if (!v?.trim()) return "Path is required";
+      if (v && !fs.existsSync(v)) return "Path does not exist";
+      return undefined;
+    },
+  });
 }
 
 const EXTERNAL_REVIEW_AGENTS: {
@@ -280,7 +191,6 @@ export async function promptInit(
   const result = await p.group(
     {
       teamName: () => {
-        if (defaults.teamName) return Promise.resolve(defaults.teamName);
         return p.select({
           message: "Select a team",
           options: [
@@ -291,10 +201,10 @@ export async function promptInit(
             })),
             { value: "__skip__", label: "skip", hint: "init without a team" },
           ],
+          initialValue: defaults.teamName,
         });
       },
       planner: () => {
-        if (defaults.planner) return Promise.resolve(defaults.planner);
         return p.select({
           message: "Planner",
           options: [
@@ -309,21 +219,19 @@ export async function promptInit(
               hint: "structured proposals (requires @fission-ai/openspec)",
             },
           ],
+          initialValue: defaults.planner,
         });
       },
       humanReview: () => {
-        if (defaults.humanReview !== undefined)
-          return Promise.resolve(defaults.humanReview);
         return p.confirm({
           message: "Enable human review checkpoints?",
-          initialValue: true,
+          initialValue: defaults.humanReview ?? true,
         });
       },
       vaultPath: async () => {
-        if (defaults.vaultPath) return Promise.resolve(defaults.vaultPath);
         const result = await promptVault(
           "Select Obsidian vault for RAG (optional):",
-          undefined,
+          defaults.vaultPath,
           true,
         );
         if (p.isCancel(result)) {
@@ -333,9 +241,7 @@ export async function promptInit(
         return result as string | undefined;
       },
       externalReview: async () => {
-        if (defaults.externalReview !== undefined)
-          return Promise.resolve(defaults.externalReview);
-        return promptExternalReview();
+        return promptExternalReview(defaults.externalReview);
       },
     },
     {
