@@ -1,6 +1,6 @@
-# Claude Code Agent Team
+# AI Agent Team
 
-Autonomous development team powered by Claude Code.
+Autonomous development team powered by AI.
 Drop this into any project and let the agents work through your roadmap.
 
 **Software Development**
@@ -554,11 +554,11 @@ Creates agents in `.claude/agents/` with a PROTOCOL.md and profiles for each rol
 
 ## Requirements
 
-> **Platform:** macOS only (Apple Silicon & Intel). Linux and Windows support is planned.
+> **Platform:** macOS (Apple Silicon & Intel) and Linux (x64 & arm64). Windows support is planned.
 
 | Tool | Required | Install |
 |------|----------|---------|
-| macOS | **yes** | Apple Silicon (arm64) or Intel (x64) |
+| macOS or Linux | **yes** | macOS arm64/x64, Linux x64/arm64 |
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` |
 | Claude Agent SDK | bundled | Included in dependencies (`@anthropic-ai/claude-agent-sdk`) |
 | Bun / npm | no | [bun.sh](https://bun.sh) (for dev tooling) |

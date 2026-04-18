@@ -1,43 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Claude Code Agent Team</title>
-    <meta name="description" content="Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.">
+    <title>Agent Team</title>
+    <meta name="description"
+        content="Autonomous AI development team. Drop this into any project and let the agents work through your roadmap.">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         :root {
             --primary: #007bff;
         }
+
         header {
             padding: 2rem 0;
             text-align: center;
         }
+
         pre {
             padding: 1rem;
             border-radius: 8px;
             background-color: #1a1a1a;
             color: #f8f8f2;
         }
+
         .container {
             max-width: 900px;
         }
+
         section {
             margin-bottom: 3rem;
         }
+
         .hero {
             background-color: var(--secondary-background);
             padding: 4rem 1rem;
             border-radius: 12px;
             margin-bottom: 2rem;
         }
+
+        .step-number {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            line-height: 2rem;
+            text-align: center;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            margin-right: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .step {
+            margin-bottom: 1.5rem;
+        }
+
+        .step h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        .terminal {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #f8f8f2;
+            overflow-x: auto;
+        }
+
+        .terminal .prompt {
+            color: #50fa7b;
+        }
+
+        .terminal .comment {
+            color: #6272a4;
+        }
+
+        .terminal .output {
+            color: #bd93f9;
+        }
+
+        .terminal .highlight {
+            color: #ff79c6;
+        }
     </style>
 </head>
+
 <body>
     <nav class="container">
         <ul>
-            <li><strong>Claude Code Agent Team</strong></li>
+            <li><strong>Agent Team</strong></li>
         </ul>
         <ul>
             <li><a href="https://github.com/Mitriyweb/agent-team">GitHub</a></li>
@@ -47,13 +105,9 @@
 
     <main class="container">
         <header class="hero">
-            <h1>Hire Your Own AI Development Team in One Command <span style="font-size: 0.5em; vertical-align: middle; background: #ff4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 10px;">macOS Only</span></h1>
-            <p>Transform your <code>ROADMAP.md</code> into reality. A fully autonomous team of Claude-powered agents that architect, code, and test your project from start to finish.</p>
-
-            <!-- Replace with real GIF/Video of agents in action -->
-            <div style="margin: 2rem 0; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px dashed #444;">
-                <p style="margin: 0; color: #888;">[Agent Team in action GIF placeholder]</p>
-            </div>
+            <h1>Hire Your Own AI Development Team in One Command</h1>
+            <p>An interactive CLI that sets up a fully autonomous team of Claude-powered agents.
+                Pick a team, configure options, and let agents architect, code, review, and test your project.</p>
 
             <div class="grid">
                 <a href="#installation" role="button">Get Started</a>
@@ -61,152 +115,240 @@
             </div>
         </header>
 
+        <section id="how-it-works">
+            <h2>How It Works</h2>
+            <p>Everything starts with an interactive wizard. No flags to memorize &mdash; just answer the prompts.</p>
+
+            <div class="step">
+                <h4><span class="step-number">1</span> Install</h4>
+                <pre><code>curl -fsSL https://raw.githubusercontent.com/Mitriyweb/agent-team/main/install.sh | bash</code></pre>
+            </div>
+
+            <div class="step">
+                <h4><span class="step-number">2</span> Initialize your project</h4>
+                <div class="terminal">
+                    <span class="prompt">$</span> agent-team init<br><br>
+                    <span class="output">&#9654; Select a team</span><br>
+                    <span class="highlight">&nbsp;&nbsp;&#9679; software development</span>
+                    <span class="comment"> &mdash; team-lead &rarr; architect &rarr; developer &rarr; reviewer &rarr; qa</span><br>
+                    <span>&nbsp;&nbsp;&#9675; frontend</span>
+                    <span class="comment"> &mdash; team-lead &rarr; ui-architect &rarr; frontend-dev &rarr; design-reviewer &rarr; qa</span><br>
+                    <span>&nbsp;&nbsp;&#9675; fullstack</span>
+                    <span class="comment"> &mdash; team-lead &rarr; architect &rarr; fe-dev + be-dev &rarr; reviewer &rarr; qa</span><br>
+                    <span>&nbsp;&nbsp;&#9675; localization</span>
+                    <span class="comment"> &mdash; team-lead &rarr; tech-writer &rarr; localizer &rarr; seo &rarr; qa</span><br><br>
+
+                    <span class="output">&#9654; Planner</span><br>
+                    <span class="highlight">&nbsp;&nbsp;&#9679; Built-in</span>
+                    <span class="comment"> &mdash; ROADMAP.md &rarr; tasks/plan.md</span><br>
+                    <span>&nbsp;&nbsp;&#9675; OpenSpec</span>
+                    <span class="comment"> &mdash; structured proposals (requires @fission-ai/openspec)</span><br><br>
+
+                    <span class="output">&#9654; Enable human review checkpoints?</span>
+                    <span class="highlight"> Yes</span> / No<br><br>
+
+                    <span class="output">&#9654; Enable Obsidian vault for RAG?</span>
+                    Yes / <span class="highlight">No</span><br><br>
+
+                    <span class="output">&#9654; External review agent (optional)</span><br>
+                    <span class="highlight">&nbsp;&nbsp;&#9679; None</span><br>
+                    <span>&nbsp;&nbsp;&#9675; Codex</span>
+                    <span class="comment"> &mdash; OpenAI Codex CLI</span><br>
+                    <span>&nbsp;&nbsp;&#9675; Claude Code</span>
+                    <span class="comment"> &mdash; Claude Code CLI</span><br>
+                    <span>&nbsp;&nbsp;&#9675; Gemini CLI</span>
+                    <span class="comment"> &mdash; Google Gemini CLI</span><br>
+                    <span>&nbsp;&nbsp;&#9675; Devin</span> /
+                    <span>Aider</span><br><br>
+
+                    <span class="output">&#9654; Enable Telegram notifications?</span>
+                    Yes / <span class="highlight">No</span><br><br>
+
+                    <span class="prompt">&#10003;</span> Updated .gitignore<br>
+                    <span class="prompt">&#10003;</span> Initialized team: software development<br>
+                    <span class="prompt">&#10003;</span> Updated CLAUDE.md with agent-team context<br>
+                    <span class="prompt">&#10003;</span> Done. Run <span class="highlight">agent-team run --plan --all</span> to start.
+                </div>
+            </div>
+
+            <div class="step">
+                <h4><span class="step-number">3</span> Write a roadmap and go</h4>
+                <pre><code>agent-team plan            # decompose ROADMAP.md into tasks
+agent-team run --all       # agents execute every task autonomously</code></pre>
+            </div>
+
+            <p>Re-running <code>agent-team init</code> on an existing project pre-selects your current config &mdash;
+                just press Enter to keep everything or change what you need.</p>
+        </section>
+
         <section id="features">
             <h2>Why Agent Team?</h2>
             <div class="grid">
                 <article>
-                    <h3>Autonomous</h3>
-                    <p>Agents work through your roadmap automatically, from architecture to testing.</p>
+                    <h3>Interactive Setup</h3>
+                    <p>Guided wizard walks you through team, planner, review, and notification options.
+                        No docs to read before you start.</p>
+                </article>
+                <article>
+                    <h3>Autonomous Execution</h3>
+                    <p>Agents work through your roadmap end-to-end &mdash; architecture, coding, review, and testing &mdash;
+                        with zero hand-holding.</p>
+                </article>
+                <article>
+                    <h3>Human-in-the-Loop</h3>
+                    <p>Optional review checkpoints with audio + Telegram alerts.
+                        Approve or reject before agents proceed.</p>
+                </article>
+            </div>
+            <div class="grid">
+                <article>
+                    <h3>External Review</h3>
+                    <p>Plug in Codex, Gemini, Claude, Devin, or Aider as an independent reviewer
+                        after each completed task.</p>
                 </article>
                 <article>
                     <h3>Framework Aware</h3>
-                    <p>Works with any project structure. Detects your tech stack and adapts.</p>
+                    <p>Agents detect your tech stack, lint rules, test runner, and build system dynamically.
+                        No hardcoded tool names.</p>
                 </article>
                 <article>
-                    <h3>Human-in-the-loop</h3>
-                    <p>Keeps you in control with interactive approvals for critical steps.</p>
+                    <h3>Full Audit Trail</h3>
+                    <p>Every tool call is logged. Task reports, cost tracking, and structured audit in
+                        <code>.claude-loop/</code>.</p>
                 </article>
             </div>
         </section>
 
         <section id="installation">
-            <h2>Installation (macOS Only)</h2>
-            <p><mark>macOS only</mark> (Apple Silicon &amp; Intel). Linux and Windows support is planned.</p>
+            <h2>Installation</h2>
+            <p>Supports <strong>macOS</strong> (Apple Silicon &amp; Intel) and <strong>Linux</strong> (x64 &amp; arm64).</p>
 
-            <h3>Option 1: One-line install (Recommended)</h3>
-            <p>Detects your platform, downloads the binary, and installs to <code>~/.local/bin/</code>.</p>
+            <h3>One-line install (Recommended)</h3>
+            <p>Detects your platform, downloads the correct binary, and installs to <code>~/.local/bin/</code>.</p>
             <pre><code>curl -fsSL https://raw.githubusercontent.com/Mitriyweb/agent-team/main/install.sh | bash</code></pre>
 
-            <h3>Option 2: npx (no install)</h3>
+            <h3>npx (no install)</h3>
             <pre><code>npx @mitriyweb/agent-team init</code></pre>
 
-            <h3>Option 3: Clone from source</h3>
+            <h3>From source</h3>
             <pre><code>git clone https://github.com/Mitriyweb/agent-team.git
 cd agent-team && bun install && bun run build
 ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
         </section>
 
-        <section id="quickstart">
-            <h2>Quickstart</h2>
-            <p>1. Initialize your project:</p>
-            <pre><code>agent-team init</code></pre>
-            <p>2. Create a plan (interactive — select or create OpenSpec change):</p>
-            <pre><code>agent-team plan</code></pre>
-            <p>3. Execute tasks (interactive — select which change to run):</p>
-            <pre><code>agent-team run --all</code></pre>
-        </section>
-
-        <section id="planners">
-            <h2>Planning Modes</h2>
-            <div class="grid">
-                <article>
-                    <h3>Built-in</h3>
-                    <p>Write a <code>ROADMAP.md</code>, run <code>agent-team plan</code>. Tasks decomposed into <code>tasks/plan.md</code> with priorities and dependencies.</p>
-                </article>
-                <article>
-                    <h3>OpenSpec</h3>
-                    <p>Structured spec-driven planning. Each change gets a proposal, design, and task checklist. Agents execute directly from <code>openspec/changes/NAME/tasks.md</code>.</p>
-                </article>
-            </div>
-        </section>
-
         <section id="teams">
             <h2>Ready-to-use Teams</h2>
-            <div class="grid">
+            <p>Select a team during <code>agent-team init</code>. Each has its own agent roles, communication protocol,
+                and quality gates.</p>
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
                 <article>
                     <h3>Software Development</h3>
-                    <p>Team Lead, Architect, Developer, Reviewer, QA. Full lifecycle from design to testing.</p>
+                    <p>Team Lead, Architect, Developer, Reviewer, QA. Proof-Loop methodology with SPEC.md, EVIDENCE.md,
+                        and VERDICT.json.</p>
                 </article>
                 <article>
                     <h3>Frontend</h3>
-                    <p>UI Architect, Frontend Dev, Design Reviewer, QA. Focused on components, accessibility, and visual quality.</p>
+                    <p>UI Architect, Frontend Dev, Design Reviewer, QA. WCAG 2.1 AA compliance, visual regression,
+                        performance audits.</p>
                 </article>
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
                 <article>
                     <h3>Fullstack</h3>
-                    <p>Architect, Frontend Dev, Backend Dev, Reviewer, QA. Team lead routes tasks to the right developer based on scope.</p>
+                    <p>Architect, Frontend Dev, Backend Dev, Reviewer, QA. Team lead routes tasks based on scope &mdash;
+                        frontend, backend, or both.</p>
                 </article>
                 <article>
                     <h3>Localization</h3>
                     <p>Technical Writer, Localizer, SEO Specialist, QA. Content creation and translation pipeline.</p>
                 </article>
             </div>
-
-            <h3>Fullstack Task Routing</h3>
-            <p>The fullstack team lead classifies every task before spawning agents:</p>
-            <div class="grid">
-                <article>
-                    <h3>Frontend</h3>
-                    <p>Components, views, CSS, design tokens &rarr; routed to <code>fe-dev</code></p>
-                </article>
-                <article>
-                    <h3>Backend</h3>
-                    <p>APIs, services, DB, migrations &rarr; routed to <code>be-dev</code></p>
-                </article>
-                <article>
-                    <h3>Fullstack</h3>
-                    <p>Features spanning both stacks &rarr; architect defines API contract, then <code>be-dev</code> + <code>fe-dev</code> in sequence</p>
-                </article>
-            </div>
-            <pre><code>agent-team init --team fullstack</code></pre>
+            <p>Need something different? Create a custom team interactively:</p>
+            <pre><code>agent-team new-team</code></pre>
         </section>
 
-        <section id="notifications">
-            <h2>Telegram Notifications</h2>
-            <p>Get real-time task updates on your phone. Configure during <code>agent-team init</code> or <code>agent-team reconfigure</code>.</p>
-            <div class="grid">
+        <section id="configuration">
+            <h2>Configuration</h2>
+            <p>All options are set interactively during <code>init</code> and saved to <code>agent-team.json</code>.
+                Change anything later with:</p>
+            <pre><code>agent-team reconfigure</code></pre>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
                 <article>
-                    <h3>Setup</h3>
-                    <p>Create a bot via <a href="https://t.me/BotFather">@BotFather</a>, get your chat ID from <a href="https://t.me/userinfobot">@userinfobot</a>, and enter both during init.</p>
+                    <h3>Planners</h3>
+                    <p><strong>Built-in:</strong> Write <code>ROADMAP.md</code>, run <code>agent-team plan</code>.
+                        <br><strong>OpenSpec:</strong> Structured proposals with design docs and task checklists.</p>
                 </article>
                 <article>
-                    <h3>Events</h3>
-                    <p>Notifies on task <strong>started</strong>, <strong>done</strong>, <strong>failed</strong>, and <strong>human review needed</strong>. Fire-and-forget &mdash; never blocks execution.</p>
+                    <h3>External Review</h3>
+                    <p>After each task, an independent CLI agent reviews the work. Choose from Codex, Claude, Gemini,
+                        Devin, or Aider.</p>
                 </article>
             </div>
-            <pre><code>agent-team init --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
-        </section>
-
-        <section id="examples">
-            <h2>Use Cases & Examples</h2>
-            <div class="grid">
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
                 <article>
-                    <h3>Reliable Features</h3>
-                    <p><strong>Software Development:</strong> Uses the Proof-Loop methodology. Architect freezes <code>SPEC.md</code>, Developer provides <code>EVIDENCE.md</code>, and QA issues a <code>VERDICT.json</code> after fresh verification.</p>
+                    <h3>Telegram</h3>
+                    <p>Real-time notifications on task started, done, failed, and review needed. Set up bot token and
+                        chat ID during init.</p>
                 </article>
                 <article>
-                    <h3>Accessible UI</h3>
-                    <p><strong>Frontend:</strong> Team ensures WCAG 2.1 AA compliance. UI Architect defines tokens, Dev builds components, and AQA runs visual regression and performance audits.</p>
-                </article>
-                <article>
-                    <h3>Multi-language Support</h3>
-                    <p><strong>Localization:</strong> Synchronized workflow where Technical Writer, Localizer, and SEO Specialist work in parallel to keep global documentation up-to-date.</p>
+                    <h3>Obsidian Vault</h3>
+                    <p>Connect a vault for RAG integration. Agent knowledge syncs to interlinked Obsidian notes with
+                        Dataview metadata.</p>
                 </article>
             </div>
+
+            <p>For CI/scripting, every option has a flag equivalent:</p>
+            <pre><code>agent-team init --team fullstack --planner openspec --external-review codex \
+  --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
         </section>
 
-        <section id="roadmap">
-            <h2>Status & Roadmap</h2>
-            <p><strong>Current Status:</strong> <mark>Alpha</mark></p>
-            <ul>
-                <li><strong>Linux & Windows support:</strong> Planned and in development.</li>
-                <li><strong>Agent Team specialized roles:</strong> Ongoing expansion of available teams.</li>
-            </ul>
+        <section id="execution">
+            <h2>Execution</h2>
+            <div class="grid">
+                <article>
+                    <h3>SDK Mode (default)</h3>
+                    <p>Tasks run via <code>@anthropic-ai/claude-agent-sdk</code> &mdash; programmatic, in-process,
+                        with streaming messages and safety hooks.</p>
+                    <pre><code>agent-team run --all</code></pre>
+                </article>
+                <article>
+                    <h3>CLI Mode</h3>
+                    <p>Falls back to spawning <code>claude</code> as a subprocess. Useful for debugging or when the SDK
+                        is unavailable.</p>
+                    <pre><code>agent-team run --all --cli</code></pre>
+                </article>
+            </div>
         </section>
 
         <section id="monitoring">
-            <h2>Monitoring</h2>
-            <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>
+            <h2>Monitoring &amp; Audit</h2>
+            <p>Every task produces logs, reports, and a structured audit trail.</p>
+            <div class="grid">
+                <article>
+                    <h3>Task Reports</h3>
+                    <p><code>.claude-loop/reports/task-{id}.md</code> &mdash; what was done, who did what, test results.</p>
+                </article>
+                <article>
+                    <h3>Audit Trail</h3>
+                    <p><code>.claude-loop/audit/audit.jsonl</code> &mdash; every tool call with role, agent, tool name, and phase.</p>
+                </article>
+                <article>
+                    <h3>Cost Tracking</h3>
+                    <p><code>.claude-loop/logs/</code> &mdash; session ID, model, token usage, and cost per task.</p>
+                </article>
+            </div>
             <pre><code>agent-team audit    # Show audit report</code></pre>
+        </section>
+
+        <section id="roadmap">
+            <h2>Status</h2>
+            <p><strong>Current:</strong> <mark>Alpha</mark></p>
+            <ul>
+                <li><strong>Platforms:</strong> macOS and Linux supported. Windows is planned.</li>
+                <li><strong>Teams:</strong> 4 built-in teams + custom team creation.</li>
+                <li><strong>External Review:</strong> 5 supported agents (Codex, Claude, Gemini, Devin, Aider).</li>
+            </ul>
         </section>
     </main>
 
@@ -216,4 +358,5 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
         </small>
     </footer>
 </body>
+
 </html>
