@@ -1,31 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Code Agent Team</title>
-    <meta name="description" content="Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.">
+    <meta name="description"
+        content="Autonomous development team powered by Claude Code. Drop this into any project and let the agents work through your roadmap.">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
         :root {
             --primary: #007bff;
         }
+
         header {
             padding: 2rem 0;
             text-align: center;
         }
+
         pre {
             padding: 1rem;
             border-radius: 8px;
             background-color: #1a1a1a;
             color: #f8f8f2;
         }
+
         .container {
             max-width: 900px;
         }
+
         section {
             margin-bottom: 3rem;
         }
+
         .hero {
             background-color: var(--secondary-background);
             padding: 4rem 1rem;
@@ -34,6 +41,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav class="container">
         <ul>
@@ -47,13 +55,14 @@
 
     <main class="container">
         <header class="hero">
-            <h1>Hire Your Own AI Development Team in One Command <span style="font-size: 0.5em; vertical-align: middle; background: #ff4444; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 10px;">macOS Only</span></h1>
-            <p>Transform your <code>ROADMAP.md</code> into reality. A fully autonomous team of Claude-powered agents that architect, code, and test your project from start to finish.</p>
+            <h1>Hire Your Own AI Development Team in One Command</h1>
+            <p>Transform your <code>ROADMAP.md</code> into reality. A fully autonomous team of Claude-powered agents
+                that architect, code, and test your project from start to finish.</p>
 
             <!-- Replace with real GIF/Video of agents in action -->
-            <div style="margin: 2rem 0; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px dashed #444;">
+            <!-- <div style="margin: 2rem 0; background: #1a1a1a; padding: 1rem; border-radius: 8px; border: 1px dashed #444;">
                 <p style="margin: 0; color: #888;">[Agent Team in action GIF placeholder]</p>
-            </div>
+            </div> -->
 
             <div class="grid">
                 <a href="#installation" role="button">Get Started</a>
@@ -80,8 +89,9 @@
         </section>
 
         <section id="installation">
-            <h2>Installation (macOS Only)</h2>
-            <p><mark>macOS only</mark> (Apple Silicon &amp; Intel). Linux and Windows support is planned.</p>
+            <h2>Installation</h2>
+            <p>Supports <strong>macOS</strong> (Apple Silicon &amp; Intel) and <strong>Linux</strong> (x64 &amp; arm64).
+            </p>
 
             <h3>Option 1: One-line install (Recommended)</h3>
             <p>Detects your platform, downloads the binary, and installs to <code>~/.local/bin/</code>.</p>
@@ -111,11 +121,13 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <div class="grid">
                 <article>
                     <h3>Built-in</h3>
-                    <p>Write a <code>ROADMAP.md</code>, run <code>agent-team plan</code>. Tasks decomposed into <code>tasks/plan.md</code> with priorities and dependencies.</p>
+                    <p>Write a <code>ROADMAP.md</code>, run <code>agent-team plan</code>. Tasks decomposed into
+                        <code>tasks/plan.md</code> with priorities and dependencies.</p>
                 </article>
                 <article>
                     <h3>OpenSpec</h3>
-                    <p>Structured spec-driven planning. Each change gets a proposal, design, and task checklist. Agents execute directly from <code>openspec/changes/NAME/tasks.md</code>.</p>
+                    <p>Structured spec-driven planning. Each change gets a proposal, design, and task checklist. Agents
+                        execute directly from <code>openspec/changes/NAME/tasks.md</code>.</p>
                 </article>
             </div>
         </section>
@@ -129,11 +141,13 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                 </article>
                 <article>
                     <h3>Frontend</h3>
-                    <p>UI Architect, Frontend Dev, Design Reviewer, QA. Focused on components, accessibility, and visual quality.</p>
+                    <p>UI Architect, Frontend Dev, Design Reviewer, QA. Focused on components, accessibility, and visual
+                        quality.</p>
                 </article>
                 <article>
                     <h3>Fullstack</h3>
-                    <p>Architect, Frontend Dev, Backend Dev, Reviewer, QA. Team lead routes tasks to the right developer based on scope.</p>
+                    <p>Architect, Frontend Dev, Backend Dev, Reviewer, QA. Team lead routes tasks to the right developer
+                        based on scope.</p>
                 </article>
                 <article>
                     <h3>Localization</h3>
@@ -154,7 +168,8 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                 </article>
                 <article>
                     <h3>Fullstack</h3>
-                    <p>Features spanning both stacks &rarr; architect defines API contract, then <code>be-dev</code> + <code>fe-dev</code> in sequence</p>
+                    <p>Features spanning both stacks &rarr; architect defines API contract, then <code>be-dev</code> +
+                        <code>fe-dev</code> in sequence</p>
                 </article>
             </div>
             <pre><code>agent-team init --team fullstack</code></pre>
@@ -162,15 +177,18 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
 
         <section id="notifications">
             <h2>Telegram Notifications</h2>
-            <p>Get real-time task updates on your phone. Configure during <code>agent-team init</code> or <code>agent-team reconfigure</code>.</p>
+            <p>Get real-time task updates on your phone. Configure during <code>agent-team init</code> or
+                <code>agent-team reconfigure</code>.</p>
             <div class="grid">
                 <article>
                     <h3>Setup</h3>
-                    <p>Create a bot via <a href="https://t.me/BotFather">@BotFather</a>, get your chat ID from <a href="https://t.me/userinfobot">@userinfobot</a>, and enter both during init.</p>
+                    <p>Create a bot via <a href="https://t.me/BotFather">@BotFather</a>, get your chat ID from <a
+                            href="https://t.me/userinfobot">@userinfobot</a>, and enter both during init.</p>
                 </article>
                 <article>
                     <h3>Events</h3>
-                    <p>Notifies on task <strong>started</strong>, <strong>done</strong>, <strong>failed</strong>, and <strong>human review needed</strong>. Fire-and-forget &mdash; never blocks execution.</p>
+                    <p>Notifies on task <strong>started</strong>, <strong>done</strong>, <strong>failed</strong>, and
+                        <strong>human review needed</strong>. Fire-and-forget &mdash; never blocks execution.</p>
                 </article>
             </div>
             <pre><code>agent-team init --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
@@ -181,15 +199,19 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <div class="grid">
                 <article>
                     <h3>Reliable Features</h3>
-                    <p><strong>Software Development:</strong> Uses the Proof-Loop methodology. Architect freezes <code>SPEC.md</code>, Developer provides <code>EVIDENCE.md</code>, and QA issues a <code>VERDICT.json</code> after fresh verification.</p>
+                    <p><strong>Software Development:</strong> Uses the Proof-Loop methodology. Architect freezes
+                        <code>SPEC.md</code>, Developer provides <code>EVIDENCE.md</code>, and QA issues a
+                        <code>VERDICT.json</code> after fresh verification.</p>
                 </article>
                 <article>
                     <h3>Accessible UI</h3>
-                    <p><strong>Frontend:</strong> Team ensures WCAG 2.1 AA compliance. UI Architect defines tokens, Dev builds components, and AQA runs visual regression and performance audits.</p>
+                    <p><strong>Frontend:</strong> Team ensures WCAG 2.1 AA compliance. UI Architect defines tokens, Dev
+                        builds components, and AQA runs visual regression and performance audits.</p>
                 </article>
                 <article>
                     <h3>Multi-language Support</h3>
-                    <p><strong>Localization:</strong> Synchronized workflow where Technical Writer, Localizer, and SEO Specialist work in parallel to keep global documentation up-to-date.</p>
+                    <p><strong>Localization:</strong> Synchronized workflow where Technical Writer, Localizer, and SEO
+                        Specialist work in parallel to keep global documentation up-to-date.</p>
                 </article>
             </div>
         </section>
@@ -198,14 +220,16 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <h2>Status & Roadmap</h2>
             <p><strong>Current Status:</strong> <mark>Alpha</mark></p>
             <ul>
-                <li><strong>Linux & Windows support:</strong> Planned and in development.</li>
+                <li><strong>Platforms:</strong> macOS and Linux supported. Windows is planned.</li>
                 <li><strong>Agent Team specialized roles:</strong> Ongoing expansion of available teams.</li>
             </ul>
         </section>
 
         <section id="monitoring">
             <h2>Monitoring</h2>
-            <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and <code>reports/</code>.</p>
+            <p>Every tool call is logged to <code>.claude-loop/audit/audit.jsonl</code> with role, agent name, tool, and
+                phase. Task logs and cost reports are saved to <code>.claude-loop/logs/</code> and
+                <code>reports/</code>.</p>
             <pre><code>agent-team audit    # Show audit report</code></pre>
         </section>
     </main>
@@ -216,4 +240,5 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
         </small>
     </footer>
 </body>
+
 </html>
