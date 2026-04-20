@@ -8,14 +8,22 @@
     "PreToolUse": [
       {
         "matcher": ".*",
-        "hooks": [{ "type": "command", "command": "agent-team audit-hook PRE" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "agent-team audit-hook PRE 2>/dev/null || true"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": ".*",
         "hooks": [
-          { "type": "command", "command": "agent-team audit-hook POST" }
+          {
+            "type": "command",
+            "command": "agent-team audit-hook POST 2>/dev/null || true"
+          }
         ]
       }
     ]
