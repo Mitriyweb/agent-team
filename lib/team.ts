@@ -194,7 +194,7 @@ export async function initProject(options: InitProjectOptions) {
     fs.unlinkSync("MEMORY.md");
     ok("Migrated MEMORY.md → .claude-loop/memory.md");
   }
-  if (planner !== "openspec" && !fs.existsSync("ROADMAP.md")) {
+  if (!fs.existsSync("ROADMAP.md")) {
     fs.writeFileSync("ROADMAP.md", "# Project Roadmap\n");
     ok("Created empty ROADMAP.md");
   }
