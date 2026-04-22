@@ -151,4 +151,24 @@ describe("common.ts", () => {
     Object.defineProperty(process, "platform", { value: originalPlatform });
     Bun.spawnSync = originalSpawnSync;
   });
+
+  describe("expandHome", () => {
+    it("expands ~ prefix to the home directory", () => {
+      expect(common.expandHome("~/vault")).toBe(
+        path.join(os.homedir(), "/vault"),
+      );
+    });
+
+    it("expands bare ~ to the home directory", () => {
+      expect(common.expandHome("~")).toBe(os.homedir());
+    });
+
+    it("leaves absolute paths unchanged", () => {
+      expect(common.expandHome("/tmp/vault")).toBe("/tmp/vault");
+    });
+
+    it("leaves relative paths unchanged", () => {
+      expect(common.expandHome("./vault")).toBe("./vault");
+    });
+  });
 });

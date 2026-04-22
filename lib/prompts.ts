@@ -8,7 +8,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import * as p from "@clack/prompts";
-import { ExternalReviewAgent, type TelegramConfig } from "./common.ts";
+import {
+  ExternalReviewAgent,
+  expandHome,
+  type TelegramConfig,
+} from "./common.ts";
 import { EMBEDDED_TEAM_NAMES } from "./embedded-agents.ts";
 
 function listSourceTeams(sourceDir: string): string[] {
@@ -48,16 +52,26 @@ export async function promptVault(
     if (!enable) return undefined;
   }
 
-  return p.text({
-    message,
+  const cwd = process.cwd();
+  const result = await p.text({
+    message: `${message}
+  - absolute:       /Users/you/ObsidianVault
+  - home-relative:  ~/Documents/ObsidianVault
+  - project-relative (cwd=${cwd}): ./vault`,
     placeholder: defaultValue || "./vault",
     initialValue: defaultValue,
     validate: (v) => {
       if (!v?.trim()) return "Path is required";
-      if (v && !fs.existsSync(v)) return "Path does not exist";
+      const expanded = expandHome(v);
+      if (!fs.existsSync(expanded)) return "Path does not exist";
       return undefined;
     },
   });
+
+  if (typeof result === "string") {
+    return expandHome(result);
+  }
+  return result;
 }
 
 const EXTERNAL_REVIEW_AGENTS: {
@@ -80,11 +94,6 @@ const EXTERNAL_REVIEW_AGENTS: {
     value: ExternalReviewAgent.Aider,
     label: "Aider",
     hint: "Aider CLI (aider)",
-  },
-  {
-    value: ExternalReviewAgent.Claude,
-    label: "Claude Code",
-    hint: "Claude Code CLI (claude)",
   },
   {
     value: ExternalReviewAgent.Gemini,

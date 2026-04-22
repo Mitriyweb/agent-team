@@ -1,5 +1,13 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+
+export function expandHome(input: string): string {
+  if (input.startsWith("~")) {
+    return path.join(os.homedir(), input.slice(1));
+  }
+  return input;
+}
 
 export const RED = "\x1b[31m";
 export const GREEN = "\x1b[32m";

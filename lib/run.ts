@@ -1351,13 +1351,24 @@ export class TaskRunner {
 
     // Inject Obsidian vault context if configured
     let vaultSection = "";
-    if (fs.existsSync(".claude/vault")) {
+    const vaultLink = ".claude/vault";
+    if (fs.existsSync(vaultLink)) {
+      let vaultTarget = vaultLink;
+      try {
+        const resolved = fs.realpathSync(vaultLink);
+        if (resolved && resolved !== path.resolve(vaultLink)) {
+          vaultTarget = `${vaultLink} -> ${resolved}`;
+        }
+      } catch {
+        // Fall back to the link path if realpath fails
+      }
       vaultSection = `
 ## Knowledge Base (Obsidian Vault)
 
-An Obsidian vault is connected at \`.claude/vault\`.
-You can use it as a RAG source — read documents from there to understand project context,
-business logic, or other relevant information not present in the current repository.
+An Obsidian vault is connected at \`${vaultTarget}\` as an optional RAG source.
+Consult it ONLY when the task requires domain/business context that is clearly
+missing from the repository. Use Grep to locate relevant files by keyword first,
+then Read only the specific file(s) you need. Do not scan or pre-load the vault.
 `;
     }
 

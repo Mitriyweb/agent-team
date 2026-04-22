@@ -61,6 +61,49 @@ describe("Obsidian Vault Integration", () => {
     expect(fs.readlinkSync(vaultLink)).toBe(vaultDir);
   });
 
+  it("should expand ~ in the vault path before creating the symlink", () => {
+    const home = os.homedir();
+    const relativeFromHome = path.relative(home, vaultDir);
+    if (relativeFromHome.startsWith("..")) {
+      // vaultDir not under home → emulate by creating inside home
+      const fakeVaultName = `agt-vault-home-${Date.now()}`;
+      const fakeVault = path.join(home, fakeVaultName);
+      fs.mkdirSync(fakeVault, { recursive: true });
+      try {
+        team.manageVaultSymlink(`~/${fakeVaultName}`);
+        const vaultLink = path.join(".claude", "vault");
+        expect(fs.readlinkSync(vaultLink)).toBe(fakeVault);
+      } finally {
+        fs.rmSync(fakeVault, { recursive: true, force: true });
+      }
+      return;
+    }
+    team.manageVaultSymlink(`~/${relativeFromHome}`);
+    expect(fs.readlinkSync(path.join(".claude", "vault"))).toBe(vaultDir);
+  });
+
+  it("should render the resolved symlink target in the agent prompt", () => {
+    team.manageVaultSymlink(vaultDir);
+
+    const agentsDir = path.join(".claude", "agents");
+    fs.mkdirSync(agentsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(agentsDir, "sw-team-lead.md"),
+      "---\nname: sw-team-lead\nmodel: sonnet\n---\n",
+    );
+    const roadmapFile = "ROADMAP.md";
+    fs.writeFileSync(
+      roadmapFile,
+      "```\n- [ ] id:1 priority:high agents:sw-developer Test task\n```\n### Task #1 — Test task\nSpec",
+    );
+
+    const runner = new TaskRunner({ roadmapFile });
+    // biome-ignore lint/suspicious/noExplicitAny: private
+    const prompt = (runner as any).buildPrompt("1", "Test task", "Spec");
+
+    expect(prompt).toContain(`.claude/vault -> ${vaultDir}`);
+  });
+
   it("should remove the symlink if vaultPath is undefined", () => {
     team.manageVaultSymlink(vaultDir);
     expect(fs.existsSync(path.join(".claude", "vault"))).toBe(true);
@@ -133,8 +176,7 @@ describe("Obsidian Vault Integration", () => {
     const prompt = (runner as any).buildPrompt("1", "Test task", "Spec");
 
     expect(prompt).toContain("## Knowledge Base (Obsidian Vault)");
-    expect(prompt).toContain(
-      "An Obsidian vault is connected at `.claude/vault`.",
-    );
+    expect(prompt).toContain("An Obsidian vault is connected at");
+    expect(prompt).toContain(".claude/vault");
   });
 });

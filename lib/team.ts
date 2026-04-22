@@ -5,6 +5,7 @@ import {
   BLUE,
   type ExternalReviewAgent,
   err,
+  expandHome,
   GREEN,
   loadConfig,
   log,
@@ -789,6 +790,7 @@ function listSourceTeams(sourceDir: string): string[] {
  */
 export function manageVaultSymlink(vaultPath?: string) {
   const vaultLink = path.join(".claude", "vault");
+  const expanded = vaultPath ? expandHome(vaultPath) : undefined;
 
   // Remove existing link/file if it exists
   try {
@@ -806,8 +808,8 @@ export function manageVaultSymlink(vaultPath?: string) {
     }
   }
 
-  if (vaultPath) {
-    const absoluteVaultPath = path.resolve(vaultPath);
+  if (expanded) {
+    const absoluteVaultPath = path.resolve(expanded);
     if (fs.existsSync(absoluteVaultPath)) {
       try {
         if (!fs.existsSync(".claude"))
