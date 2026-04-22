@@ -158,7 +158,14 @@ export async function initProject(options: InitProjectOptions) {
   if (planner === "openspec") {
     try {
       const proc = Bun.spawnSync(
-        ["npx", "@fission-ai/openspec", "init", "--tools", "claude"],
+        [
+          "npx",
+          "--no-install",
+          "@fission-ai/openspec",
+          "init",
+          "--tools",
+          "claude",
+        ],
         {
           stdio: ["inherit", "inherit", "inherit"],
         },
@@ -166,12 +173,14 @@ export async function initProject(options: InitProjectOptions) {
       if (proc.success) {
         ok("OpenSpec initialized");
       } else {
-        warn(
-          "OpenSpec init failed — install with: npm i -g @fission-ai/openspec",
+        err(
+          "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec",
         );
       }
     } catch {
-      warn("OpenSpec not found — install with: npm i -g @fission-ai/openspec");
+      err(
+        "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec",
+      );
     }
   }
 
