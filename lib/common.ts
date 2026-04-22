@@ -9,6 +9,35 @@ export function expandHome(input: string): string {
   return input;
 }
 
+/**
+ * Detect how to invoke OpenSpec. Prefers the `openspec` binary on PATH
+ * (covers Homebrew, global npm with bin symlink, etc.), falls back to
+ * `npx --no-install @fission-ai/openspec`. Returns undefined if neither
+ * is available.
+ */
+export function detectOpenSpecInvocation(): string[] | undefined {
+  try {
+    const direct = Bun.spawnSync(["openspec", "--version"], {
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    if (direct.success) return ["openspec"];
+  } catch {
+    // fall through
+  }
+  try {
+    const viaNpx = Bun.spawnSync(
+      ["npx", "--no-install", "@fission-ai/openspec", "--version"],
+      { stdio: ["ignore", "ignore", "ignore"] },
+    );
+    if (viaNpx.success) {
+      return ["npx", "--no-install", "@fission-ai/openspec"];
+    }
+  } catch {
+    // fall through
+  }
+  return undefined;
+}
+
 export const RED = "\x1b[31m";
 export const GREEN = "\x1b[32m";
 export const YELLOW = "\x1b[33m";

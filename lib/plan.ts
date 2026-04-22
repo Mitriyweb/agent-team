@@ -4,6 +4,7 @@ import * as p from "@clack/prompts";
 import {
   BLUE,
   CYAN,
+  detectOpenSpecInvocation,
   err,
   GREEN,
   loadConfig,
@@ -15,6 +16,16 @@ import {
   warn,
   YELLOW,
 } from "./common.ts";
+
+function openspecCmd(): string[] {
+  const cmd = detectOpenSpecInvocation();
+  if (!cmd) {
+    err(
+      "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec, or: brew install openspec",
+    );
+  }
+  return cmd;
+}
 
 const AGENTS_DIR = path.join(".claude", "agents");
 
@@ -195,15 +206,17 @@ async function promptNewChangeName(roadmapContent: string): Promise<{
   isNew: boolean;
   roadmapContent: string;
 }> {
+  const suggestion = "add-test-coverage";
   const changeName = await p.text({
     message: "Change name (kebab-case, descriptive)",
-    placeholder: "add-test-coverage",
+    placeholder: suggestion,
+    defaultValue: suggestion,
     validate: (v) => {
-      if (!v?.trim()) return "Name is required";
-      if (!/^[a-z0-9][a-z0-9-]*$/.test(v.trim()))
+      const value = v?.trim() || suggestion;
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(value))
         return "Use kebab-case: lowercase letters, numbers, hyphens";
-      const dir = path.join("openspec", "changes", v.trim());
-      if (fs.existsSync(dir)) return `Change "${v.trim()}" already exists`;
+      const dir = path.join("openspec", "changes", value);
+      if (fs.existsSync(dir)) return `Change "${value}" already exists`;
       return undefined;
     },
   });
@@ -225,14 +238,7 @@ async function promptNewChangeName(roadmapContent: string): Promise<{
  */
 function getOpenSpecInstructions(artifact: string, changeName: string): string {
   const proc = Bun.spawnSync(
-    [
-      "npx",
-      "@fission-ai/openspec",
-      "instructions",
-      artifact,
-      "--change",
-      changeName,
-    ],
+    [...openspecCmd(), "instructions", artifact, "--change", changeName],
     { stderr: "pipe" },
   );
   if (!proc.success) return "";
@@ -246,13 +252,7 @@ export function validateOpenSpecChange(
   changeName: string,
   strict = false,
 ): boolean {
-  const args = [
-    "npx",
-    "@fission-ai/openspec",
-    "validate",
-    changeName,
-    "--no-interactive",
-  ];
+  const args = [...openspecCmd(), "validate", changeName, "--no-interactive"];
   if (strict) args.push("--strict");
   const proc = Bun.spawnSync(args, {
     stdio: ["inherit", "inherit", "inherit"],
@@ -265,7 +265,7 @@ export function validateOpenSpecChange(
  */
 export function archiveOpenSpecChange(changeName: string): boolean {
   const proc = Bun.spawnSync(
-    ["npx", "@fission-ai/openspec", "archive", changeName, "--yes"],
+    [...openspecCmd(), "archive", changeName, "--yes"],
     { stdio: ["inherit", "inherit", "inherit"] },
   );
   return proc.success;
@@ -297,15 +297,8 @@ async function planWithOpenSpec(inputFile: string) {
 
   // Create change directory if new
   if (isNew) {
-    const newChangeProc = Bun.spawnSync(
-      ["npx", "@fission-ai/openspec", "new", "change", changeName],
-      { stdio: ["inherit", "inherit", "inherit"] },
-    );
-    if (!newChangeProc.success) {
-      err(
-        "Failed to create OpenSpec change. Is @fission-ai/openspec installed?",
-      );
-    }
+    fs.mkdirSync(changeDir, { recursive: true });
+    ok(`Created change directory: ${BLUE}${changeDir}${NC}`);
   }
 
   // Determine which artifacts to generate (in schema order: proposal → design → tasks)
@@ -342,6 +335,7 @@ async function planWithOpenSpec(inputFile: string) {
   const startTime = Date.now();
 
   // Generate each missing artifact sequentially using OpenSpec instructions
+  let upgradeNoticeShown = false;
   for (const artifact of missing) {
     log(`Generating ${CYAN}${artifact.name}${NC} via OpenSpec instructions...`);
 
@@ -353,8 +347,14 @@ async function planWithOpenSpec(inputFile: string) {
 
     if (!instructions) {
       warn(
-        `No OpenSpec instructions for ${artifact.name} — falling back to generic prompt.`,
+        `No OpenSpec instructions for ${artifact.name} — using generic prompt.`,
       );
+      if (!upgradeNoticeShown) {
+        warn(
+          "Your OpenSpec version lacks the `instructions` command. For richer prompts, upgrade: brew upgrade openspec (or npm i -g @fission-ai/openspec@latest).",
+        );
+        upgradeNoticeShown = true;
+      }
     }
 
     const cliArgs = [

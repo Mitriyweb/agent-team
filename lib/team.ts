@@ -3,6 +3,7 @@ import path from "node:path";
 import * as p from "@clack/prompts";
 import {
   BLUE,
+  detectOpenSpecInvocation,
   type ExternalReviewAgent,
   err,
   expandHome,
@@ -157,30 +158,21 @@ export async function initProject(options: InitProjectOptions) {
 
   // Initialize OpenSpec if selected
   if (planner === "openspec") {
-    try {
-      const proc = Bun.spawnSync(
-        [
-          "npx",
-          "--no-install",
-          "@fission-ai/openspec",
-          "init",
-          "--tools",
-          "claude",
-        ],
-        {
-          stdio: ["inherit", "inherit", "inherit"],
-        },
-      );
-      if (proc.success) {
-        ok("OpenSpec initialized");
-      } else {
-        err(
-          "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec",
-        );
-      }
-    } catch {
+    const invocation = detectOpenSpecInvocation();
+    if (!invocation) {
       err(
-        "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec",
+        "OpenSpec is not installed. Install with: npm i -g @fission-ai/openspec, or: brew install openspec",
+      );
+    }
+
+    const proc = Bun.spawnSync([...invocation, "init", "--tools", "claude"], {
+      stdio: ["inherit", "inherit", "inherit"],
+    });
+    if (proc.success) {
+      ok("OpenSpec initialized");
+    } else {
+      warn(
+        "OpenSpec init exited non-zero. See output above (e.g. legacy files need cleanup — re-run interactively or with --force).",
       );
     }
   }
