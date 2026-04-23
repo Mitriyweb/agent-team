@@ -100,10 +100,17 @@ export function loadEnv(envFile = ".env") {
   }
 }
 
-export function notifyReview() {
+/**
+ * Play a pre-recorded sound from ~/.agent-team/assets/<asset>, falling back
+ * to platform TTS (`say` on macOS, `spd-say` on Linux) and the terminal bell
+ * as last resort. Used for audible notifications: review needed, loop done,
+ * loop failed.
+ */
+function playNotification(assetName: string, ttsMessage: string): void {
   const soundFile = path.join(
     process.env.HOME || "",
-    ".agent-team/assets/review.m4a",
+    ".agent-team/assets",
+    assetName,
   );
   let played = false;
 
@@ -131,12 +138,11 @@ export function notifyReview() {
   }
 
   if (!played) {
-    const msg = "Review required";
     try {
       if (process.platform === Platform.Darwin) {
-        Bun.spawnSync(["say", msg]);
+        Bun.spawnSync(["say", ttsMessage]);
       } else if (process.platform === Platform.Linux) {
-        Bun.spawnSync(["spd-say", msg]);
+        Bun.spawnSync(["spd-say", ttsMessage]);
       } else {
         process.stdout.write("\x07"); // bell
       }
@@ -144,6 +150,29 @@ export function notifyReview() {
       process.stdout.write("\x07");
     }
   }
+}
+
+export function notifyReview(): void {
+  playNotification("review.m4a", "Review required");
+}
+
+export function notifyDone(): void {
+  playNotification("done.m4a", "All tasks completed");
+}
+
+export function notifyFailed(reason?: string): void {
+  // Keep spoken reason short and natural — long exception messages with
+  // paths and stack frames sound terrible through TTS.
+  let spoken = "Loop stopped due to error";
+  if (reason) {
+    const firstSentence = reason.split(/[\n.]/)[0]?.replace(/[`"]/g, "").trim();
+    const short =
+      firstSentence && firstSentence.length <= 80
+        ? firstSentence
+        : `${firstSentence?.slice(0, 80)}…`;
+    if (short) spoken = `Loop stopped due to error. ${short}`;
+  }
+  playNotification("failed.m4a", spoken);
 }
 
 interface ModelPrice {

@@ -9,7 +9,13 @@ import * as p from "@clack/prompts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
-import { Command, err, loadConfig, Planner } from "../lib/common.ts";
+import {
+  Command,
+  err,
+  loadConfig,
+  notifyFailed,
+  Planner,
+} from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import {
@@ -333,5 +339,10 @@ async function main() {
 }
 
 main().catch((e) => {
+  // Only notify for run-time failures (i.e. when a loop was actually
+  // executing tasks). Init/config errors don't warrant a voice alert.
+  if (command === Command.Run) {
+    notifyFailed(e.message);
+  }
   err(e.message);
 });

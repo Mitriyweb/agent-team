@@ -510,6 +510,23 @@ Agents can request human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED`
 
 Reduce review prompts with `--no-human-review` (sets `defaultMode: auto` for all profiles).
 
+## Audio Notifications
+
+`agent-team run` plays a short voice cue on three events:
+
+| Event | Default phrase |
+|-------|----------------|
+| Task needs review (`HUMAN_REVIEW_NEEDED`) | "Review is required" |
+| Loop finished with all tasks complete | "All tasks completed" |
+| Loop stopped due to failures or crash | "Loop stopped due to error. _\<reason\>_" |
+
+The audio files ship embedded as base64 in the compiled binary and are
+extracted to `~/.agent-team/assets/` on first run. Replace any of
+`review.m4a`, `done.m4a`, `failed.m4a` in that directory with your own
+recording to customise the voice — the extractor skips existing files.
+
+On Linux, `spd-say` is used as fallback if the `.m4a` playback fails.
+
 ## Security Permissions
 
 Blocked by default via `permissions.deny`:

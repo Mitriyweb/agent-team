@@ -12,6 +12,8 @@ import {
   loadConfig,
   log,
   NC,
+  notifyDone,
+  notifyFailed,
   notifyReview,
   ok,
   Planner,
@@ -191,6 +193,8 @@ export class TaskRunner {
   private roadmap: string;
   private ui: TerminalUI;
   private currentTaskNum = 0;
+  /** Tasks actually executed in this process (not pre-existing done/failed). */
+  private tasksExecutedThisRun = 0;
   private totalTasks = 0;
   private cumulativeCost = 0;
   private teamLeadModel: string | undefined;
@@ -618,6 +622,7 @@ export class TaskRunner {
       }
 
       this.currentTaskNum++;
+      this.tasksExecutedThisRun++;
       const success = this.options.cli
         ? await this.runTask(next)
         : await this.runTaskSdk(next);
@@ -662,17 +667,34 @@ export class TaskRunner {
       }
     }
 
+    const pendingAtEnd = this.getRoadmapTasks(" ").length;
+    const failedAtEnd = this.getRoadmapTasks("!").length;
+
     if (!this.options.all) {
-      const pending = this.getRoadmapTasks(" ").length;
-      if (pending > 0) {
+      if (pendingAtEnd > 0) {
         log(
-          `Loop finished (single-task mode). ${pending} task(s) still pending — re-run with ${BLUE}--all${NC} to process them.`,
+          `Loop finished (single-task mode). ${pendingAtEnd} task(s) still pending — re-run with ${BLUE}--all${NC} to process them.`,
         );
       } else {
         log("Loop finished.");
       }
     } else {
       log("Loop finished.");
+    }
+
+    // Audible notifications — mirror the review-sound UX.
+    //   - failed tasks          → notifyFailed (distinct sound/voice)
+    //   - everything complete   → notifyDone (only if we actually ran tasks)
+    //   - user interrupt / WIP  → silent (pending>0 w/o failures)
+    // We gate on `this.currentTaskNum > 0` so an empty roadmap or an already-
+    // finished roadmap doesn't trigger a misleading "All tasks completed" on
+    // a no-op run.
+    if (failedAtEnd > 0) {
+      const reason =
+        failedAtEnd === 1 ? "One task failed" : `${failedAtEnd} tasks failed`;
+      notifyFailed(reason);
+    } else if (pendingAtEnd === 0 && this.tasksExecutedThisRun > 0) {
+      notifyDone();
     }
   }
 
