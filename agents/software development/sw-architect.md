@@ -1,7 +1,7 @@
 ---
 name: sw-architect
 description: System architect. Designs the solution before implementation AND reviews the code after. Communicates directly with developer in both phases.
-model: claude-opus
+model: opus
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
 ---
 
@@ -36,7 +36,7 @@ When team-lead assigns a task:
 
 **Step 3** — Update `.claude-loop/memory.md` if your design introduces new patterns or architectural decisions.
 
-**Step 4** — Write `SPEC.md` after developer replies. This is the **Spec Freeze** phase.
+**Step 4** — Write `.claude-loop/reports/task-{id}-spec.md` after developer replies. This is the **Spec Freeze** phase.
 
 The spec must be an immutable contract. It must include:
 
@@ -74,7 +74,7 @@ The spec must be an immutable contract. It must include:
 {
   "from": "sw-architect", "type": "DONE",
   "subject": "Spec frozen",
-  "body": "SPEC.md written, validated, and FROZEN. It contains explicit Acceptance Criteria (AC1, AC2, etc.). Ready for implementation.",
+  "body": ".claude-loop/reports/task-{id}-spec.md written, validated, and FROZEN. It contains explicit Acceptance Criteria (AC1, AC2, etc.). Ready for implementation.",
   "requires_response": false
 }
 ```
@@ -85,7 +85,7 @@ The spec must be an immutable contract. It must include:
 
 When developer sends `REVIEW_REQUEST`:
 
-1. Read the code and **EVIDENCE.md** — compare against the frozen spec.
+1. Read the code and **.claude-loop/reports/task-{id}-evidence.md** — compare against the frozen spec.
 2. Check:
    - Spec compliance and AC coverage (Verify all ACs have PASS in Evidence)
 

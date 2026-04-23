@@ -1,6 +1,6 @@
 ---
 name: librarian
-model: claude-sonnet
+model: haiku
 description: Knowledge curator. Runs after each task to maintain .claude-loop/memory.md
 ---
 

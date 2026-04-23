@@ -203,8 +203,8 @@ agent-team run --all       # agents execute every task autonomously</code></pre>
             <div class="grid">
                 <article>
                     <h3>External Review</h3>
-                    <p>Plug in Codex, Gemini, Claude, Devin, or Aider as an independent reviewer
-                        after each completed task.</p>
+                    <p>Plug in Codex, Gemini, Claude, Devin, or Aider as an independent reviewer.
+                        Runs twice: on the generated plan <em>and</em> after each completed task.</p>
                 </article>
                 <article>
                     <h3>Framework Aware</h3>
@@ -243,8 +243,9 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <div class="grid" style="grid-template-columns: 1fr 1fr;">
                 <article>
                     <h3>Software Development</h3>
-                    <p>Team Lead, Architect, Developer, Reviewer, QA. Proof-Loop methodology with SPEC.md, EVIDENCE.md,
-                        and VERDICT.json.</p>
+                    <p>Team Lead, Architect, Developer, Reviewer, QA. Proof-Loop methodology with frozen
+                        spec, developer evidence, and independent QA verdict &mdash; all stored per-task in
+                        <code>.claude-loop/reports/</code>.</p>
                 </article>
                 <article>
                     <h3>Frontend</h3>
@@ -281,8 +282,8 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                 </article>
                 <article>
                     <h3>External Review</h3>
-                    <p>After each task, an independent CLI agent reviews the work. Choose from Codex, Claude, Gemini,
-                        Devin, or Aider.</p>
+                    <p>An independent CLI agent reviews both the plan (before execution) and each completed
+                        task. Choose from Codex, Claude, Gemini, Devin, or Aider.</p>
                 </article>
             </div>
             <div class="grid" style="grid-template-columns: 1fr 1fr;">

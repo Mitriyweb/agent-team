@@ -224,7 +224,7 @@ export async function runAgent(
       ? "./node_modules/.bin/claude"
       : findGlobalClaude());
 
-  const hooks = createHooks(logger, role);
+  const hooks = createHooks(logger, role, team);
 
   const options: Options = {
     systemPrompt: systemPrompt || undefined,
@@ -244,7 +244,7 @@ export async function runAgent(
   let sessionId: string | undefined;
 
   logger.info(
-    `Starting | tools: [${options.allowedTools?.join(", ")}] maxTurns: ${resolvedMaxTurns}`,
+    `Starting | model: ${resolvedModel || "(sdk default)"} | tools: [${options.allowedTools?.join(", ")}] maxTurns: ${resolvedMaxTurns}`,
   );
 
   try {
@@ -257,9 +257,9 @@ export async function runAgent(
           if (block.type === "text" && block.text) {
             logger.assistant(block.text);
           }
-          if (block.type === "tool_use") {
-            logger.tool(block.name, block.input as Record<string, unknown>);
-          }
+          // tool_use blocks are logged by the PreToolUse hook as [PRE] <name>,
+          // and PostToolUse as [POST] <name> with the result. No need to log
+          // again here — it just duplicates the pre-execution line.
         }
       }
 

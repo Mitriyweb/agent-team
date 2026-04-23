@@ -9,6 +9,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { AuditStatus } from "./common.ts";
 
 const LOG_DIR = ".claude-loop/audit";
 
@@ -51,7 +52,9 @@ export async function runAuditHook(phase: string) {
   } else {
     // Claude Code PostToolUse hooks may include tool_output or error
     const hasError = !!parsed.tool_error;
-    const status = hasError ? "error" : (parsed.status as string) || "success";
+    const status = hasError
+      ? AuditStatus.Error
+      : (parsed.status as string) || AuditStatus.Success;
     const durationMs = (parsed.duration_ms as number) || 0;
     const entry = JSON.stringify({
       ts: timestamp,

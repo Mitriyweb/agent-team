@@ -9,6 +9,12 @@ export function expandHome(input: string): string {
   return input;
 }
 
+export enum Platform {
+  Darwin = "darwin",
+  Linux = "linux",
+  Win32 = "win32",
+}
+
 /**
  * Detect how to invoke OpenSpec. Prefers the `openspec` binary on PATH
  * (covers Homebrew, global npm with bin symlink, etc.), falls back to
@@ -103,10 +109,10 @@ export function notifyReview() {
 
   if (fs.existsSync(soundFile)) {
     try {
-      if (process.platform === "darwin") {
+      if (process.platform === Platform.Darwin) {
         const proc = Bun.spawnSync(["afplay", soundFile]);
         if (proc.success) played = true;
-      } else if (process.platform === "linux") {
+      } else if (process.platform === Platform.Linux) {
         const paplay = Bun.spawnSync(["paplay", "--version"]);
         if (paplay.success) {
           const proc = Bun.spawnSync(["paplay", soundFile]);
@@ -127,9 +133,9 @@ export function notifyReview() {
   if (!played) {
     const msg = "Review required";
     try {
-      if (process.platform === "darwin") {
+      if (process.platform === Platform.Darwin) {
         Bun.spawnSync(["say", msg]);
-      } else if (process.platform === "linux") {
+      } else if (process.platform === Platform.Linux) {
         Bun.spawnSync(["spd-say", msg]);
       } else {
         process.stdout.write("\x07"); // bell
@@ -140,20 +146,61 @@ export function notifyReview() {
   }
 }
 
+interface ModelPrice {
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+}
+
+/**
+ * Per-million-token prices in USD. Matches Anthropic pricing for Claude 4.x.
+ * Cache reads are ~90% cheaper than regular input — the main savings lever for
+ * stable system prompts.
+ *
+ * Source: https://www.anthropic.com/pricing (verified 2026-04-23).
+ * Update these if Anthropic publishes new rates.
+ */
+const PRICE_OPUS: ModelPrice = {
+  input: 15,
+  output: 75,
+  cacheWrite: 18.75,
+  cacheRead: 1.5,
+};
+const PRICE_SONNET: ModelPrice = {
+  input: 3,
+  output: 15,
+  cacheWrite: 3.75,
+  cacheRead: 0.3,
+};
+const PRICE_HAIKU: ModelPrice = {
+  input: 1,
+  output: 5,
+  cacheWrite: 1.25,
+  cacheRead: 0.1,
+};
+
+function priceFor(model: string): ModelPrice {
+  if (model.includes("opus")) return PRICE_OPUS;
+  if (model.includes("haiku")) return PRICE_HAIKU;
+  return PRICE_SONNET;
+}
+
 export function calculateCost(
   model: string,
   inputTokens: number,
   outputTokens: number,
+  cacheCreationTokens = 0,
+  cacheReadTokens = 0,
 ): string {
-  let inputPrice = 0.000003; // Sonnet default
-  let outputPrice = 0.000015;
-
-  if (model.includes("opus")) {
-    inputPrice = 0.000015;
-    outputPrice = 0.000075;
-  }
-
-  return (inputTokens * inputPrice + outputTokens * outputPrice).toFixed(6);
+  const p = priceFor(model);
+  const cost =
+    (inputTokens * p.input +
+      outputTokens * p.output +
+      cacheCreationTokens * p.cacheWrite +
+      cacheReadTokens * p.cacheRead) /
+    1_000_000;
+  return cost.toFixed(6);
 }
 
 export function configureProvider() {
@@ -241,8 +288,63 @@ export interface TelegramConfig {
   chatId: string;
 }
 
+export enum Planner {
+  Builtin = "builtin",
+  Openspec = "openspec",
+}
+
+export enum Command {
+  Init = "init",
+  Run = "run",
+  Plan = "plan",
+  NewTeam = "new-team",
+  Import = "import",
+  Update = "update",
+  Reconfigure = "reconfigure",
+  Validate = "validate",
+  AuditHook = "audit-hook",
+  Audit = "audit",
+  SyncVault = "sync-vault",
+}
+
+export enum AuditStatus {
+  Success = "success",
+  Error = "error",
+}
+
+export enum ImportSource {
+  Windsurf = ".windsurf",
+  Cursor = ".cursor",
+  Github = ".github",
+  Claude = ".claude",
+}
+
+export enum Priority {
+  High = "high",
+  Medium = "medium",
+  Low = "low",
+}
+
+export enum TaskStatus {
+  Success = "SUCCESS",
+  HumanReviewNeeded = "HUMAN_REVIEW_NEEDED",
+  Missing = "MISSING",
+  Failed = "FAILED",
+}
+
+export enum VaultDocType {
+  Agent = "agent",
+  Spec = "spec",
+}
+
+export enum RuleTrigger {
+  Always = "always",
+  Glob = "glob",
+  Manual = "manual",
+}
+
 export interface ProjectConfig {
-  planner: "builtin" | "openspec";
+  planner: Planner;
   team?: string;
   vaultPath?: string;
   /** Extra regex patterns to block in Bash (added to built-in defaults) */
@@ -251,11 +353,13 @@ export interface ProjectConfig {
   externalReview?: ExternalReviewConfig;
   /** Telegram notifications for task lifecycle */
   telegram?: TelegramConfig;
+  /** If false, auto-approve HUMAN_REVIEW_NEEDED tasks without prompting */
+  humanReview?: boolean;
   [key: string]: unknown;
 }
 
 export function loadConfig(): ProjectConfig {
-  const defaults: ProjectConfig = { planner: "builtin" };
+  const defaults: ProjectConfig = { planner: Planner.Builtin };
   if (!fs.existsSync(CONFIG_FILE)) return defaults;
   try {
     const data = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
@@ -279,7 +383,7 @@ const MODEL_ALIASES: Record<string, string> = {
   "claude-sonnet": "sonnet",
   "claude-sonnet-4-6": "sonnet",
   "claude-haiku": "haiku",
-  "claude-haiku-4-5": "haiku",
+  "claude-haiku-4-6": "haiku",
 };
 
 export function resolveModelAlias(model: string): string {

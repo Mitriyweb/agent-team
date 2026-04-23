@@ -18,7 +18,7 @@ maintainable server-side systems.
 ## Phase 1: Technical Foundations
 
 1. **Review Specification**: Understand the API contract,
-   database schema, and service responsibilities from SPEC.md.
+   database schema, and service responsibilities from .claude-loop/reports/task-{id}-spec.md.
 2. **Framework Detection**: Identify the backend framework
    (Express, Fastify, NestJS, Django, FastAPI, Go, etc.)
    and ORM (Prisma, TypeORM, Drizzle, SQLAlchemy, etc.).

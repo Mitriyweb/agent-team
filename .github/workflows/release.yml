@@ -2,11 +2,81 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - package.json
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "If true, detect the version and report but do not create tag or release"
+        type: boolean
+        default: false
+
+# Prevent two concurrent releases from racing on tag creation.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version and tag
+        id: check
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "Triggered by tag: ${{ github.ref_name }}"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          VERSION=$(jq -r .version package.json)
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "::error::package.json has no 'version' field (got: '$VERSION')"
+            exit 1
+          fi
+          TAG="v$VERSION"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "DRY RUN: would create annotated tag $TAG and push it."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "New version detected: $VERSION. Creating tag $TAG."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
   validate:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +85,8 @@ jobs:
       - run: bun run validate
 
   build:
-    needs: validate
+    needs: [prepare, validate]
+    if: needs.prepare.outputs.release == 'true'
     strategy:
       matrix:
         include:
@@ -55,7 +126,11 @@ jobs:
           path: dist/${{ matrix.asset }}
 
   release:
-    needs: build
+    needs: [prepare, build]
+    # Only create the GitHub Release from the tag-triggered run to avoid
+    # duplicate releases when the branch-triggered run pushes a tag that
+    # immediately fires a second workflow.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -71,6 +146,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
           files: |
             install.sh
             dist/agent-team-*

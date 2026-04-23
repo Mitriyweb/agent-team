@@ -1,7 +1,7 @@
 ---
 name: fe-aqa
 description: Automated Frontend QA engineer. Specialized in E2E testing with Playwright, visual regression, and performance auditing.
-model: claude-sonnet
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---
 

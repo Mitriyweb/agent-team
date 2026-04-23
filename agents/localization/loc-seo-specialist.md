@@ -2,7 +2,7 @@
 name: loc-seo-specialist
 description: SEO specialist. Optimizes source English docs and all localized versions for search — adds metadata, improves headings, keywords, and
 structure. Works in parallel with QA after tech-writer approves localizations.
-model: claude-sonnet-4-6
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Teammate
 ---
 

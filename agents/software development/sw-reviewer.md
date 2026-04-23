@@ -1,7 +1,7 @@
 ---
 name: sw-reviewer
 description: Code reviewer. Focuses on style, security, and best practices. Reviews after developer, before QA. Iterates with developer until approved.
-model: claude-opus
+model: opus
 tools: Read, Grep, Glob, Bash, Teammate
 ---
 
@@ -35,10 +35,10 @@ Run the project's linter (detected in Step 0) before manual review:
 ```bash
 # Use whatever lint command was discovered in Step 0
 # Examples: npm run lint, bun run lint, make lint, cargo clippy, etc.
-<detected-lint-command> 2>&1 | tee LINT_RESULTS.txt
+<detected-lint-command> 2>&1 | tee .claude-loop/reports/task-{id}-lint.txt
 ```
 
-- Every lint error is a **Critical** finding in your REVIEW.md.
+- Every lint error is a **Critical** finding in your .claude-loop/reports/task-{id}-review.md.
 - Group lint errors by rule and file for clarity.
 - If the linter cannot run (missing deps, broken config), report as **BLOCKED**.
 
@@ -50,7 +50,7 @@ Review against the project's actual coding guidelines (read in Step 0), not gene
 
 ## Output
 
-Create `REVIEW.md`:
+Create `.claude-loop/reports/task-{id}-review.md`:
 
 ```markdown
 
@@ -78,8 +78,8 @@ Notify team-lead:
 {
   "from": "sw-reviewer", "type": "DONE",
   "subject": "Review complete",
-  "body": "Critical: N. Warnings: N. See REVIEW.md",
-  "files": ["REVIEW.md"],
+  "body": "Critical: N. Warnings: N. See .claude-loop/reports/task-{id}-review.md",
+  "files": [".claude-loop/reports/task-{id}-review.md"],
   "requires_response": false
 }
 ```

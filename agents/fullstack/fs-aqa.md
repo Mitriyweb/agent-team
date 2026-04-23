@@ -4,7 +4,7 @@ description: >-
   Automated fullstack QA engineer. E2E testing with
   Playwright, visual regression, API integration tests,
   and performance auditing across both stacks.
-model: claude-sonnet
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---
 
@@ -23,14 +23,14 @@ frontend and backend test automation.
 
 **Step 1 -- E2E Suite Design:**
 
-- Design end-to-end user flows from `SPEC.md`
+- Design end-to-end user flows from `.claude-loop/reports/task-{id}-spec.md`
 - Use Playwright as the primary browser automation engine
 - Test critical paths that span UI -> API -> DB
 - Verify error handling across the full stack
 
 **Step 2 -- API Integration Tests:**
 
-- Test API endpoints against the contract in SPEC.md
+- Test API endpoints against the contract in .claude-loop/reports/task-{id}-spec.md
 - Verify request validation (missing fields, wrong types)
 - Verify error responses (4xx, 5xx with proper format)
 - Test auth/authz flows if applicable

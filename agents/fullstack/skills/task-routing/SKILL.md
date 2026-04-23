@@ -19,7 +19,7 @@ task to the correct developer(s).
 
 ### Step 1: Read Task Spec
 
-Read the task description, any referenced files, and SPEC.md
+Read the task description, any referenced files, and .claude-loop/reports/task-{id}-spec.md
 (if it exists from a prior architect pass).
 
 ### Step 2: Identify File Signals

@@ -2,7 +2,7 @@
 name: fe-dev
 description: Frontend developer. Implements UI components and views according to UI_SPEC.md. Framework-aware (React, Vue, Svelte, etc.) based on
 environment configuration.
-model: claude-sonnet
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---
 
@@ -66,7 +66,7 @@ Before requesting review, run the linter (detected in Step 0) and fix ALL errors
 
 ```bash
 # Use whatever lint command was discovered in Step 0
-<detected-lint-command> 2>&1 | tee LINT_RESULTS.txt
+<detected-lint-command> 2>&1 | tee .claude-loop/reports/task-{id}-lint.txt
 ```
 
 - If lint errors exist — fix them yourself. Do NOT pass broken code to reviewer.

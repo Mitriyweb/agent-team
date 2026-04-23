@@ -7,8 +7,6 @@ import {
   CYAN,
   calculateCost,
   configureProvider,
-  ExternalReviewAgent,
-  type ExternalReviewConfig,
   err,
   GREEN,
   loadConfig,
@@ -16,12 +14,15 @@ import {
   NC,
   notifyReview,
   ok,
+  Planner,
   RED,
   resolveModelAlias,
+  TaskStatus,
   type TelegramConfig,
   warn,
   YELLOW,
 } from "./common.ts";
+import { runExternalReview } from "./external-review.ts";
 import {
   checkout,
   commitAndPush,
@@ -29,6 +30,11 @@ import {
   createPR,
   getCurrentBranch,
 } from "./git.ts";
+import {
+  archiveOldMemoryTasks,
+  capMemoryForPrompt,
+  MEMORY_PROMPT_TASK_CAP,
+} from "./memory.ts";
 import { tg } from "./notify.ts";
 import {
   archiveOpenSpecChange,
@@ -152,6 +158,19 @@ function loadOpenSpecContext(tasksFile: string): string {
     ctx += `## Design\n\n${fs.readFileSync(designFile, "utf-8").trim()}\n\n`;
   }
   return ctx;
+}
+
+/**
+ * Pull the most review-worthy snippet out of a task report — prefer an
+ * explicit "## Summary" section, fall back to the first ~60 lines.
+ */
+function extractReviewContext(report: string): string {
+  const summaryMatch = report.match(/##\s+Summary\s*\n([\s\S]*?)(?:\n##\s|$)/);
+  const chunk = summaryMatch?.[1]?.trim() ?? report.trim();
+  const lines = chunk.split("\n").slice(0, 60);
+  let out = lines.join("\n");
+  if (out.length > 2000) out = `${out.slice(0, 2000)}\n... (truncated)`;
+  return out;
 }
 
 function findMdFiles(dir: string): string[] {
@@ -492,7 +511,7 @@ export class TaskRunner {
     const config = loadConfig();
     this.telegramConfig = config.telegram;
 
-    if (config.planner === "openspec" && !this.options.roadmapFile) {
+    if (config.planner === Planner.Openspec && !this.options.roadmapFile) {
       const openspecTasks = await selectOpenSpecTasks();
       if (openspecTasks) {
         this.roadmap = openspecTasks;
@@ -515,7 +534,7 @@ export class TaskRunner {
         await planRoadmap("ROADMAP.md");
       }
       // After planning, re-detect openspec
-      if (config.planner === "openspec") {
+      if (config.planner === Planner.Openspec) {
         const openspecTasks = await selectOpenSpecTasks();
         if (openspecTasks) {
           this.roadmap = openspecTasks;
@@ -539,6 +558,21 @@ export class TaskRunner {
     const doneTasks = this.getRoadmapTasks("x");
     const failedTasks = this.getRoadmapTasks("!");
     this.currentTaskNum = doneTasks.length + failedTasks.length;
+
+    // Validate --stop-at target exists, else warn (loop would run all tasks).
+    if (this.options.stopAt) {
+      const allIds = [
+        ...doneTasks,
+        ...failedTasks,
+        ...this.getRoadmapTasks(" "),
+        ...this.getRoadmapTasks("~"),
+      ].map((l) => this.getTaskId(l));
+      if (!allIds.includes(this.options.stopAt)) {
+        warn(
+          `--stop-at ${this.options.stopAt}: no such task id in roadmap. Known ids: ${allIds.join(", ") || "(none)"}.`,
+        );
+      }
+    }
 
     TerminalUI.printDashboard({
       done: doneTasks.length,
@@ -566,6 +600,20 @@ export class TaskRunner {
           );
           this.markStatus(tid, " ", "x");
           continue;
+        }
+      }
+
+      // If stop-at target is already completed (e.g. recovered from prior
+      // run), bail out before picking up later tasks.
+      if (this.options.stopAt) {
+        const stopDone = this.getRoadmapTasks("x").some(
+          (l) => this.getTaskId(l) === this.options.stopAt,
+        );
+        if (stopDone && tid !== this.options.stopAt) {
+          log(
+            `Stop-at task ${BLUE}#${this.options.stopAt}${NC} already complete — stopping before #${tid}.`,
+          );
+          break;
         }
       }
 
@@ -614,7 +662,18 @@ export class TaskRunner {
       }
     }
 
-    log("Loop finished.");
+    if (!this.options.all) {
+      const pending = this.getRoadmapTasks(" ").length;
+      if (pending > 0) {
+        log(
+          `Loop finished (single-task mode). ${pending} task(s) still pending — re-run with ${BLUE}--all${NC} to process them.`,
+        );
+      } else {
+        log("Loop finished.");
+      }
+    } else {
+      log("Loop finished.");
+    }
   }
 
   private getTaskAgents(line: string): string[] {
@@ -741,10 +800,12 @@ export class TaskRunner {
         // Extract TASK_STATUS from result (may be in JSON .result or raw stdout)
         const taskStatus = this.extractTaskStatus(stdoutBuffer);
 
-        if (exitCode === 0 && taskStatus === "HUMAN_REVIEW_NEEDED") {
+        if (exitCode === 0 && taskStatus === TaskStatus.HumanReviewNeeded) {
           const approved = await this.promptHumanReview(taskId, desc);
           if (approved) {
-            ok(`Task #${taskId} review approved — continuing.`);
+            ok(
+              `Task #${taskId} review approved${this.options.all ? " — continuing to next task." : " — single-task mode (pass --all to process remaining tasks)."}`,
+            );
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
             this.runExternalReview(taskId, desc);
@@ -766,9 +827,10 @@ export class TaskRunner {
 
         if (
           exitCode === 0 &&
-          (taskStatus === "SUCCESS" || taskStatus === "MISSING")
+          (taskStatus === TaskStatus.Success ||
+            taskStatus === TaskStatus.Missing)
         ) {
-          if (taskStatus === "MISSING") {
+          if (taskStatus === TaskStatus.Missing) {
             warn(
               `Task #${taskId} — no TASK_STATUS line found, treating exit 0 as success.`,
             );
@@ -794,7 +856,7 @@ export class TaskRunner {
           return true;
         }
 
-        if (exitCode === 0 && taskStatus.startsWith("FAILED")) {
+        if (exitCode === 0 && taskStatus.startsWith(TaskStatus.Failed)) {
           warn(`Task #${taskId} agent reported failure: ${taskStatus}`);
         } else {
           warn(
@@ -864,7 +926,8 @@ export class TaskRunner {
     this.markStatus(taskId, " ", "~");
     const spec = this.getTaskSpec(taskId);
     const prompt = this.buildPrompt(taskId, desc, spec);
-    const team = this.options.team || "software development";
+    const team =
+      this.options.team || loadConfig().team || "software development";
 
     let attempt = 0;
     const retryLimit = this.options.retryLimit || 0;
@@ -893,21 +956,15 @@ export class TaskRunner {
       }, 1000);
 
       try {
+        // Let runAgent resolve tools from the agent's frontmatter. Hardcoding
+        // them here would override intentionally restricted sets (e.g. team-lead
+        // without Bash, which enforces delegation).
         const result = await runAgent({
           team,
           role: agents[0] || "team-lead",
           prompt,
           maxTurns: 30,
           model: this.teamLeadModel,
-          allowedTools: [
-            "Read",
-            "Write",
-            "Edit",
-            "Bash",
-            "Glob",
-            "Grep",
-            "Agent",
-          ],
         });
 
         clearInterval(timer);
@@ -939,10 +996,12 @@ export class TaskRunner {
 
         const taskStatus = this.extractTaskStatus(result.output);
 
-        if (taskStatus === "HUMAN_REVIEW_NEEDED") {
+        if (taskStatus === TaskStatus.HumanReviewNeeded) {
           const approved = await this.promptHumanReview(taskId, desc);
           if (approved) {
-            ok(`Task #${taskId} review approved — continuing.`);
+            ok(
+              `Task #${taskId} review approved${this.options.all ? " — continuing to next task." : " — single-task mode (pass --all to process remaining tasks)."}`,
+            );
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
             this.runExternalReview(taskId, desc);
@@ -964,9 +1023,10 @@ export class TaskRunner {
 
         if (
           !result.timedOut &&
-          (taskStatus === "SUCCESS" || taskStatus === "MISSING")
+          (taskStatus === TaskStatus.Success ||
+            taskStatus === TaskStatus.Missing)
         ) {
-          if (taskStatus === "MISSING") {
+          if (taskStatus === TaskStatus.Missing) {
             warn(
               `Task #${taskId} — no TASK_STATUS line found, treating as success.`,
             );
@@ -992,7 +1052,7 @@ export class TaskRunner {
           return true;
         }
 
-        if (taskStatus.startsWith("FAILED")) {
+        if (taskStatus.startsWith(TaskStatus.Failed)) {
           warn(`Task #${taskId} agent reported failure: ${taskStatus}`);
         } else {
           warn(
@@ -1042,7 +1102,7 @@ export class TaskRunner {
       if (jsonMatch?.[1]) return jsonMatch[1].trim();
     } catch {}
 
-    return "MISSING";
+    return TaskStatus.Missing;
   }
 
   private saveTaskLog(
@@ -1107,16 +1167,25 @@ export class TaskRunner {
     try {
       const resp = JSON.parse(stdoutBuffer);
       if (resp.usage) {
+        const cacheCreate = resp.usage.cache_creation_input_tokens ?? 0;
+        const cacheRead = resp.usage.cache_read_input_tokens ?? 0;
         const cost = parseFloat(
           calculateCost(
             resp.model || "",
             resp.usage.input_tokens,
             resp.usage.output_tokens,
+            cacheCreate,
+            cacheRead,
           ),
         );
         this.saveCost(taskId, cost);
+        const cacheTotal = cacheCreate + cacheRead;
+        const cacheRatio =
+          cacheTotal > 0
+            ? ` | cache: ${((cacheRead / cacheTotal) * 100).toFixed(0)}% hit`
+            : "";
         log(
-          `Task cost: ${YELLOW}$${cost.toFixed(4)}${NC} (Total: ${YELLOW}$${this.cumulativeCost.toFixed(4)}${NC})`,
+          `Task cost: ${YELLOW}$${cost.toFixed(4)}${NC} (Total: ${YELLOW}$${this.cumulativeCost.toFixed(4)}${NC})${cacheRatio}`,
         );
       }
     } catch (_e: unknown) {}
@@ -1126,24 +1195,57 @@ export class TaskRunner {
     taskId: string,
     desc: string,
   ): Promise<boolean> {
+    const config = loadConfig();
+    if (config.humanReview === false) {
+      ok(
+        `Task #${taskId} flagged for review — auto-approving (humanReview=false).`,
+      );
+      return true;
+    }
+
     notifyReview();
     tg.review("team-lead", `#${taskId} ${desc}`, this.telegramConfig);
 
     console.log("");
     console.log(
-      `  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}`,
+      `${RED}╔══════════════════════════════════════════════════════════════╗${NC}`,
     );
+    console.log(`${RED}║${NC} ${YELLOW}HUMAN REVIEW NEEDED${NC}`);
+    console.log(`${RED}║${NC} Task ${BLUE}#${taskId}${NC}: ${desc}`);
     console.log(
-      `  ${RED}║${NC}  ${YELLOW}HUMAN REVIEW NEEDED${NC}                                       ${RED}║${NC}`,
+      `${RED}╚══════════════════════════════════════════════════════════════╝${NC}`,
     );
+
+    // Show team-lead's summary inline so reviewer has context without
+    // jumping to another file.
+    const reportFile = path.join(REPORTS_DIR, `task-${taskId}.md`);
+    if (fs.existsSync(reportFile)) {
+      const report = fs.readFileSync(reportFile, "utf-8");
+      const summary = extractReviewContext(report);
+      if (summary) {
+        console.log(`\n${CYAN}── Team-lead summary ──${NC}`);
+        console.log(summary);
+      }
+    }
+
+    // Show files changed (git status) so reviewer sees the blast radius.
+    try {
+      const gitProc = Bun.spawnSync(["git", "status", "--short"], {
+        stdout: "pipe",
+        stderr: "ignore",
+      });
+      const changes = new TextDecoder().decode(gitProc.stdout).trim();
+      if (changes) {
+        console.log(`\n${CYAN}── Files changed ──${NC}`);
+        console.log(
+          changes.split("\n").slice(0, 20).join("\n") +
+            (changes.split("\n").length > 20 ? "\n  ... (truncated)" : ""),
+        );
+      }
+    } catch (_e) {}
+
     console.log(
-      `  ${RED}║${NC}  Task ${BLUE}#${taskId}${NC}: ${desc.slice(0, 44).padEnd(44)} ${RED}║${NC}`,
-    );
-    console.log(
-      `  ${RED}╚══════════════════════════════════════════════════════════════╝${NC}`,
-    );
-    console.log(
-      `  Check reports in ${BLUE}.claude-loop/reports/task-${taskId}.md${NC}`,
+      `\n${CYAN}Full report:${NC} .claude-loop/reports/task-${taskId}.md`,
     );
     console.log("");
 
@@ -1193,13 +1295,20 @@ export class TaskRunner {
       const instructions = fs.readFileSync(librarianAgent, "utf-8");
       const report = fs.readFileSync(reportSource, "utf-8");
       const prompt = `${instructions}\n\n---\n\n## Task Report\n\n${report}`;
+
+      // Read librarian's model from its frontmatter (default: haiku for cheap curation)
+      const fmMatch = instructions.match(/^---\n([\s\S]*?)\n---/);
+      const modelMatch = fmMatch?.[1]?.match(/^model:\s*(.+)$/m);
+      const rawModel = modelMatch?.[1]?.trim() ?? "haiku";
+      const librarianModel = resolveModelAlias(rawModel);
+
       const proc = Bun.spawnSync(
         [
           "claude",
           "-p",
           prompt,
           "--model",
-          "sonnet",
+          librarianModel,
           "--max-turns",
           "10",
           "--allowedTools",
@@ -1226,6 +1335,14 @@ export class TaskRunner {
     } catch (e) {
       warn(`Librarian error: ${e}`);
     }
+
+    // Opportunistic: rotate old memory entries out of the active file so
+    // future prompts stay small. No-op until threshold is reached.
+    try {
+      archiveOldMemoryTasks(MEMORY_FILE);
+    } catch (e) {
+      warn(`Memory archive error: ${e}`);
+    }
   }
 
   /**
@@ -1233,21 +1350,6 @@ export class TaskRunner {
    * Invoked after task completion when externalReview is configured.
    */
   private runExternalReview(taskId: string, desc: string) {
-    const config = loadConfig();
-    const reviewConfig = config.externalReview;
-    if (!reviewConfig) return;
-
-    const cmd = this.resolveExternalCommand(reviewConfig);
-    if (!cmd) {
-      warn(`External review agent "${reviewConfig.agent}" not found in PATH.`);
-      return;
-    }
-
-    log(
-      `Running external review via ${CYAN}${reviewConfig.agent}${NC} for task #${taskId}...`,
-    );
-
-    // Build review prompt
     const reportFile = path.join(REPORTS_DIR, `task-${taskId}.md`);
     const reportExists = fs.existsSync(reportFile);
     const reviewPrompt = [
@@ -1259,93 +1361,26 @@ export class TaskRunner {
       .filter(Boolean)
       .join("\n");
 
-    try {
-      const args = this.buildExternalArgs(reviewConfig, reviewPrompt);
-      const proc = Bun.spawnSync(args, {
-        stdio: ["inherit", "pipe", "pipe"],
-        timeout: 300_000, // 5 min
-      });
-
-      const stdout = new TextDecoder().decode(proc.stdout).trim();
-      const stderr = new TextDecoder().decode(proc.stderr).trim();
-
-      // Save review output
-      const reviewFile = path.join(
-        REPORTS_DIR,
-        `task-${taskId}-external-review.md`,
-      );
-      const content = [
-        `# External Review — Task #${taskId}`,
-        `**Agent:** ${reviewConfig.agent}`,
-        `**Date:** ${new Date().toISOString()}`,
-        "",
-        stdout || "(no output)",
-        stderr ? `\n## Stderr\n${stderr}` : "",
-      ].join("\n");
-      fs.writeFileSync(reviewFile, content);
-
-      if (proc.success) {
-        ok(`External review saved: ${BLUE}${reviewFile}${NC}`);
-      } else {
-        warn(
-          `External review exited with code ${proc.exitCode} — output saved to ${reviewFile}`,
-        );
-      }
-    } catch (e) {
-      warn(`External review error: ${e}`);
-    }
-  }
-
-  private resolveExternalCommand(config: ExternalReviewConfig): string | null {
-    if (config.command) return config.command;
-    // Enum values are the CLI command names
-    const cmd = config.agent as string;
-    if (!cmd) return null;
-    const which = Bun.spawnSync(["which", cmd], {
-      stdio: ["pipe", "pipe", "pipe"],
+    runExternalReview({
+      subject: `task #${taskId}`,
+      prompt: reviewPrompt,
+      outputFile: path.join(REPORTS_DIR, `task-${taskId}-external-review.md`),
     });
-    return which.success ? cmd : null;
-  }
-
-  private buildExternalArgs(
-    config: ExternalReviewConfig,
-    prompt: string,
-  ): string[] {
-    const cmd = config.command || config.agent;
-    switch (config.agent) {
-      case ExternalReviewAgent.Codex:
-        return [cmd, "-q", prompt];
-      case ExternalReviewAgent.Claude:
-        return [
-          cmd,
-          "-p",
-          prompt,
-          "--max-turns",
-          "10",
-          "--output-format",
-          "text",
-        ];
-      case ExternalReviewAgent.Devin:
-        return [cmd, "run", prompt];
-      case ExternalReviewAgent.Aider:
-        return [cmd, "--message", prompt, "--yes"];
-      case ExternalReviewAgent.Gemini:
-        return [cmd, "-p", prompt];
-      default:
-        return [cmd, prompt];
-    }
   }
 
   private buildPrompt(taskId: string, desc: string, spec: string): string {
-    const team = this.options.team || "software development";
+    const team =
+      this.options.team || loadConfig().team || "software development";
     const REPORTS_DIR_VAL = REPORTS_DIR;
 
-    // Inject shared memory so each task sees what previous tasks learned
+    // Inject shared memory so each task sees what previous tasks learned.
+    // Cap to the most recent N tasks to keep prompt size bounded.
     let memorySection = "";
     if (fs.existsSync(MEMORY_FILE)) {
       const memory = fs.readFileSync(MEMORY_FILE, "utf-8").trim();
       if (memory && memory !== "# Project Memory") {
-        memorySection = `\n## Shared memory (from previous tasks)\n\n${memory}\n`;
+        const capped = capMemoryForPrompt(memory, MEMORY_PROMPT_TASK_CAP);
+        memorySection = `\n## Shared memory (from previous tasks)\n\n${capped}\n`;
       }
     }
 
@@ -1385,16 +1420,14 @@ ${memorySection}${vaultSection}
 
 1. Read the specification and PROTOCOL.md to understand the workflow and available teammates.
 2. Explore the codebase to understand the current state.
+   NEVER read full log/coverage artifacts (*.log, *-coverage.*, multi-MB files) yourself —
+   ask the QA/AQA agent for a short summary. Reading them directly burns tokens on Opus
+   and almost always pulls in content that belongs in a delegated sub-agent's context.
 3. Delegate work to teammates following the communication graph in PROTOCOL.md.
-4. After the task, append findings to \`.claude-loop/memory.md\`:
-   \`\`\`
-   ## Task #${taskId}: ${desc}
-   - [key decisions]
-   - [files changed and why]
-   - [gotchas discovered]
-   \`\`\`
-5. Write a report to ${REPORTS_DIR_VAL}/task-${taskId}.md (what was done, who did what, results).
-6. On your VERY LAST LINE, output exactly one of:
+4. Write a short report to ${REPORTS_DIR_VAL}/task-${taskId}.md (what was done, who did what, key results only — do not paste raw artifacts).
+   Do NOT touch \`.claude-loop/memory.md\` — the \`librarian\` agent curates it automatically
+   after each task from your task report.
+5. On your VERY LAST LINE, output exactly one of:
    - TASK_STATUS: SUCCESS
    - TASK_STATUS: HUMAN_REVIEW_NEEDED
    - TASK_STATUS: FAILED: <reason>

@@ -11,12 +11,23 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BLUE, CYAN, err, GREEN, log, NC, ok, warn } from "./common.ts";
+import {
+  BLUE,
+  CYAN,
+  err,
+  GREEN,
+  ImportSource,
+  log,
+  NC,
+  ok,
+  RuleTrigger,
+  warn,
+} from "./common.ts";
 
 interface ImportedRule {
   name: string;
   description: string;
-  trigger: "always" | "glob" | "manual";
+  trigger: RuleTrigger;
   glob?: string;
   body: string;
   source: string;
@@ -34,32 +45,44 @@ export async function importConfig(sourcePath: string) {
   const basename = path.basename(sourcePath);
   let rules: ImportedRule[] = [];
 
-  if (basename === ".windsurf" || sourcePath.endsWith(".windsurf")) {
+  if (
+    basename === ImportSource.Windsurf ||
+    sourcePath.endsWith(ImportSource.Windsurf)
+  ) {
     rules = importWindsurf(sourcePath);
-  } else if (basename === ".cursor" || sourcePath.endsWith(".cursor")) {
+  } else if (
+    basename === ImportSource.Cursor ||
+    sourcePath.endsWith(ImportSource.Cursor)
+  ) {
     rules = importCursor(sourcePath);
-  } else if (basename === ".github" || sourcePath.endsWith(".github")) {
+  } else if (
+    basename === ImportSource.Github ||
+    sourcePath.endsWith(ImportSource.Github)
+  ) {
     rules = importCopilot(sourcePath);
-  } else if (basename === ".claude" || sourcePath.endsWith(".claude")) {
+  } else if (
+    basename === ImportSource.Claude ||
+    sourcePath.endsWith(ImportSource.Claude)
+  ) {
     rules = importClaude(sourcePath);
   } else if (
-    fs.existsSync(path.join(sourcePath, ".windsurf")) ||
+    fs.existsSync(path.join(sourcePath, ImportSource.Windsurf)) ||
     fs.existsSync(path.join(sourcePath, ".windsurfrules"))
   ) {
     // Path is a project root, detect tool
-    const wsDir = path.join(sourcePath, ".windsurf");
+    const wsDir = path.join(sourcePath, ImportSource.Windsurf);
     if (fs.existsSync(wsDir)) {
       rules = importWindsurf(wsDir);
     } else {
       rules = importWindsurfLegacy(path.join(sourcePath, ".windsurfrules"));
     }
-  } else if (fs.existsSync(path.join(sourcePath, ".cursor"))) {
-    rules = importCursor(path.join(sourcePath, ".cursor"));
-  } else if (fs.existsSync(path.join(sourcePath, ".github"))) {
-    rules = importCopilot(path.join(sourcePath, ".github"));
+  } else if (fs.existsSync(path.join(sourcePath, ImportSource.Cursor))) {
+    rules = importCursor(path.join(sourcePath, ImportSource.Cursor));
+  } else if (fs.existsSync(path.join(sourcePath, ImportSource.Github))) {
+    rules = importCopilot(path.join(sourcePath, ImportSource.Github));
   } else {
     err(
-      `Cannot detect source type from: ${sourcePath}\nSupported: .windsurf, .cursor, .github, .claude`,
+      `Cannot detect source type from: ${sourcePath}\nSupported: ${ImportSource.Windsurf}, ${ImportSource.Cursor}, ${ImportSource.Github}, ${ImportSource.Claude}`,
     );
   }
 
@@ -75,8 +98,8 @@ export async function importConfig(sourcePath: string) {
   if (!fs.existsSync(rulesDir)) fs.mkdirSync(rulesDir, { recursive: true });
 
   // Append always-on rules to CLAUDE.md
-  const alwaysRules = rules.filter((r) => r.trigger === "always");
-  const otherRules = rules.filter((r) => r.trigger !== "always");
+  const alwaysRules = rules.filter((r) => r.trigger === RuleTrigger.Always);
+  const otherRules = rules.filter((r) => r.trigger !== RuleTrigger.Always);
 
   if (alwaysRules.length > 0) {
     appendToClaudeMd(alwaysRules);
@@ -138,25 +161,25 @@ function importWindsurfLegacy(filePath: string): ImportedRule[] {
     {
       name: "windsurfrules",
       description: "Imported from .windsurfrules",
-      trigger: "always",
+      trigger: RuleTrigger.Always,
       body: content,
       source: ".windsurfrules",
     },
   ];
 }
 
-function mapWindsurfTrigger(trigger?: string): "always" | "glob" | "manual" {
+function mapWindsurfTrigger(trigger?: string): RuleTrigger {
   switch (trigger) {
     case "always_on":
-      return "always";
+      return RuleTrigger.Always;
     case "glob":
-      return "glob";
+      return RuleTrigger.Glob;
     case "manual":
-      return "manual";
+      return RuleTrigger.Manual;
     case "model_decision":
-      return "manual";
+      return RuleTrigger.Manual;
     default:
-      return "always";
+      return RuleTrigger.Always;
   }
 }
 
@@ -177,13 +200,13 @@ function importCursor(cursorDir: string): ImportedRule[] {
         parsed.frontmatter.alwaysApply === "true";
       const globs = parsed.frontmatter.globs;
 
-      let trigger: "always" | "glob" | "manual";
+      let trigger: RuleTrigger;
       if (alwaysApply) {
-        trigger = "always";
+        trigger = RuleTrigger.Always;
       } else if (globs) {
-        trigger = "glob";
+        trigger = RuleTrigger.Glob;
       } else {
-        trigger = "manual";
+        trigger = RuleTrigger.Manual;
       }
 
       rules.push({
@@ -204,7 +227,7 @@ function importCursor(cursorDir: string): ImportedRule[] {
     rules.push({
       name: "cursorrules",
       description: "Imported from .cursorrules",
-      trigger: "always",
+      trigger: RuleTrigger.Always,
       body: content,
       source: ".cursorrules",
     });
@@ -225,7 +248,7 @@ function importCopilot(githubDir: string): ImportedRule[] {
     rules.push({
       name: "copilot-instructions",
       description: "Imported from .github/copilot-instructions.md",
-      trigger: "always",
+      trigger: RuleTrigger.Always,
       body: content,
       source: ".github/copilot-instructions.md",
     });
@@ -238,7 +261,7 @@ function importCopilot(githubDir: string): ImportedRule[] {
     rules.push({
       name: "copilot-agent",
       description: "Imported from .github/copilot/AGENT.md",
-      trigger: "always",
+      trigger: RuleTrigger.Always,
       body: content,
       source: ".github/copilot/AGENT.md",
     });
@@ -264,7 +287,7 @@ function importClaude(claudeDir: string): ImportedRule[] {
       rules.push({
         name: "claude-project-rules",
         description: "Imported from CLAUDE.md",
-        trigger: "always",
+        trigger: RuleTrigger.Always,
         body: cleaned,
         source: "CLAUDE.md",
       });
@@ -280,7 +303,7 @@ function importClaude(claudeDir: string): ImportedRule[] {
       rules.push({
         name: path.basename(file, ".md"),
         description: `Imported from .claude/rules/${file}`,
-        trigger: "always",
+        trigger: RuleTrigger.Always,
         body: content,
         source: `.claude/rules/${file}`,
       });

@@ -13,7 +13,7 @@ Your goal is to implement solutions that are robust, efficient, and follow stric
 
 ## Phase 1: Technical Foundations
 
-1. **Review Specification**: Thoroughly understand the Architect's visual, structural, and **technical** requirements (`SPEC.md`).
+1. **Review Specification**: Thoroughly understand the Architect's visual, structural, and **technical** requirements (`.claude-loop/reports/task-{id}-spec.md`).
 2. **Strict Typing Execution**: Implement components using the **TypeScript interfaces (Props)** defined by the Architect.
    Provide internal typing for state, refs, and effects.
 3. **Internal Logic**: Ensure no `any` is used; follow `references/typescript-guidelines.md` for all implementation details.

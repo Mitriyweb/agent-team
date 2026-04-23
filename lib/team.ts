@@ -12,6 +12,7 @@ import {
   log,
   NC,
   ok,
+  Planner,
   type ProjectConfig,
   saveConfig,
   type TelegramConfig,
@@ -92,7 +93,7 @@ interface InitProjectOptions {
   teamName?: string;
   humanReview?: boolean;
   sourceDir?: string;
-  planner?: "builtin" | "openspec";
+  planner?: Planner;
   vaultPath?: string;
   externalReview?: string;
   telegram?: TelegramConfig;
@@ -103,7 +104,7 @@ export async function initProject(options: InitProjectOptions) {
     teamName,
     humanReview = true,
     sourceDir = ".",
-    planner = "builtin",
+    planner = Planner.Builtin,
     vaultPath,
     externalReview,
     telegram,
@@ -150,14 +151,15 @@ export async function initProject(options: InitProjectOptions) {
   if (telegram) {
     config.telegram = telegram;
   }
+  config.humanReview = humanReview;
   saveConfig(config);
 
   // Manage Obsidian vault symlink
   manageVaultSymlink(vaultPath);
-  ok(`Planner: ${planner === "openspec" ? "OpenSpec" : "built-in"}`);
+  ok(`Planner: ${planner === Planner.Openspec ? "OpenSpec" : "built-in"}`);
 
   // Initialize OpenSpec if selected
-  if (planner === "openspec") {
+  if (planner === Planner.Openspec) {
     const invocation = detectOpenSpecInvocation();
     if (!invocation) {
       err(
@@ -389,13 +391,15 @@ The **librarian** agent runs automatically after each completed task to curate m
 - Syncs agent-specific gotchas to \`.claude/agents/skills/\`
 
 ## External Review
+
 ${(() => {
   const cfg = loadConfig();
-  if (cfg.externalReview) {
-    return `\nAll code produced by agents will be independently reviewed by agent ${cfg.externalReview.agent} after each task completion.\nDo NOT skip or bypass this review step — it is mandatory when external review is enabled.\n`;
+  if (cfg.externalReview?.agent) {
+    return `All plans and code produced by agents will be independently reviewed by \`${cfg.externalReview.agent}\` — after planning and after each task completion.\nDo NOT skip or bypass this review step — it is mandatory.\n`;
   }
-  return "";
+  return "External review is not configured. To enable an independent second-opinion review (after planning and after each task), run `agent-team reconfigure` and select a review agent (codex, claude, gemini, devin, or aider).\n";
 })()}
+
 ## Reports
 
 - Task reports: .claude-loop/reports/task-{id}.md

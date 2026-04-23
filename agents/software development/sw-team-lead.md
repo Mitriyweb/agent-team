@@ -2,8 +2,9 @@
 name: sw-team-lead
 description: Main orchestrator. Launch when you need the full team to execute a task — it decomposes work, delegates to agents, and synthesizes
 results. Never writes code itself.
-model: claude-opus
-tools: Read, Write, Bash, Glob, Grep, Task, Teammate
+model: opus
+tools: Read, Write, Glob, Grep, Task, Teammate
+allow_sub_agents: true
 ---
 
 # Team Lead
@@ -100,7 +101,7 @@ Spawn a `sw-architect` via the `Task` tool.
 
 - **Working Directory**: `agents/software development/architect`
 
-- **Instruction**: "Design [task] and freeze SPEC.md. It must include explicit Acceptance Criteria (AC1, AC2, etc.). Output: SPEC.md"
+- **Instruction**: "Design [task] and freeze .claude-loop/reports/task-{id}-spec.md. It must include explicit Acceptance Criteria (AC1, AC2, etc.). Output: .claude-loop/reports/task-{id}-spec.md"
 
 - **Permission Mode**: `readOnly`
 
@@ -112,13 +113,15 @@ Spawn a `sw-developer` via the `Task` tool.
 
 - **Working Directory**: `agents/software development/developer`
 
-- **Instruction**: "Implement per SPEC.md. You must provide concrete proof for every AC in EVIDENCE.md before requesting review."
+- **Instruction**: "Implement per .claude-loop/reports/task-{id}-spec.md.
+  You must provide concrete proof for every AC in
+  .claude-loop/reports/task-{id}-evidence.md before requesting review."
 
 - **Permission Mode**: `acceptEdits`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Task` (for consulting the architect)
 
-Iterate until the architect (spawned again if needed) approves the implementation in EVIDENCE.md.
+Iterate until the architect (spawned again if needed) approves the implementation in .claude-loop/reports/task-{id}-evidence.md.
 
 ### Phase 3 — Fresh Verification
 
@@ -129,8 +132,8 @@ Spawn a `sw-reviewer` and `sw-qa` via the `Task` tool.
 - **Working Directory**: `agents/software development/reviewer`
 
 - **Instruction**: "Follow Project Rules Discovery from sw-PROTOCOL.md first.
-  Run the linter. Review code style and security per SPEC.md and
-  discovered project rules. Output: REVIEW.md"
+  Run the linter. Review code style and security per .claude-loop/reports/task-{id}-spec.md and
+  discovered project rules. Output: .claude-loop/reports/task-{id}-review.md"
 
 - **Permission Mode**: `default`
 
@@ -142,13 +145,13 @@ Spawn a `sw-reviewer` and `sw-qa` via the `Task` tool.
 
 - **Instruction**: "Follow Project Rules Discovery from sw-PROTOCOL.md first.
   Write lint-compliant tests. Run ALL three quality gates
-  (tests, lint, build). Output: VERDICT.json and QA_REPORT.md"
+  (tests, lint, build). Output: .claude-loop/reports/task-{id}-verdict.json and .claude-loop/reports/task-{id}-qa-report.md"
 
 - **Permission Mode**: `default`
 
 - **Allowed Tools**: `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`
 
-Iterate with the developer if any quality gate fails (VERDICT.json contains FAIL).
+Iterate with the developer if any quality gate fails (task-{id}-verdict.json contains FAIL).
 
 ### Task-Type Shortcut: Test Writing / Coverage Tasks
 
@@ -162,30 +165,22 @@ For test-only tasks, phases 1-3 are replaced by this streamlined flow — but de
    "Review the test code written by sw-developer.
    Check test quality, coverage gaps, lint compliance,
    and adherence to project testing rules.
-   Output: TEST_REVIEW.md"
+   Output: .claude-loop/reports/task-{id}-test-review.md"
 3. **Spawn sw-qa** — instruction:
    "Run ALL three quality gates (tests, lint, build).
    Verify test coverage meets thresholds.
-   Output: VERDICT.json and QA_REPORT.md"
+   Output: .claude-loop/reports/task-{id}-verdict.json and .claude-loop/reports/task-{id}-qa-report.md"
 4. If any agent reports issues → iterate with sw-developer
 5. Proceed to Phase 3.5 only after all three agents report DONE
 
-### Phase 3.5 — Independent Gate Verification (MANDATORY)
+### Phase 3.5 — Gate Verification via QA
 
-Before accepting DONE from QA or Reviewer, team-lead MUST independently verify:
-
-```bash
-# Detect lint/test/build commands from the project manifest (package.json, Makefile, etc.)
-# Run all three gates yourself — do NOT trust agent reports blindly
-<detected-lint-command> 2>&1 | tail -5     # Check for zero errors
-<detected-test-command> 2>&1 | tail -10    # Check for zero failures
-<detected-build-command> 2>&1 | tail -5    # Check for successful build
-```
-
-If any gate fails despite QA reporting PASS:
-
-1. Send QA a `BUG_REPORT` with the gate output
-2. Do NOT proceed to Phase 4
+You do NOT run lint/test/build yourself — you have no `Bash` tool.
+If you doubt QA's verdict, spawn `sw-qa` again with instruction
+"Re-run all three gates from a clean working directory and produce
+a new `.claude-loop/reports/task-{id}-verdict.json`."
+The verdict file is the single source of truth; refuse to proceed
+to Phase 4 unless it reports PASS.
 
 ### Phase 4 — Summary
 

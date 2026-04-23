@@ -78,7 +78,7 @@ fs-team-lead ---+---> fs-architect <---> fe-dev <---> fs-reviewer
 - `fs-team-lead` coordinates all agents, **never writes code**
 - `fs-team-lead` **routes tasks** to fe-dev, be-dev, or both
   based on what needs to change (see Routing Rules below)
-- `fs-architect` designs UI + API together, writes SPEC.md
+- `fs-architect` designs UI + API together, writes .claude-loop/reports/task-{id}-spec.md
 - `fe-dev` implements UI components, consumes APIs
 - `be-dev` implements APIs, services, DB migrations
 - `fe-dev` and `be-dev` sync on API contracts when both are
@@ -115,7 +115,7 @@ Analyze the task description, changed files, and spec to determine scope:
 
 When a task requires both frontend and backend changes:
 
-1. **Architect** defines the API contract in SPEC.md
+1. **Architect** defines the API contract in .claude-loop/reports/task-{id}-spec.md
    (endpoints, request/response shapes, error codes)
 2. **be-dev** implements the API first (or in parallel if
    contract is stable)

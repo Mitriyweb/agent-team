@@ -11,11 +11,14 @@ import {
   log,
   NC,
   ok,
+  Planner,
+  Priority,
   RED,
   resolveModelAlias,
   warn,
   YELLOW,
 } from "./common.ts";
+import { runExternalReview } from "./external-review.ts";
 
 function openspecCmd(): string[] {
   const cmd = detectOpenSpecInvocation();
@@ -105,7 +108,7 @@ Complete instructions for the agent.
 export async function planRoadmap(inputFile = "ROADMAP.md", model?: string) {
   const config = loadConfig();
 
-  if (config.planner === "openspec") {
+  if (config.planner === Planner.Openspec) {
     await planWithOpenSpec(inputFile);
   } else {
     await planWithBuiltin(inputFile, model);
@@ -430,6 +433,8 @@ async function planWithOpenSpec(inputFile: string) {
   } else {
     warn(`No tasks.md in ${changeDir}. Create it manually or re-run plan.`);
   }
+
+  reviewPlanExternally(changeDir, `plan openspec/${changeName}`);
 }
 
 /**
@@ -536,11 +541,34 @@ async function planWithBuiltin(inputFile: string, model?: string) {
   if (response.includes("PLAN_READY")) {
     ok(`Plan created in ${CYAN}${mins}m ${secs}s${NC}: ${planFile}`);
     showTaskSummary(planFile);
+    reviewPlanExternally(planFile, `plan ${planFile}`);
   } else {
     warn(
       "Team-lead finished but PLAN_READY not confirmed. Check tasks/plan.md",
     );
   }
+}
+
+/**
+ * If external review is configured, ask the external CLI agent to review
+ * the generated plan before any task execution. Non-fatal on failure.
+ */
+function reviewPlanExternally(planArtifact: string, subject: string) {
+  if (!fs.existsSync(planArtifact)) return;
+  const reviewPrompt = [
+    "Review this implementation plan for feasibility, completeness, and risks.",
+    `Plan location: ${planArtifact}`,
+    "Focus on: missing steps, wrong ordering, unclear acceptance criteria, hidden dependencies.",
+    "Output a concise review with findings.",
+  ].join("\n");
+
+  const reportsDir = path.join(".claude-loop", "reports");
+  const outName = `plan-${path.basename(planArtifact).replace(/[^\w.-]/g, "_")}-external-review.md`;
+  runExternalReview({
+    subject,
+    prompt: reviewPrompt,
+    outputFile: path.join(reportsDir, outName),
+  });
 }
 
 function showTaskSummary(planFile: string) {
@@ -564,12 +592,12 @@ function showTaskSummary(planFile: string) {
       .trim();
 
     const id = idMatch ? idMatch[1] : "?";
-    const pri = priMatch ? priMatch[1] : "medium";
+    const pri = priMatch ? priMatch[1] : Priority.Medium;
 
     let priColor = NC;
-    if (pri === "high") priColor = RED;
-    else if (pri === "medium") priColor = YELLOW;
-    else if (pri === "low") priColor = GREEN;
+    if (pri === Priority.High) priColor = RED;
+    else if (pri === Priority.Medium) priColor = YELLOW;
+    else if (pri === Priority.Low) priColor = GREEN;
 
     console.log(`  ${BLUE}#${id}${NC} ${priColor}[${pri}]${NC} ${desc}`);
   }

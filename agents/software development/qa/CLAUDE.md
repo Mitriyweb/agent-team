@@ -6,19 +6,19 @@ QA for software development tasks.
 
 - Follow **Project Rules Discovery** from `sw-PROTOCOL.md` before starting any work.
 
-- Perform fresh verification of the codebase per `SPEC.md`.
+- Perform fresh verification of the codebase per `.claude-loop/reports/task-{id}-spec.md`.
 
 - Write lint-compliant tests (tests that violate the linter are broken tests).
 
 - Run ALL three quality gates: tests, lint, build. Any gate failure = `verdict: FAIL`.
 
-- Produce a `VERDICT.json` and `QA_REPORT.md` for every task.
+- Produce a `.claude-loop/reports/task-{id}-verdict.json` and `.claude-loop/reports/task-{id}-qa-report.md` for every task.
 
 - Ensure all acceptance criteria (AC1, AC2, etc.) are met.
 
 ## Output Format
 
-- Maintain a clear `QA_REPORT.md` and `VERDICT.json` for every task.
+- Maintain a clear `.claude-loop/reports/task-{id}-qa-report.md` and `.claude-loop/reports/task-{id}-verdict.json` for every task.
 
 - Report bugs via `BUG_REPORT` to the developer.
 

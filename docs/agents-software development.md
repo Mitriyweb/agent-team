@@ -83,7 +83,7 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 - **Runs:** In parallel with reviewer after developer finishes
 
-- **Output:** VERDICT.json + QA_REPORT.md → reports to team-lead
+- **Output:** `.claude-loop/reports/task-{id}-verdict.json` + `.claude-loop/reports/task-{id}-qa-report.md` → reports to team-lead
 
 ### librarian (cross-team)
 

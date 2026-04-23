@@ -60,6 +60,37 @@ describe("common.ts", () => {
     expect(common.calculateCost("unknown", 100, 100)).toBe("0.001800");
   });
 
+  it("charges cache reads at ~10% of regular input", () => {
+    const regular = parseFloat(common.calculateCost("sonnet", 1_000_000, 0));
+    const cacheRead = parseFloat(
+      common.calculateCost("sonnet", 0, 0, 0, 1_000_000),
+    );
+    expect(regular).toBe(3);
+    expect(cacheRead).toBe(0.3);
+    expect(cacheRead).toBeLessThan(regular * 0.15);
+  });
+
+  it("charges cache writes at 1.25x input", () => {
+    const regular = parseFloat(common.calculateCost("sonnet", 1_000_000, 0));
+    const cacheWrite = parseFloat(
+      common.calculateCost("sonnet", 0, 0, 1_000_000, 0),
+    );
+    expect(cacheWrite / regular).toBeCloseTo(1.25, 2);
+  });
+
+  it("sums input/output/cacheWrite/cacheRead components", () => {
+    const cost = parseFloat(common.calculateCost("opus", 100, 50, 200, 400));
+    // opus: 15 input, 75 output, 18.75 cacheWrite, 1.5 cacheRead per 1M
+    const expected = (100 * 15 + 50 * 75 + 200 * 18.75 + 400 * 1.5) / 1_000_000;
+    expect(cost).toBeCloseTo(expected, 6);
+  });
+
+  it("defaults cache tokens to zero when omitted (backward compatible)", () => {
+    const withDefaults = common.calculateCost("sonnet", 1000, 500);
+    const explicitZeros = common.calculateCost("sonnet", 1000, 500, 0, 0);
+    expect(withDefaults).toBe(explicitZeros);
+  });
+
   it("covers resolveModelAlias", () => {
     expect(common.resolveModelAlias("claude-opus")).toBe("opus");
     expect(common.resolveModelAlias("claude-sonnet")).toBe("sonnet");
@@ -81,16 +112,16 @@ describe("common.ts", () => {
 
   it("covers loadConfig and saveConfig", () => {
     const config = common.loadConfig();
-    expect(config.planner).toBe("builtin");
+    expect(config.planner).toBe(common.Planner.Builtin);
 
-    common.saveConfig({ planner: "openspec", team: "test" });
+    common.saveConfig({ planner: common.Planner.Openspec, team: "test" });
     const config2 = common.loadConfig();
-    expect(config2.planner).toBe("openspec");
+    expect(config2.planner).toBe(common.Planner.Openspec);
     expect(config2.team).toBe("test");
 
     // Corrupt config
     fs.writeFileSync("agent-team.json", "{invalid");
-    expect(common.loadConfig().planner).toBe("builtin");
+    expect(common.loadConfig().planner).toBe(common.Planner.Builtin);
   });
 
   it("covers configureProvider", () => {

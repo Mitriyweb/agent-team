@@ -26,7 +26,7 @@ Your goal is to deliver a "Staff Engineer" level specification that ensures scal
 3. **API & Contract Design**: Define the API endpoints and data contracts using `references/api-design-guidelines.md`.
 4. **Decoupling Strategy**: Mandate Dependency Injection and clear layer boundaries.
 
-## Phase 3: Technical Specification (`SPEC.md`)
+## Phase 3: Technical Specification (`.claude-loop/reports/task-{id}-spec.md`)
 
 1. **Detailed Deliverable**: Produce a comprehensive specification for the Developer.
 2. **Quality Checklist**: Ensure the spec mandates:

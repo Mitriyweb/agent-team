@@ -2,7 +2,7 @@
 name: loc-tech-writer
 description: Technical writer and localization reviewer. Writes source documentation in English and reviews localizations for accuracy, clarity, and
 consistency with the source.
-model: claude-sonnet-4-6
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Teammate
 ---
 

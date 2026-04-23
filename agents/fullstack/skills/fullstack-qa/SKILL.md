@@ -40,7 +40,7 @@ and server-side systems.
 
 - **Lint compliance**: Read lint rules BEFORE writing tests.
 - **API mocking**: When testing frontend in isolation, mock
-  API responses matching the contract in SPEC.md.
+  API responses matching the contract in .claude-loop/reports/task-{id}-spec.md.
 - **Database state**: Backend tests should set up and tear
   down their own test data. Never depend on existing state.
 - **Flakiness**: Use stable selectors (`data-testid`) for

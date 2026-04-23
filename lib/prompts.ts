@@ -11,6 +11,7 @@ import * as p from "@clack/prompts";
 import {
   ExternalReviewAgent,
   expandHome,
+  Planner,
   type TelegramConfig,
 } from "./common.ts";
 import { EMBEDDED_TEAM_NAMES } from "./embedded-agents.ts";
@@ -184,7 +185,7 @@ export async function promptTelegram(
 
 export interface InitAnswers {
   teamName?: string;
-  planner: "builtin" | "openspec";
+  planner: Planner;
   humanReview: boolean;
   vaultPath?: string;
   externalReview?: ExternalReviewAgent;
@@ -218,12 +219,12 @@ export async function promptInit(
           message: "Planner",
           options: [
             {
-              value: "builtin" as const,
+              value: Planner.Builtin,
               label: "Built-in",
               hint: "ROADMAP.md → tasks/plan.md",
             },
             {
-              value: "openspec" as const,
+              value: Planner.Openspec,
               label: "OpenSpec",
               hint: "structured proposals (requires @fission-ai/openspec)",
             },
@@ -266,7 +267,7 @@ export async function promptInit(
   return {
     teamName:
       result.teamName === "__skip__" ? undefined : (result.teamName as string),
-    planner: result.planner as "builtin" | "openspec",
+    planner: result.planner as Planner,
     humanReview: result.humanReview as boolean,
     vaultPath: (result as { vaultPath?: string }).vaultPath,
     externalReview: result.externalReview as ExternalReviewAgent | undefined,

@@ -2,9 +2,9 @@
 name: fe-dev
 description: >-
   Frontend developer. Implements UI components and views
-  according to SPEC.md. Framework-aware based on environment
+  according to .claude-loop/reports/task-{id}-spec.md. Framework-aware based on environment
   configuration.
-model: claude-sonnet
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---
 
@@ -47,7 +47,7 @@ Follow the **Project Rules Discovery** procedure from
 
 ### Step 1 -- Review the Spec
 
-Read `SPEC.md`. If this is a fullstack task, pay special
+Read `.claude-loop/reports/task-{id}-spec.md`. If this is a fullstack task, pay special
 attention to the **API Contract** section -- this is the
 interface you consume.
 
@@ -60,7 +60,7 @@ Clarify ambiguities with `fs-architect`.
 - Ensure components are responsive and use design tokens
 - Apply accessibility best practices (semantic HTML, ARIA)
 - Use the styling approach defined in `CSS_APPROACH`
-- Consume APIs per the contract in SPEC.md
+- Consume APIs per the contract in .claude-loop/reports/task-{id}-spec.md
 
 ### Step 3 -- Lint self-check (MANDATORY before review)
 

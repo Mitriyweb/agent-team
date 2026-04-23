@@ -2,9 +2,9 @@
 name: be-dev
 description: >-
   Backend developer. Implements APIs, services, database
-  layer, and server-side business logic per SPEC.md.
+  layer, and server-side business logic per .claude-loop/reports/task-{id}-spec.md.
   Framework-aware based on project detection.
-model: claude-sonnet
+model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---
 
@@ -41,7 +41,7 @@ write MUST comply with them.
 
 ### Step 1 -- Review the Spec
 
-Read `SPEC.md` and note:
+Read `.claude-loop/reports/task-{id}-spec.md` and note:
 
 - API contract (endpoints, request/response shapes, error codes)
 - Database schema changes (if any)
@@ -71,7 +71,7 @@ Clarify ambiguities with `fs-architect` via QUESTION message.
 Before requesting review, run the linter and fix ALL errors:
 
 ```bash
-<detected-lint-command> 2>&1 | tee LINT_RESULTS.txt
+<detected-lint-command> 2>&1 | tee .claude-loop/reports/task-{id}-lint.txt
 ```
 
 - If lint errors exist -- fix them. Do NOT pass broken code.
@@ -79,9 +79,9 @@ Before requesting review, run the linter and fix ALL errors:
 
 ### Step 4 -- API Contract Sync
 
-If your implementation changes the API contract from SPEC.md:
+If your implementation changes the API contract from .claude-loop/reports/task-{id}-spec.md:
 
-1. Document the change in EVIDENCE.md
+1. Document the change in .claude-loop/reports/task-{id}-evidence.md
 2. Send `API_ISSUE` to fe-dev (if frontend is involved):
 
 ```json
@@ -99,7 +99,7 @@ If your implementation changes the API contract from SPEC.md:
 {
   "from": "be-dev", "type": "REVIEW_REQUEST",
   "subject": "Review ready: [component]",
-  "body": "Implementation done. Lint clean. Evidence in EVIDENCE.md.",
+  "body": "Implementation done. Lint clean. Evidence in .claude-loop/reports/task-{id}-evidence.md.",
   "files": ["changed files"],
   "requires_response": true
 }
@@ -108,11 +108,11 @@ If your implementation changes the API contract from SPEC.md:
 ### Step 6 -- Iterate on feedback
 
 Fix issues from architect (`REVIEW_FEEDBACK`) and QA
-(`BUG_REPORT`). Update EVIDENCE.md. Repeat until approved.
+(`BUG_REPORT`). Update .claude-loop/reports/task-{id}-evidence.md. Repeat until approved.
 
 ## Rules
 
-- Do not deviate from SPEC.md without telling architect
+- Do not deviate from .claude-loop/reports/task-{id}-spec.md without telling architect
 - One logical unit of change at a time
 - Do not write tests -- that is QA's job
 - If a requirement is unclear, send architect a QUESTION

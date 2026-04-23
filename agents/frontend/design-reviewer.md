@@ -1,7 +1,7 @@
 ---
 name: fe-reviewer
 description: Design reviewer. Focuses on visual consistency, responsiveness, and accessibility (WCAG 2.1 AA). Ensures implementation matches the design system.
-model: claude-sonnet
+model: sonnet
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
 ---
 

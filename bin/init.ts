@@ -9,7 +9,7 @@ import * as p from "@clack/prompts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
-import { err, loadConfig } from "../lib/common.ts";
+import { Command, err, loadConfig, Planner } from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import {
@@ -56,7 +56,7 @@ function flagValue(flag: string): string | undefined {
 }
 
 async function main() {
-  if (command === "init") {
+  if (command === Command.Init) {
     // Detect explicit flags → non-interactive
     const explicitTeam = flagValue("--team") ?? args[1];
     const teamFromFlag =
@@ -77,7 +77,7 @@ async function main() {
       explicitTelegramToken !== undefined;
 
     let teamName: string | undefined;
-    let planner: "builtin" | "openspec";
+    let planner: Planner;
     let humanReview: boolean;
     let vaultPath: string | undefined;
     let externalReview: string | undefined;
@@ -87,7 +87,7 @@ async function main() {
       // Classic flag-based mode
       teamName = teamFromFlag;
       planner =
-        explicitPlanner === "openspec" ? "openspec" : ("builtin" as const);
+        explicitPlanner === "openspec" ? Planner.Openspec : Planner.Builtin;
       humanReview = !explicitNoReview;
       vaultPath = explicitVault;
       externalReview = explicitExternalReview;
@@ -104,6 +104,7 @@ async function main() {
       const answers = await promptInit(sourceDir, {
         teamName: existingConfig.team,
         planner: existingConfig.planner,
+        humanReview: existingConfig.humanReview,
         vaultPath: existingConfig.vaultPath,
         externalReview: existingConfig.externalReview?.agent,
         telegram: existingConfig.telegram,
@@ -129,7 +130,7 @@ async function main() {
 
     if (!isNonInteractive)
       p.outro("Done. Run agent-team run --plan --all to start.");
-  } else if (command === "run") {
+  } else if (command === Command.Run) {
     const options: RunOptions = {
       all: args.includes("--all"),
       dryRun: args.includes("--dry-run"),
@@ -157,13 +158,13 @@ async function main() {
 
     const runner = new TaskRunner(options);
     await runner.run();
-  } else if (command === "plan") {
+  } else if (command === Command.Plan) {
     const inputFile =
       args[1] && !args[1].startsWith("-") ? args[1] : "ROADMAP.md";
     const modelIdx = args.indexOf("--model");
     const planModel = modelIdx !== -1 ? args[modelIdx + 1] : undefined;
     await planRoadmap(inputFile, planModel);
-  } else if (command === "new-team") {
+  } else if (command === Command.NewTeam) {
     const nameFromFlag = flagValue("--name");
     const descFromFlag = flagValue("--description");
     const rolesFromFlag = flagValue("--roles");
@@ -193,7 +194,7 @@ async function main() {
       await createTeam(answers);
       p.outro("Team created.");
     }
-  } else if (command === "import") {
+  } else if (command === Command.Import) {
     const source = args[1];
 
     if (source) {
@@ -205,20 +206,20 @@ async function main() {
       await importConfig(answers.source);
       p.outro("Import complete.");
     }
-  } else if (command === "update") {
+  } else if (command === Command.Update) {
     await updateProject({ sourceDir });
-  } else if (command === "reconfigure") {
+  } else if (command === Command.Reconfigure) {
     await reconfigureProject({ sourceDir });
-  } else if (command === "validate") {
+  } else if (command === Command.Validate) {
     const name = args[1];
     if (!name) err("Usage: agent-team validate NAME");
     validateTeam(name);
-  } else if (command === "audit-hook") {
+  } else if (command === Command.AuditHook) {
     const phase = args[1] || "PRE";
     await runAuditHook(phase);
-  } else if (command === "audit") {
+  } else if (command === Command.Audit) {
     auditReport();
-  } else if (command === "sync-vault") {
+  } else if (command === Command.SyncVault) {
     const agentsDirFlag = flagValue("--source") ?? flagValue("--agents");
     const vaultDirFlag = flagValue("--vault");
 

@@ -149,7 +149,24 @@ Configure via `agent-team init` or `agent-team reconfigure`.
 
 ## Reports and Logs
 
-- Task reports: `.claude-loop/reports/task-{id}.md`
-- External reviews: `.claude-loop/reports/task-{id}-external-review.md`
-- Task logs: `.claude-loop/logs/`
-- Audit trail: `.claude-loop/audit/audit.jsonl`
+All agent artifacts MUST be written under `.claude-loop/reports/` with a
+task-scoped prefix — NEVER in the project root.
+
+| Artifact | Path |
+|---|---|
+| Task summary (team-lead) | `.claude-loop/reports/task-{id}.md` |
+| Code review | `.claude-loop/reports/task-{id}-review.md` |
+| Visual review (frontend) | `.claude-loop/reports/task-{id}-visual-review.md` |
+| Test review | `.claude-loop/reports/task-{id}-test-review.md` |
+| External review | `.claude-loop/reports/task-{id}-external-review.md` |
+| QA verdict | `.claude-loop/reports/task-{id}-verdict.json` |
+| QA report | `.claude-loop/reports/task-{id}-qa-report.md` |
+| AQA report | `.claude-loop/reports/task-{id}-aqa-report.md` |
+| Bug log | `.claude-loop/reports/task-{id}-problems.md` |
+| Lint output | `.claude-loop/reports/task-{id}-lint.txt` |
+| Task logs | `.claude-loop/logs/` |
+| Audit trail | `.claude-loop/audit/audit.jsonl` |
+
+If any instruction mentions a short name (e.g. `VERDICT.json`, `REVIEW.md`,
+`QA_REPORT.md`), resolve it through this table — NEVER create files at the
+repo root. Replace `{id}` with the current task id passed by team-lead.

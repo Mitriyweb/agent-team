@@ -18,7 +18,7 @@ Reviewer for software development tasks.
 
 ## Output Format
 
-- Produce a `REVIEW.md` for every task.
+- Produce `.claude-loop/reports/task-{id}-review.md` for every task (NEVER write to project root).
 
 - Final output must conclude with `DONE` and `Review done`.
 

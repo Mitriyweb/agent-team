@@ -13,11 +13,9 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative } from "node:path";
-import { ok, warn } from "./common.ts";
+import { ok, VaultDocType, warn } from "./common.ts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type DocType = "agent" | "spec";
 
 interface AgentFrontmatter {
   name: string;
@@ -27,7 +25,7 @@ interface AgentFrontmatter {
 }
 
 interface DocFile {
-  type: DocType;
+  type: VaultDocType;
   /** Display name (agent name or spec title) */
   name: string;
   frontmatter: Record<string, string | string[] | undefined>;
@@ -251,8 +249,8 @@ function generateVaultNote(doc: DocFile): string {
 // ── Write index note ──────────────────────────────────────────────────────────
 
 async function writeIndexNote(docs: DocFile[], vaultDir: string) {
-  const agents = docs.filter((d) => d.type === "agent");
-  const specs = docs.filter((d) => d.type === "spec");
+  const agents = docs.filter((d) => d.type === VaultDocType.Agent);
+  const specs = docs.filter((d) => d.type === VaultDocType.Spec);
 
   const lines = ["# Vault Index", ""];
 
@@ -330,7 +328,7 @@ export async function syncVault(options: SyncVaultOptions) {
       }
 
       const doc: DocFile = {
-        type: "agent",
+        type: VaultDocType.Agent,
         name: fm.name,
         frontmatter: fm as unknown as Record<
           string,
@@ -366,7 +364,7 @@ export async function syncVault(options: SyncVaultOptions) {
         titleFromFilename(filePath);
 
       const doc: DocFile = {
-        type: "spec",
+        type: VaultDocType.Spec,
         name: title,
         frontmatter: fields,
         body,
@@ -389,8 +387,8 @@ export async function syncVault(options: SyncVaultOptions) {
     }
   }
 
-  const agentCount = docs.filter((d) => d.type === "agent").length;
-  const specCount = docs.filter((d) => d.type === "spec").length;
+  const agentCount = docs.filter((d) => d.type === VaultDocType.Agent).length;
+  const specCount = docs.filter((d) => d.type === VaultDocType.Spec).length;
 
   console.log(
     `\nSynced ${docs.length} doc(s): ${agentCount} agent(s), ${specCount} spec(s)`,

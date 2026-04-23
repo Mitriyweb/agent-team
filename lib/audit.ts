@@ -1,5 +1,16 @@
 import fs from "node:fs";
-import { BLUE, CYAN, GREEN, log, NC, ok, RED, warn, YELLOW } from "./common.ts";
+import {
+  AuditStatus,
+  BLUE,
+  CYAN,
+  GREEN,
+  log,
+  NC,
+  ok,
+  RED,
+  warn,
+  YELLOW,
+} from "./common.ts";
 
 const LOG_FILE = ".claude-loop/audit/audit.jsonl";
 
@@ -52,7 +63,7 @@ export function auditReport() {
     };
 
     existing.calls++;
-    if (entry.status === "success") {
+    if (entry.status === AuditStatus.Success) {
       existing.success++;
     } else {
       existing.errors++;

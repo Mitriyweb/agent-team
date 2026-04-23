@@ -6,15 +6,15 @@ Architect for software development tasks.
 
 - Design the solution per the team-lead's instruction.
 
-- Freeze `SPEC.md` with explicit Acceptance Criteria (AC1, AC2, etc.).
+- Freeze `.claude-loop/reports/task-{id}-spec.md` with explicit Acceptance Criteria (AC1, AC2, etc.).
 
-- Review implementation in `EVIDENCE.md` against `SPEC.md`.
+- Review implementation in `.claude-loop/reports/task-{id}-evidence.md` against `.claude-loop/reports/task-{id}-spec.md`.
 
 - Ensure architectural integrity and design token consistency.
 
 ## Output Format
 
-- Maintain a clear `SPEC.md` for every task.
+- Maintain a clear `.claude-loop/reports/task-{id}-spec.md` for every task.
 
 - Provide feedback to the developer through `REVIEW_FEEDBACK`.
 

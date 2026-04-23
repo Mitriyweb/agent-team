@@ -12,7 +12,7 @@ QA for technical documentation and localizations.
 
 ## Output Format
 
-- `QA_REPORT.md` summarizing findings.
+- `.claude-loop/reports/task-{id}-qa-report.md` summarizing findings.
 
 - Issue reports via `QA_ISSUE`.
 

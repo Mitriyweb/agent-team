@@ -11,7 +11,8 @@ and how they are integrated into the `agent-team` workflow.
    in an `EVIDENCE.md` file before requesting a review. This ensures the developer has verified
    their own work against the spec.
 3. **Fresh Verification**: The `sw-qa` agent acts as an independent verifier. It must not rely on the
-   developer's narrative but instead perform a "fresh" verification of the codebase to produce a `VERDICT.json`.
+   developer's narrative but instead perform a "fresh" verification of the codebase to produce a
+   `.claude-loop/reports/task-{id}-verdict.json`.
 4. **Durable Artifacts**: All task-related artifacts (Spec, Evidence, Verdict, Problems) should be
    stored in a task-specific directory (e.g., `.claude-loop/tasks/<TASK_ID>/`) to ensure auditability
    and easier resumption.
@@ -23,8 +24,8 @@ and how they are integrated into the `agent-team` workflow.
 
 | `task-spec-freezer` | `sw-architect` | Creates and freezes `SPEC.md` |
 | `task-builder` | `sw-developer` | Implements changes and packs `EVIDENCE.md` |
-| `task-verifier` | `sw-qa` | Performs fresh verification, produces `VERDICT.json` |
-| `task-fixer` | `sw-developer` | Fixes issues identified in `PROBLEMS.md` |
+| `task-verifier` | `sw-qa` | Performs fresh verification, produces `task-{id}-verdict.json` |
+| `task-fixer` | `sw-developer` | Fixes issues identified in `task-{id}-problems.md` |
 | Orchestrator | `sw-team-lead` | Drives the loop: Spec → Build → Evidence → Verify → Fix |
 
 ## Integration Steps
@@ -41,7 +42,8 @@ and how they are integrated into the `agent-team` workflow.
 4. **Update `sw-qa`**: Discover project rules at start.
    Write lint-compliant tests.
    Run all three quality gates (tests, lint, build).
-   Require `VERDICT.json` and `PROBLEMS.md` based on independent verification.
+   Require `.claude-loop/reports/task-{id}-verdict.json` and
+   `.claude-loop/reports/task-{id}-problems.md` based on independent verification.
    Any gate failure = `verdict: FAIL`.
 5. **Update `sw-reviewer`**: Discover project rules at start.
    Run linter — lint errors are Critical findings.

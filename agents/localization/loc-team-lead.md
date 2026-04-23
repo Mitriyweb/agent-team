@@ -2,8 +2,9 @@
 name: loc-team-lead
 description: Localization team orchestrator. Launch when you need to produce documented, localized, and SEO-optimized content — decomposes work,
 delegates to tech-writer, localizers, seo-specialist, and qa. Never writes docs or translations itself.
-model: claude-opus
-tools: Read, Write, Bash, Glob, Grep, Task, Teammate
+model: opus
+tools: Read, Write, Glob, Grep, Task, Teammate
+allow_sub_agents: true
 ---
 
 # Team Lead
@@ -81,7 +82,7 @@ After all localizations are approved, launch `loc-seo-specialist` and `loc-qa` s
 
 - **Working Directory**: `agents/localization/qa`
 
-- **Instruction**: "Review all: docs/[name].en.md + all translations. Output: QA_REPORT.md"
+- **Instruction**: "Review all: docs/[name].en.md + all translations. Output: .claude-loop/reports/task-{id}-qa-report.md"
 
 - **Permission Mode**: `readOnly`
 

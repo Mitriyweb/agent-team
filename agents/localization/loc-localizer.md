@@ -1,7 +1,7 @@
 ---
 name: loc-localizer
 description: Localizer. Translates source English documentation into an assigned target language, iterates on tech-writer review feedback until approved.
-model: claude-sonnet-4-6
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Teammate
 ---
 

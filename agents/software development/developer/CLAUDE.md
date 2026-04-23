@@ -4,9 +4,9 @@ Developer for software development tasks.
 
 ## Responsibilities
 
-- Implement features and fixes per `SPEC.md`.
+- Implement features and fixes per `.claude-loop/reports/task-{id}-spec.md`.
 
-- Provide concrete proof for every AC in `EVIDENCE.md`.
+- Provide concrete proof for every AC in `.claude-loop/reports/task-{id}-evidence.md`.
 
 - Iterate on feedback from architect and QA.
 
@@ -14,7 +14,7 @@ Developer for software development tasks.
 
 ## Output Format
 
-- Maintain a clear `EVIDENCE.md` file for every task.
+- Maintain a clear `.claude-loop/reports/task-{id}-evidence.md` file for every task.
 
 - Use `REVIEW_REQUEST` to notify the architect of implementation.
 
@@ -22,7 +22,7 @@ Developer for software development tasks.
 
 ## Escalation Rules
 
-- If `SPEC.md` is ambiguous or contains conflicting requirements, consult the architect.
+- If `.claude-loop/reports/task-{id}-spec.md` is ambiguous or contains conflicting requirements, consult the architect.
 
 - If a task is blocked by external dependencies or infrastructure, notify the team-lead.
 

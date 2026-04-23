@@ -2,7 +2,7 @@
 name: loc-qa
 description: Documentation QA. Reviews source English docs and all translations for completeness, accuracy, consistency, and formatting. Reports
 issues directly to the responsible agent.
-model: claude-sonnet-4-6
+model: sonnet
 tools: Read, Glob, Grep, Bash, Teammate
 ---
 
@@ -37,7 +37,7 @@ Read all files before starting any reviews.
 Run markdownlint-cli2 on every file before manual review:
 
 ```bash
-bun run lint 2>&1 | tee LINT_RESULTS.txt
+bun run lint 2>&1 | tee .claude-loop/reports/task-{id}-lint.txt
 ```
 
 Treat lint errors as `Critical` issues — report them to the responsible agent before proceeding.
@@ -93,7 +93,7 @@ After receiving `QA_FIX`, re-read the affected sections and confirm the issue is
 
 ### Step 7 — Report to team-lead
 
-Create `QA_REPORT.md`:
+Create `.claude-loop/reports/task-{id}-qa-report.md`:
 
 ```markdown
 
@@ -120,8 +120,8 @@ Notify team-lead:
 {
   "from": "loc-qa", "type": "DONE",
   "subject": "QA complete",
-  "body": "All files reviewed. Issues: N found, N fixed. See QA_REPORT.md",
-  "files": ["QA_REPORT.md"],
+  "body": "All files reviewed. Issues: N found, N fixed. See .claude-loop/reports/task-{id}-qa-report.md",
+  "files": [".claude-loop/reports/task-{id}-qa-report.md"],
   "requires_response": false
 }
 ```
