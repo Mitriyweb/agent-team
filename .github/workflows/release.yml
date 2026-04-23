@@ -2,11 +2,53 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - package.json
     tags:
       - "v*"
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release: ${{ steps.check.outputs.release }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check version and tag
+        id: check
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "Triggered by tag: ${{ github.ref_name }}"
+            echo "release=true" >> $GITHUB_OUTPUT
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(jq -r .version package.json)
+            TAG="v$VERSION"
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists. Skipping release."
+              echo "release=false" >> $GITHUB_OUTPUT
+            else
+              echo "New version detected: $VERSION. Creating tag $TAG."
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git tag "$TAG"
+              git push origin "$TAG"
+              echo "release=true" >> $GITHUB_OUTPUT
+              echo "tag=$TAG" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   validate:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +57,7 @@ jobs:
       - run: bun run validate
 
   build:
-    needs: validate
+    needs: [prepare, validate]
     strategy:
       matrix:
         include:
@@ -55,7 +97,7 @@ jobs:
           path: dist/${{ matrix.asset }}
 
   release:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -71,6 +113,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
           files: |
             install.sh
             dist/agent-team-*
