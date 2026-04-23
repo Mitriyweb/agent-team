@@ -241,8 +241,13 @@ export interface TelegramConfig {
   chatId: string;
 }
 
+export enum Planner {
+  Builtin = "builtin",
+  Openspec = "openspec",
+}
+
 export interface ProjectConfig {
-  planner: "builtin" | "openspec";
+  planner: Planner;
   team?: string;
   vaultPath?: string;
   /** Extra regex patterns to block in Bash (added to built-in defaults) */
@@ -251,11 +256,13 @@ export interface ProjectConfig {
   externalReview?: ExternalReviewConfig;
   /** Telegram notifications for task lifecycle */
   telegram?: TelegramConfig;
+  /** If false, auto-approve HUMAN_REVIEW_NEEDED tasks without prompting */
+  humanReview?: boolean;
   [key: string]: unknown;
 }
 
 export function loadConfig(): ProjectConfig {
-  const defaults: ProjectConfig = { planner: "builtin" };
+  const defaults: ProjectConfig = { planner: Planner.Builtin };
   if (!fs.existsSync(CONFIG_FILE)) return defaults;
   try {
     const data = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));

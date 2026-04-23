@@ -84,10 +84,10 @@ export function createHooks(
             if (input.hook_event_name !== "PostToolUse") {
               return { continue: true };
             }
-            const summary = summarize(input.tool_response);
-            logger.tool(`[POST] ${input.tool_name}`, {
-              result: summary,
-            });
+            logger.tool(
+              `[POST] ${input.tool_name}`,
+              summarizeToolResponse(input.tool_name, input.tool_response),
+            );
             return { continue: true };
           },
         ],
@@ -128,7 +128,40 @@ export function createHooks(
   };
 }
 
-function summarize(value: unknown): string {
-  const str = JSON.stringify(value) ?? "";
-  return str.length > 200 ? `${str.slice(0, 200)}...` : str;
+function truncate(str: string, max = 200): string {
+  if (!str) return "";
+  const clean = str.replace(/\n+$/, "");
+  return clean.length > max ? `${clean.slice(0, max)}...` : clean;
+}
+
+/**
+ * Format tool responses for logging. For Bash we show just stdout/stderr
+ * (optionally a truncation notice) so the log reads like a shell transcript,
+ * not a JSON dump. For other tools we fall back to truncated JSON.
+ */
+function summarizeToolResponse(
+  toolName: string,
+  response: unknown,
+): Record<string, unknown> {
+  if (
+    toolName === "Bash" &&
+    response &&
+    typeof response === "object" &&
+    "stdout" in response
+  ) {
+    const r = response as {
+      stdout?: string;
+      stderr?: string;
+      interrupted?: boolean;
+    };
+    const out: Record<string, unknown> = {};
+    if (r.stdout) out.stdout = truncate(r.stdout);
+    if (r.stderr) out.stderr = truncate(r.stderr);
+    if (r.interrupted) out.interrupted = true;
+    if (Object.keys(out).length === 0) out.stdout = "(empty)";
+    return out;
+  }
+
+  const str = JSON.stringify(response) ?? "";
+  return { result: truncate(str) };
 }

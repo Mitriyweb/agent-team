@@ -12,6 +12,7 @@ import {
   log,
   NC,
   ok,
+  Planner,
   type ProjectConfig,
   saveConfig,
   type TelegramConfig,
@@ -92,7 +93,7 @@ interface InitProjectOptions {
   teamName?: string;
   humanReview?: boolean;
   sourceDir?: string;
-  planner?: "builtin" | "openspec";
+  planner?: Planner;
   vaultPath?: string;
   externalReview?: string;
   telegram?: TelegramConfig;
@@ -103,7 +104,7 @@ export async function initProject(options: InitProjectOptions) {
     teamName,
     humanReview = true,
     sourceDir = ".",
-    planner = "builtin",
+    planner = Planner.Builtin,
     vaultPath,
     externalReview,
     telegram,
@@ -150,14 +151,15 @@ export async function initProject(options: InitProjectOptions) {
   if (telegram) {
     config.telegram = telegram;
   }
+  config.humanReview = humanReview;
   saveConfig(config);
 
   // Manage Obsidian vault symlink
   manageVaultSymlink(vaultPath);
-  ok(`Planner: ${planner === "openspec" ? "OpenSpec" : "built-in"}`);
+  ok(`Planner: ${planner === Planner.Openspec ? "OpenSpec" : "built-in"}`);
 
   // Initialize OpenSpec if selected
-  if (planner === "openspec") {
+  if (planner === Planner.Openspec) {
     const invocation = detectOpenSpecInvocation();
     if (!invocation) {
       err(

@@ -166,7 +166,8 @@ agent-team run --all     # Interactive: select which change to execute
 
 1. `agent-team plan` prompts to select an existing OpenSpec change or create a new one
 2. New changes prompt for a descriptive kebab-case name (e.g., `add-test-coverage`)
-3. Each missing artifact is generated using `openspec instructions <artifact>` for enriched prompts
+3. Each missing artifact is generated using `openspec instructions <artifact>` for enriched prompts.
+   Falls back to a generic prompt if your OpenSpec version lacks `instructions` (only in experimental builds).
 4. After generation, `openspec validate --strict` validates the complete change
 5. Artifacts stay in `openspec/changes/NAME/` (no intermediate `tasks/plan.md`)
 
@@ -198,7 +199,12 @@ openspec/changes/add-test-coverage/
 └── tasks.md          # Actionable checklist (source of truth for execution)
 ```
 
-Requires `@fission-ai/openspec` (`npm i -g @fission-ai/openspec`).
+Requires the `openspec` CLI on your `PATH`. Install via either:
+
+- `brew install openspec` (recommended — includes experimental `instructions` command for enriched prompts)
+- `npm i -g @fission-ai/openspec` (falls back to generic prompts on stable builds)
+
+`agent-team` auto-detects whichever binary is available (`openspec` on `PATH` first, then `npx --no-install @fission-ai/openspec`).
 
 ## Project Structure After Init
 
@@ -562,7 +568,7 @@ Creates agents in `.claude/agents/` with a PROTOCOL.md and profiles for each rol
 | Claude Code | **yes** | `npm i -g @anthropic-ai/claude-code` |
 | Claude Agent SDK | bundled | Included in dependencies (`@anthropic-ai/claude-agent-sdk`) |
 | Bun / npm | no | [bun.sh](https://bun.sh) (for dev tooling) |
-| OpenSpec | no | `npm i -g @fission-ai/openspec` (if `--planner openspec`) |
+| OpenSpec | no | `brew install openspec` or `npm i -g @fission-ai/openspec` (if `--planner openspec`) |
 
 ## License
 

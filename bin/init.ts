@@ -9,7 +9,7 @@ import * as p from "@clack/prompts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
-import { err, loadConfig } from "../lib/common.ts";
+import { err, loadConfig, Planner } from "../lib/common.ts";
 import { importConfig } from "../lib/import.ts";
 import { planRoadmap } from "../lib/plan.ts";
 import {
@@ -77,7 +77,7 @@ async function main() {
       explicitTelegramToken !== undefined;
 
     let teamName: string | undefined;
-    let planner: "builtin" | "openspec";
+    let planner: Planner;
     let humanReview: boolean;
     let vaultPath: string | undefined;
     let externalReview: string | undefined;
@@ -87,7 +87,7 @@ async function main() {
       // Classic flag-based mode
       teamName = teamFromFlag;
       planner =
-        explicitPlanner === "openspec" ? "openspec" : ("builtin" as const);
+        explicitPlanner === "openspec" ? Planner.Openspec : Planner.Builtin;
       humanReview = !explicitNoReview;
       vaultPath = explicitVault;
       externalReview = explicitExternalReview;

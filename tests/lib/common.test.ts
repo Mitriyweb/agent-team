@@ -81,16 +81,16 @@ describe("common.ts", () => {
 
   it("covers loadConfig and saveConfig", () => {
     const config = common.loadConfig();
-    expect(config.planner).toBe("builtin");
+    expect(config.planner).toBe(common.Planner.Builtin);
 
-    common.saveConfig({ planner: "openspec", team: "test" });
+    common.saveConfig({ planner: common.Planner.Openspec, team: "test" });
     const config2 = common.loadConfig();
-    expect(config2.planner).toBe("openspec");
+    expect(config2.planner).toBe(common.Planner.Openspec);
     expect(config2.team).toBe("test");
 
     // Corrupt config
     fs.writeFileSync("agent-team.json", "{invalid");
-    expect(common.loadConfig().planner).toBe("builtin");
+    expect(common.loadConfig().planner).toBe(common.Planner.Builtin);
   });
 
   it("covers configureProvider", () => {

@@ -12,6 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import * as p from "@clack/prompts";
+import { Planner } from "../../lib/common.ts";
 import * as team from "../../lib/team.ts";
 
 const PROJECT_ROOT = import.meta.dir.replace(/\/tests\/lib$/, "");
@@ -66,7 +67,7 @@ describe("team.ts", () => {
     // Init project with OpenSpec
     await team.initProject({
       teamName: "test-team",
-      planner: "openspec",
+      planner: Planner.Openspec,
       humanReview: false,
     });
     expect(fs.readFileSync("agent-team.json", "utf-8")).toContain("openspec");

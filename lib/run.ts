@@ -16,6 +16,7 @@ import {
   NC,
   notifyReview,
   ok,
+  Planner,
   RED,
   resolveModelAlias,
   type TelegramConfig,
@@ -492,7 +493,7 @@ export class TaskRunner {
     const config = loadConfig();
     this.telegramConfig = config.telegram;
 
-    if (config.planner === "openspec" && !this.options.roadmapFile) {
+    if (config.planner === Planner.Openspec && !this.options.roadmapFile) {
       const openspecTasks = await selectOpenSpecTasks();
       if (openspecTasks) {
         this.roadmap = openspecTasks;
@@ -515,7 +516,7 @@ export class TaskRunner {
         await planRoadmap("ROADMAP.md");
       }
       // After planning, re-detect openspec
-      if (config.planner === "openspec") {
+      if (config.planner === Planner.Openspec) {
         const openspecTasks = await selectOpenSpecTasks();
         if (openspecTasks) {
           this.roadmap = openspecTasks;
@@ -614,7 +615,18 @@ export class TaskRunner {
       }
     }
 
-    log("Loop finished.");
+    if (!this.options.all) {
+      const pending = this.getRoadmapTasks(" ").length;
+      if (pending > 0) {
+        log(
+          `Loop finished (single-task mode). ${pending} task(s) still pending — re-run with ${BLUE}--all${NC} to process them.`,
+        );
+      } else {
+        log("Loop finished.");
+      }
+    } else {
+      log("Loop finished.");
+    }
   }
 
   private getTaskAgents(line: string): string[] {
@@ -744,7 +756,9 @@ export class TaskRunner {
         if (exitCode === 0 && taskStatus === "HUMAN_REVIEW_NEEDED") {
           const approved = await this.promptHumanReview(taskId, desc);
           if (approved) {
-            ok(`Task #${taskId} review approved — continuing.`);
+            ok(
+              `Task #${taskId} review approved${this.options.all ? " — continuing to next task." : " — single-task mode (pass --all to process remaining tasks)."}`,
+            );
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
             this.runExternalReview(taskId, desc);
@@ -942,7 +956,9 @@ export class TaskRunner {
         if (taskStatus === "HUMAN_REVIEW_NEEDED") {
           const approved = await this.promptHumanReview(taskId, desc);
           if (approved) {
-            ok(`Task #${taskId} review approved — continuing.`);
+            ok(
+              `Task #${taskId} review approved${this.options.all ? " — continuing to next task." : " — single-task mode (pass --all to process remaining tasks)."}`,
+            );
             this.markStatus(taskId, "~", "x");
             this.runLibrarian(taskId);
             this.runExternalReview(taskId, desc);
@@ -1126,6 +1142,14 @@ export class TaskRunner {
     taskId: string,
     desc: string,
   ): Promise<boolean> {
+    const config = loadConfig();
+    if (config.humanReview === false) {
+      ok(
+        `Task #${taskId} flagged for review — auto-approving (humanReview=false).`,
+      );
+      return true;
+    }
+
     notifyReview();
     tg.review("team-lead", `#${taskId} ${desc}`, this.telegramConfig);
 

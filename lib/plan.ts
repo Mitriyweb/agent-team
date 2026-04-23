@@ -11,6 +11,7 @@ import {
   log,
   NC,
   ok,
+  Planner,
   RED,
   resolveModelAlias,
   warn,
@@ -105,7 +106,7 @@ Complete instructions for the agent.
 export async function planRoadmap(inputFile = "ROADMAP.md", model?: string) {
   const config = loadConfig();
 
-  if (config.planner === "openspec") {
+  if (config.planner === Planner.Openspec) {
     await planWithOpenSpec(inputFile);
   } else {
     await planWithBuiltin(inputFile, model);
