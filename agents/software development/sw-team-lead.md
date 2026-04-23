@@ -2,7 +2,7 @@
 name: sw-team-lead
 description: Main orchestrator. Launch when you need the full team to execute a task — it decomposes work, delegates to agents, and synthesizes
 results. Never writes code itself.
-model: opus
+model: sonnet
 tools: Read, Write, Glob, Grep, Task, Teammate
 allow_sub_agents: true
 ---

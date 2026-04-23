@@ -1,7 +1,7 @@
 ---
 name: fe-team-lead
 description: Frontend team lead. Orchestrates the UI pipeline including design, implementation, visual review, and QA. Strictly focused on the UI layer.
-model: opus
+model: sonnet
 tools: Read, Write, Glob, Grep, Task, Teammate
 allow_sub_agents: true
 ---

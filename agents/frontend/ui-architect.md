@@ -1,7 +1,7 @@
 ---
 name: fe-architect
 description: Frontend architect. Designs component hierarchy, state management strategy, and design systems. Strictly focused on UI architecture.
-model: sonnet
+model: opus
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
 ---
 

@@ -963,7 +963,7 @@ export class TaskRunner {
           team,
           role: agents[0] || "team-lead",
           prompt,
-          maxTurns: 30,
+          maxTurns: 20,
           model: this.teamLeadModel,
         });
 
@@ -1418,15 +1418,18 @@ ${spec}
 ${memorySection}${vaultSection}
 ## Instructions
 
-1. Read the specification and PROTOCOL.md to understand the workflow and available teammates.
-2. Explore the codebase to understand the current state.
-   NEVER read full log/coverage artifacts (*.log, *-coverage.*, multi-MB files) yourself —
-   ask the QA/AQA agent for a short summary. Reading them directly burns tokens on Opus
-   and almost always pulls in content that belongs in a delegated sub-agent's context.
-3. Delegate work to teammates following the communication graph in PROTOCOL.md.
-4. Write a short report to ${REPORTS_DIR_VAL}/task-${taskId}.md (what was done, who did what, key results only — do not paste raw artifacts).
-   Do NOT touch \`.claude-loop/memory.md\` — the \`librarian\` agent curates it automatically
-   after each task from your task report.
+1. **Classify the task in one sentence** — is it (a) code-writing, (b) verification/run-command, or
+   (c) analysis/identification? Use the minimum number of sub-agents required. Analysis and
+   verification tasks need ONE sub-agent (usually QA); only feature/bugfix tasks need the full
+   architect → developer → reviewer → qa chain.
+2. Read only what you need: task spec, PROTOCOL.md, and any prior report referenced by this task.
+   **DO NOT** re-run commands that a previous task already ran and saved to \`.claude-loop/reports/\`
+   (e.g. if task N-1 saved \`task-<N-1>-coverage.md\`, read THAT, don't run \`npm run test:coverage\` again).
+   NEVER read log/coverage artifacts over 500 KB — ask the QA agent for a short summary.
+3. Delegate via \`Task\` / \`Teammate\`. Per the delegation matrix, pick the shortest viable chain.
+4. Write a **short** (≤40 lines) report to ${REPORTS_DIR_VAL}/task-${taskId}.md — routing decision,
+   sub-agents spawned, key findings, links to sub-agent reports. Do NOT paste raw artifacts, tables,
+   or logs. Do NOT touch \`.claude-loop/memory.md\` — the \`librarian\` curates it from your report.
 5. On your VERY LAST LINE, output exactly one of:
    - TASK_STATUS: SUCCESS
    - TASK_STATUS: HUMAN_REVIEW_NEEDED

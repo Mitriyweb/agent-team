@@ -1,7 +1,7 @@
 ---
 name: sw-reviewer
 description: Code reviewer. Focuses on style, security, and best practices. Reviews after developer, before QA. Iterates with developer until approved.
-model: opus
+model: sonnet
 tools: Read, Grep, Glob, Bash, Teammate
 ---
 

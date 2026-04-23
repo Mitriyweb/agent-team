@@ -4,7 +4,7 @@ description: >-
   Fullstack architect. Designs component hierarchy, API
   contracts, state management, and database schema.
   Covers both UI and server-side architecture.
-model: sonnet
+model: opus
 tools: Read, Grep, Glob, WebFetch, Bash, Teammate
 ---
 

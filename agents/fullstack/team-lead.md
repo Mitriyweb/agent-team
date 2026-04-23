@@ -4,7 +4,7 @@ description: >-
   Fullstack team lead. Routes tasks to frontend or backend
   developers based on scope analysis. Orchestrates the full
   lifecycle from architecture to QA across both stacks.
-model: opus
+model: sonnet
 tools: Read, Write, Glob, Grep, Task, Teammate
 allow_sub_agents: true
 ---
