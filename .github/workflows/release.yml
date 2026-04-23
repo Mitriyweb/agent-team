@@ -127,10 +127,12 @@ jobs:
 
   release:
     needs: [prepare, build]
-    # Only create the GitHub Release from the tag-triggered run to avoid
-    # duplicate releases when the branch-triggered run pushes a tag that
-    # immediately fires a second workflow.
-    if: startsWith(github.ref, 'refs/tags/')
+    # Run once per tagged release. We can't gate on `startsWith(github.ref,
+    # 'refs/tags/')` because GitHub Actions does NOT trigger workflows for
+    # commits/tags pushed by GITHUB_TOKEN — so the branch-triggered run is
+    # the only one we get. `prepare` ensures release=true only when a brand
+    # new tag was created (or the workflow was fired by a manual tag push).
+    if: needs.prepare.outputs.release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
