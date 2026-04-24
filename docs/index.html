@@ -164,6 +164,12 @@
                     <span class="output">&#9654; Enable Telegram notifications?</span>
                     Yes / <span class="highlight">No</span><br><br>
 
+                    <span class="output">&#9654; Setup commands to run before cycle (optional)</span><br>
+                    <span class="highlight">&nbsp;&nbsp;nvm use 20, pyenv local 3.10</span><br><br>
+
+                    <span class="output">&#9654; Enable sound notifications (review/done/failed)?</span>
+                    <span class="highlight"> Yes</span> / No<br><br>
+
                     <span class="prompt">&#10003;</span> Updated .gitignore<br>
                     <span class="prompt">&#10003;</span> Initialized team: software development<br>
                     <span class="prompt">&#10003;</span> Updated CLAUDE.md with agent-team context<br>
@@ -201,9 +207,15 @@ agent-team run --all       # agents execute every task autonomously</code></pre>
                 </article>
                 <article>
                     <h3>Voice Notifications</h3>
-                    <p>Spoken cues on three events: review needed, all tasks done, loop stopped due to error.
-                        Customise by dropping your own <code>.m4a</code> files into
-                        <code>~/.agent-team/assets/</code>.</p>
+                    <p>Spoken cues on real loop exits &mdash; all tasks done, or stopped due to an error in
+                        the current run. Review cue fires only in single-task runs, so <code>--all</code> loops
+                        don't spam you between tasks. Toggle with <code>--no-sound</code> at init, or drop
+                        your own <code>.m4a</code> files into <code>~/.agent-team/assets/</code>.</p>
+                </article>
+                <article>
+                    <h3>Environment Setup</h3>
+                    <p>Configure custom commands like <code>nvm use</code> or <code>pyenv local</code> to run before
+                        the cycle. Environment variables are captured and propagated to agents.</p>
                 </article>
             </div>
             <div class="grid">
@@ -303,11 +315,17 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                     <p>Connect a vault for RAG integration. Agent knowledge syncs to interlinked Obsidian notes with
                         Dataview metadata.</p>
                 </article>
+                <article>
+                    <h3>Setup Commands</h3>
+                    <p>Run environment setup (Python, Node versions) or install dependencies automatically before agents
+                        start their cycle.</p>
+                </article>
             </div>
 
             <p>For CI/scripting, every option has a flag equivalent:</p>
             <pre><code>agent-team init --team fullstack --planner openspec --external-review codex \
-  --telegram-token 7xxx:AAF... --telegram-chat 123456789</code></pre>
+  --telegram-token T --telegram-chat C --setup-commands "nvm use 20" \
+  --no-human-review --no-sound</code></pre>
         </section>
 
         <section id="execution">

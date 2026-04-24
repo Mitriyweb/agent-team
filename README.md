@@ -73,6 +73,8 @@ agent-team init --team "software development"
 agent-team init --team frontend --no-human-review
 agent-team init --team fullstack
 agent-team init --team "software development" --planner openspec
+agent-team init --setup-commands "nvm use 20, pyenv local 3.10"
+agent-team init --team frontend --no-sound                 # silence audio cues
 
 # Import rules (interactive if no path given)
 agent-team import
@@ -106,6 +108,8 @@ Setup:
   agent-team init                                      Interactive setup
   agent-team init --team NAME [--planner P]             Non-interactive
                  [--telegram-token T --telegram-chat C]
+                 [--setup-commands "cmd1, cmd2"]
+                 [--no-human-review] [--no-sound]
   agent-team update                                    Update project configs
   agent-team reconfigure                               Update skills & workflows
   agent-team import [path]                             Import rules (interactive if no path)
@@ -298,13 +302,19 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
   "team": "software development",
   "blockedBashPatterns": ["docker\\s+system\\s+prune", "DROP\\s+TABLE"],
   "externalReview": { "agent": "codex" },
-  "telegram": { "botToken": "7xxx:AAF...", "chatId": "123456789" }
+  "telegram": { "botToken": "7xxx:AAF...", "chatId": "123456789" },
+  "setupCommands": ["nvm use 20", "pip install -r requirements.txt"],
+  "humanReview": true,
+  "sound": true
 }
 ```
 
 - `blockedBashPatterns` — regex patterns added to built-in safety hooks
 - `externalReview` — optional external CLI agent for independent review after each task
 - `telegram` — optional Telegram notifications for task lifecycle events
+- `setupCommands` — list of commands to run before the agent cycle starts (e.g. environment setup)
+- `humanReview` — `false` to auto-approve every `HUMAN_REVIEW_NEEDED` task (default: `true`)
+- `sound` — `false` to mute all audible cues (review/done/failed); default: `true`
 
 ### External Review
 
@@ -371,6 +381,27 @@ agent-team init --team frontend \
 
 Notifications are fire-and-forget — network errors are logged
 but never block task execution.
+
+### Setup Commands (Environment)
+
+Configure a set of commands to run before the agent task cycle begins. This is essential for setting up specific language versions or installing dependencies.
+
+```bash
+# Interactive setup
+agent-team init                  # prompts for setup commands
+agent-team reconfigure           # update existing commands
+
+# Non-interactive
+agent-team init --setup-commands "nvm use 20, pyenv local 3.10"
+```
+
+Common uses:
+
+- **Node.js**: `nvm use 20`, `npm install`
+- **Python**: `pyenv local 3.11`, `pip install -r requirements.txt`
+- **Environment**: `export STAGING=true`, `source .env.local`
+
+Variables exported by these commands are automatically captured and propagated to the agents' child processes.
 
 ## How It Works
 
@@ -504,7 +535,7 @@ If the contract changes, be-dev notifies fe-dev via `API_ISSUE` message.
 
 Agents can request human review by outputting `TASK_STATUS: HUMAN_REVIEW_NEEDED`.
 
-1. Audio notification plays (+ Telegram notification if configured)
+1. Audio notification plays in single-task runs (+ Telegram notification if configured)
 2. Visual banner appears with task details
 3. User approves (`y`) or rejects (`n`)
 
@@ -512,13 +543,24 @@ Reduce review prompts with `--no-human-review` (sets `defaultMode: auto` for all
 
 ## Audio Notifications
 
-`agent-team run` plays a short voice cue on three events:
+`agent-team run` plays short voice cues tied to real events, not task boundaries:
 
-| Event | Default phrase |
-|-------|----------------|
-| Task needs review (`HUMAN_REVIEW_NEEDED`) | "Review is required" |
-| Loop finished with all tasks complete | "All tasks completed" |
-| Loop stopped due to failures or crash | "Loop stopped due to error. _\<reason\>_" |
+| Event | Plays on | Default phrase |
+|-------|----------|----------------|
+| Task needs review (`HUMAN_REVIEW_NEEDED`) | Single-task run only (not mid-loop) | "Review is required" |
+| Loop finished with all tasks complete | `--all` exit, all tasks done | "All tasks completed" |
+| Loop stopped due to failures | `--all` exit, **failure happened in this run** | "Loop stopped due to error. _\<reason\>_" |
+
+Design notes:
+
+- In `--all` (loop) mode the review cue is suppressed so you don't get spammed on every
+  per-task pause — the loop itself will still pause for your `y/n` input, and Telegram
+  still fires on each review if configured.
+- The "stopped due to error" cue only triggers on failures that occurred during the
+  current run. Stale `[!]` entries left in `tasks/plan.md` from earlier runs don't
+  re-fire the alert on a clean run.
+- Silence everything with `--no-sound` at init time, or set `"sound": false` in
+  `agent-team.json` (or flip it via `agent-team reconfigure`).
 
 The audio files ship embedded as base64 in the compiled binary and are
 extracted to `~/.agent-team/assets/` on first run. Replace any of

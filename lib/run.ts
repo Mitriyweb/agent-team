@@ -195,6 +195,8 @@ export class TaskRunner {
   private currentTaskNum = 0;
   /** Tasks actually executed in this process (not pre-existing done/failed). */
   private tasksExecutedThisRun = 0;
+  /** Tasks that failed during this process (not pre-existing `!` in roadmap). */
+  private tasksFailedThisRun = 0;
   private totalTasks = 0;
   private cumulativeCost = 0;
   private teamLeadModel: string | undefined;
@@ -508,11 +510,15 @@ export class TaskRunner {
   async run() {
     configureProvider();
 
+    const config = loadConfig();
+    if (config.setupCommands && config.setupCommands.length > 0) {
+      await this.executeSetupCommands(config.setupCommands);
+    }
+
     if (this.options.dryRun) warn(`${YELLOW}[DRY RUN MODE]${NC}`);
     if (this.options.cli) log(`Execution mode: ${GREEN}CLI${NC}`);
 
     // Detect openspec mode (interactive selection if multiple changes)
-    const config = loadConfig();
     this.telegramConfig = config.telegram;
 
     if (config.planner === Planner.Openspec && !this.options.roadmapFile) {
@@ -627,6 +633,10 @@ export class TaskRunner {
         ? await this.runTask(next)
         : await this.runTaskSdk(next);
 
+      if (!success) {
+        this.tasksFailedThisRun++;
+      }
+
       if (this.options.stopAt && tid === this.options.stopAt) {
         log(`Reached stop-at task ${BLUE}#${tid}${NC} — stopping.`);
         break;
@@ -668,7 +678,6 @@ export class TaskRunner {
     }
 
     const pendingAtEnd = this.getRoadmapTasks(" ").length;
-    const failedAtEnd = this.getRoadmapTasks("!").length;
 
     if (!this.options.all) {
       if (pendingAtEnd > 0) {
@@ -682,19 +691,21 @@ export class TaskRunner {
       log("Loop finished.");
     }
 
-    // Audible notifications — mirror the review-sound UX.
-    //   - failed tasks          → notifyFailed (distinct sound/voice)
-    //   - everything complete   → notifyDone (only if we actually ran tasks)
-    //   - user interrupt / WIP  → silent (pending>0 w/o failures)
-    // We gate on `this.currentTaskNum > 0` so an empty roadmap or an already-
-    // finished roadmap doesn't trigger a misleading "All tasks completed" on
-    // a no-op run.
-    if (failedAtEnd > 0) {
-      const reason =
-        failedAtEnd === 1 ? "One task failed" : `${failedAtEnd} tasks failed`;
-      notifyFailed(reason);
-    } else if (pendingAtEnd === 0 && this.tasksExecutedThisRun > 0) {
-      notifyDone();
+    // Audible notifications — only on an actual loop exit (`--all`). In
+    // single-task runs there is no loop to exit, so audible cues would be
+    // misleading. We also key on per-run counters (not roadmap `!`/` `
+    // totals) so stale failures from earlier runs don't re-trigger the
+    // "loop stopped due to error" voice on an otherwise-clean run.
+    if (this.options.all && this.tasksExecutedThisRun > 0) {
+      if (this.tasksFailedThisRun > 0) {
+        const reason =
+          this.tasksFailedThisRun === 1
+            ? "One task failed"
+            : `${this.tasksFailedThisRun} tasks failed`;
+        notifyFailed(reason);
+      } else if (pendingAtEnd === 0) {
+        notifyDone();
+      }
     }
   }
 
@@ -1225,7 +1236,13 @@ export class TaskRunner {
       return true;
     }
 
-    notifyReview();
+    // In loop mode (`--all`) each task pauses here, so firing the review
+    // sound on every pause gets spammy. Keep the audible alert only for
+    // single-task runs — loop runs still get Telegram and the final
+    // done/failed sound at actual loop exit.
+    if (!this.options.all) {
+      notifyReview();
+    }
     tg.review("team-lead", `#${taskId} ${desc}`, this.telegramConfig);
 
     console.log("");
@@ -1458,5 +1475,73 @@ ${memorySection}${vaultSection}
    - TASK_STATUS: FAILED: <reason>
    This line is MANDATORY — the runner uses it to determine task outcome.
     `.trim();
+  }
+
+  private async executeSetupCommands(commands: string[]) {
+    log("Running setup commands...");
+    // Use the user's login+interactive shell so shell-function tools like
+    // `nvm`, `pyenv`, `rbenv` (which are defined in ~/.bashrc / ~/.zshrc,
+    // not on PATH) become callable. A plain `bash -c` is non-interactive
+    // and non-login — it sources none of those and fails with
+    // "nvm: command not found".
+    //
+    // `+m` disables job-control monitor mode. Without it, an interactive
+    // shell spawned as a child process tries to take control of the parent's
+    // tty and the kernel suspends the whole process group with SIGTTOU
+    // ("zsh: suspended (tty output)"). stdin="ignore" is a second safeguard:
+    // no tty on stdin, no tty to fight over.
+    const shell = process.env.SHELL || "/bin/bash";
+    const delimiter = `---AGENT-TEAM-ENV-${crypto.randomUUID()}---`;
+
+    for (const cmd of commands) {
+      log(`Running: ${CYAN}${cmd}${NC}`);
+      const proc = Bun.spawnSync(
+        [shell, "+m", "-lic", `${cmd} && printf '%s\\n' "${delimiter}" && env`],
+        {
+          stdio: ["ignore", "pipe", "inherit"],
+        },
+      );
+
+      if (!proc.success) {
+        err(
+          `Setup command failed: ${cmd}\n` +
+            `  Shell: ${shell} -lic\n` +
+            "  Hint: make sure the command is defined in your shell rc " +
+            "(e.g. ~/.zshrc for zsh, ~/.bashrc for bash). Tools like " +
+            "nvm/pyenv only work in interactive shells unless you source " +
+            "them explicitly first.",
+        );
+      }
+
+      const output = proc.stdout.toString();
+      const parts = output.split(delimiter);
+      const cmdOutput = parts[0]?.trim();
+      const envOutput = parts[1]?.trim();
+
+      if (cmdOutput) {
+        process.stdout.write(`${cmdOutput}\n`);
+      }
+
+      if (envOutput) {
+        for (const line of envOutput.split("\n")) {
+          const match = line.match(/^([^=]+)=(.*)$/);
+          if (!match) {
+            continue;
+          }
+          const [, key, value] = match;
+          // Skip shell-internal churn: `_` is the last-invoked command,
+          // `PWD`/`OLDPWD`/`SHLVL` shift with every subshell.
+          if (
+            !key ||
+            ["_", "PWD", "OLDPWD", "SHLVL"].includes(key) ||
+            process.env[key] === value
+          ) {
+            continue;
+          }
+          process.env[key] = value;
+        }
+      }
+    }
+    ok("Setup commands completed.");
   }
 }

@@ -190,6 +190,8 @@ export interface InitAnswers {
   vaultPath?: string;
   externalReview?: ExternalReviewAgent;
   telegram?: TelegramConfig;
+  setupCommands?: string[];
+  sound: boolean;
 }
 
 export async function promptInit(
@@ -253,6 +255,20 @@ export async function promptInit(
       externalReview: async () => {
         return promptExternalReview(defaults.externalReview);
       },
+      setupCommands: () => {
+        return p.text({
+          message:
+            "Setup commands to run before cycle (optional, comma-separated)",
+          placeholder: "nvm use 20, pyenv local 3.10, npm install",
+          initialValue: defaults.setupCommands?.join(", "),
+        });
+      },
+      sound: () => {
+        return p.confirm({
+          message: "Enable sound notifications (review/done/failed)?",
+          initialValue: defaults.sound ?? true,
+        });
+      },
     },
     {
       onCancel: () => {
@@ -272,6 +288,11 @@ export async function promptInit(
     vaultPath: (result as { vaultPath?: string }).vaultPath,
     externalReview: result.externalReview as ExternalReviewAgent | undefined,
     telegram,
+    setupCommands: (result.setupCommands as string)
+      ?.split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    sound: result.sound as boolean,
   };
 }
 

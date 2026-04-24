@@ -92,22 +92,26 @@ export async function createTeam(options: CreateTeamOptions) {
 interface InitProjectOptions {
   teamName?: string;
   humanReview?: boolean;
+  sound?: boolean;
   sourceDir?: string;
   planner?: Planner;
   vaultPath?: string;
   externalReview?: string;
   telegram?: TelegramConfig;
+  setupCommands?: string[];
 }
 
 export async function initProject(options: InitProjectOptions) {
   const {
     teamName,
     humanReview = true,
+    sound = true,
     sourceDir = ".",
     planner = Planner.Builtin,
     vaultPath,
     externalReview,
     telegram,
+    setupCommands,
   } = options;
 
   log("Initializing agent-team project...");
@@ -151,7 +155,11 @@ export async function initProject(options: InitProjectOptions) {
   if (telegram) {
     config.telegram = telegram;
   }
+  if (setupCommands) {
+    config.setupCommands = setupCommands;
+  }
   config.humanReview = humanReview;
+  config.sound = sound;
   saveConfig(config);
 
   // Manage Obsidian vault symlink
@@ -639,6 +647,20 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
       externalReview: async () => {
         return promptExternalReview(config.externalReview?.agent);
       },
+      setupCommands: () => {
+        return p.text({
+          message:
+            "Setup commands to run before cycle (optional, comma-separated)",
+          placeholder: "nvm use 20, pyenv local 3.10, npm install",
+          initialValue: config.setupCommands?.join(", "),
+        });
+      },
+      sound: () => {
+        return p.confirm({
+          message: "Enable sound notifications (review/done/failed)?",
+          initialValue: config.sound ?? true,
+        });
+      },
     },
     {
       onCancel: () => {
@@ -649,6 +671,8 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
   )) as {
     vaultPath: string | undefined;
     externalReview: ExternalReviewAgent | undefined;
+    setupCommands: string | undefined;
+    sound: boolean;
   };
 
   const telegramConfig = await promptTelegram(config.telegram);
@@ -678,6 +702,18 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
   } else {
     delete config.telegram;
   }
+
+  if (answers.setupCommands) {
+    config.setupCommands = answers.setupCommands
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } else {
+    delete config.setupCommands;
+  }
+
+  config.sound = answers.sound;
+
   saveConfig(config);
 
   // 2. Update skills and scripts from source

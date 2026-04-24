@@ -69,25 +69,31 @@ async function main() {
       explicitTeam && !explicitTeam.startsWith("-") ? explicitTeam : undefined;
     const explicitPlanner = flagValue("--planner");
     const explicitNoReview = hasFlag("--no-human-review");
+    const explicitNoSound = hasFlag("--no-sound");
     const explicitVault = flagValue("--vault");
     const explicitExternalReview = flagValue("--external-review");
     const explicitTelegramToken = flagValue("--telegram-token");
     const explicitTelegramChat = flagValue("--telegram-chat");
+    const explicitSetupCommands = flagValue("--setup-commands");
 
     const isNonInteractive =
       teamFromFlag !== undefined ||
       explicitPlanner !== undefined ||
       explicitNoReview ||
+      explicitNoSound ||
       explicitVault !== undefined ||
       explicitExternalReview !== undefined ||
-      explicitTelegramToken !== undefined;
+      explicitTelegramToken !== undefined ||
+      explicitSetupCommands !== undefined;
 
     let teamName: string | undefined;
     let planner: Planner;
     let humanReview: boolean;
+    let sound: boolean;
     let vaultPath: string | undefined;
     let externalReview: string | undefined;
     let telegram: { botToken: string; chatId: string } | undefined;
+    let setupCommands: string[] | undefined;
 
     if (isNonInteractive) {
       // Classic flag-based mode
@@ -95,6 +101,7 @@ async function main() {
       planner =
         explicitPlanner === "openspec" ? Planner.Openspec : Planner.Builtin;
       humanReview = !explicitNoReview;
+      sound = !explicitNoSound;
       vaultPath = explicitVault;
       externalReview = explicitExternalReview;
       if (explicitTelegramToken && explicitTelegramChat) {
@@ -103,6 +110,10 @@ async function main() {
           chatId: explicitTelegramChat,
         };
       }
+      setupCommands = explicitSetupCommands
+        ?.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     } else {
       // Interactive mode — pre-fill from existing config
       p.intro("agent-team");
@@ -114,24 +125,30 @@ async function main() {
         vaultPath: existingConfig.vaultPath,
         externalReview: existingConfig.externalReview?.agent,
         telegram: existingConfig.telegram,
+        setupCommands: existingConfig.setupCommands,
+        sound: existingConfig.sound,
       });
       if (!answers) return;
       teamName = answers.teamName;
       planner = answers.planner;
       humanReview = answers.humanReview;
+      sound = answers.sound;
       vaultPath = answers.vaultPath;
       externalReview = answers.externalReview;
       telegram = answers.telegram;
+      setupCommands = answers.setupCommands;
     }
 
     await initProject({
       teamName,
       humanReview,
+      sound,
       sourceDir,
       planner,
       vaultPath,
       externalReview,
       telegram,
+      setupCommands,
     });
 
     if (!isNonInteractive)
@@ -278,6 +295,9 @@ async function main() {
     );
     console.log(
       "                    [--telegram-token TOKEN --telegram-chat CHAT_ID]",
+    );
+    console.log(
+      "                    [--no-sound]                         Disable audible notifications",
     );
     console.log(
       "    agent-team update                                    Update project configs",

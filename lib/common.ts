@@ -107,6 +107,18 @@ export function loadEnv(envFile = ".env") {
  * loop failed.
  */
 function playNotification(assetName: string, ttsMessage: string): void {
+  // Respect per-project config: `sound: false` silences all audible cues
+  // (review/done/failed) for runs inside that project. Wrapped in try/catch
+  // because this is called from top-level error handlers where a missing or
+  // malformed config must not mask the original failure.
+  try {
+    if (loadConfig().sound === false) {
+      return;
+    }
+  } catch {
+    /* fall through — default is sound enabled */
+  }
+
   const soundFile = path.join(
     process.env.HOME || "",
     ".agent-team/assets",
@@ -384,6 +396,10 @@ export interface ProjectConfig {
   telegram?: TelegramConfig;
   /** If false, auto-approve HUMAN_REVIEW_NEEDED tasks without prompting */
   humanReview?: boolean;
+  /** Commands to run before starting the task cycle (e.g. nvm use, pyenv local) */
+  setupCommands?: string[];
+  /** If false, suppress all audible notifications (review/done/failed). Default: true */
+  sound?: boolean;
   [key: string]: unknown;
 }
 
