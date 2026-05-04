@@ -555,6 +555,9 @@ async function planWithBuiltin(inputFile: string, model?: string) {
  */
 function reviewPlanExternally(planArtifact: string, subject: string) {
   if (!fs.existsSync(planArtifact)) return;
+  const config = loadConfig();
+  if (!config.externalReview?.agent) return;
+
   const reviewPrompt = [
     "Review this implementation plan for feasibility, completeness, and risks.",
     `Plan location: ${planArtifact}`,

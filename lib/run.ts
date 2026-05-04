@@ -1275,7 +1275,7 @@ export class TaskRunner {
       });
       const changes = new TextDecoder().decode(gitProc.stdout).trim();
       if (changes) {
-        console.log(`\n${CYAN}── Files changed ──${NC}`);
+        console.log(`\n${CYAN}── Files to review ──${NC}`);
         console.log(
           changes.split("\n").slice(0, 20).join("\n") +
             (changes.split("\n").length > 20 ? "\n  ... (truncated)" : ""),

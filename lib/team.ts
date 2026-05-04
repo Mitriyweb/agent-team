@@ -105,7 +105,7 @@ export async function initProject(options: InitProjectOptions) {
   const {
     teamName,
     humanReview = true,
-    sound = true,
+    sound = false,
     sourceDir = ".",
     planner = Planner.Builtin,
     vaultPath,
@@ -658,7 +658,7 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
       sound: () => {
         return p.confirm({
           message: "Enable sound notifications (review/done/failed)?",
-          initialValue: config.sound ?? true,
+          initialValue: config.sound ?? false,
         });
       },
     },

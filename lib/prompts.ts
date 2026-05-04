@@ -266,7 +266,7 @@ export async function promptInit(
       sound: () => {
         return p.confirm({
           message: "Enable sound notifications (review/done/failed)?",
-          initialValue: defaults.sound ?? true,
+          initialValue: defaults.sound ?? false,
         });
       },
     },
