@@ -160,23 +160,76 @@ describe("common.ts", () => {
     process.env.LITELLM_HOST = "http://lite";
     common.configureProvider();
 
+    process.env.PROVIDER = "anthropic";
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    common.configureProvider();
+
+    process.env.PROVIDER = "azure-apim";
+    process.env.AZURE_APIM_ENDPOINT = "http://azure";
+    process.env.AZURE_APIM_KEY = "azure-key";
+    common.configureProvider();
+
+    process.env.PROVIDER = "azure-apim-oauth";
+    process.env.AZURE_APIM_ENDPOINT = "http://azure-oauth";
+    common.configureProvider();
+
     process.env = origEnv;
   });
 
-  it("covers notifyReview", () => {
+  it("covers detectOpenSpecInvocation", () => {
+    const originalSpawnSync = Bun.spawnSync;
+
+    // Both fail
+    // @ts-expect-error: mock
+    Bun.spawnSync = mock(() => ({ success: false }));
+    expect(common.detectOpenSpecInvocation()).toBeUndefined();
+
+    // Direct success
+    // @ts-expect-error: mock
+    Bun.spawnSync = mock((args: string[]) => ({
+      success: args[0] === "openspec",
+    }));
+    expect(common.detectOpenSpecInvocation()).toEqual(["openspec"]);
+
+    // Npx success
+    // @ts-expect-error: mock
+    Bun.spawnSync = mock((args: string[]) => ({
+      success: args[0] === "npx",
+    }));
+    expect(common.detectOpenSpecInvocation()).toEqual([
+      "npx",
+      "--no-install",
+      "@fission-ai/openspec",
+    ]);
+
+    Bun.spawnSync = originalSpawnSync;
+  });
+
+  it("covers notify functions", () => {
     const originalSpawnSync = Bun.spawnSync;
     // @ts-expect-error: mock spawnSync with minimal shape
     Bun.spawnSync = mock(() => ({ success: false }));
 
     const originalPlatform = process.platform;
 
-    Object.defineProperty(process, "platform", { value: "linux" });
+    for (const platform of ["linux", "darwin", "win32"] as const) {
+      Object.defineProperty(process, "platform", { value: platform });
+      common.notifyReview();
+      common.notifyDone();
+      common.notifyFailed("error");
+      common.notifyFailed(); // No reason
+      common.notifyFailed("Long ".repeat(50)); // Truncation
+    }
+
+    // Test sound file existence path
+    spyOn(fs, "existsSync").mockReturnValue(true);
     common.notifyReview();
 
-    Object.defineProperty(process, "platform", { value: "darwin" });
-    common.notifyReview();
-
-    Object.defineProperty(process, "platform", { value: "win32" });
+    // Test sound disabled config
+    spyOn(common, "loadConfig").mockReturnValue({
+      planner: common.Planner.Builtin,
+      sound: false,
+    });
     common.notifyReview();
 
     Object.defineProperty(process, "platform", { value: originalPlatform });
