@@ -78,6 +78,16 @@ describe("plan.ts", () => {
     await planRoadmap(roadmapFile);
     expect(fs.existsSync(path.join(tmpDir, "tasks/plan.md"))).toBe(true);
 
+    // Test summary output
+    spyOn(console, "log").mockImplementation(() => {});
+    fs.writeFileSync(
+      path.join(tmpDir, "tasks/plan.md"),
+      "- [ ] id:1 priority:high agents:dev Description\n- [ ] id:2 priority:medium agents:qa Description2\n- [ ] id:3 priority:low agents:arch Description3",
+    );
+    // showTaskSummary is called inside planRoadmap when PLAN_READY is in response
+    // Already mocked Bun.spawn to create file and return PLAN_READY
+    await planRoadmap(roadmapFile);
+
     // Test failure case
     // @ts-expect-error: mock Bun.spawn
     Bun.spawn = mock(() => ({

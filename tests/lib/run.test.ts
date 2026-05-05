@@ -27,6 +27,7 @@ describe("run.ts", () => {
 
   afterEach(() => {
     process.chdir(rootDir);
+    delete process.env.NEW_KEY;
     try {
       if (tmpDir && fs.existsSync(tmpDir)) {
         fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -78,7 +79,68 @@ describe("run.ts", () => {
         JSON.stringify({ result: { text: "TASK_STATUS: SUCCESS" } }),
       ),
     ).toBe("SUCCESS");
+    expect(r.extractTaskStatus("TASK_STATUS: HUMAN_REVIEW_NEEDED")).toBe(
+      "HUMAN_REVIEW_NEEDED",
+    );
+    expect(r.extractTaskStatus('{"result":"TASK_STATUS: SUCCESS"}')).toBe(
+      "SUCCESS",
+    );
 
     Bun.spawn = originalSpawn;
+  });
+
+  it("covers executeSetupCommands", async () => {
+    process.chdir(tmpDir);
+    spyOn(common, "log").mockImplementation(() => {});
+    spyOn(common, "ok").mockImplementation(() => {});
+    const originalSpawnSync = Bun.spawnSync;
+
+    const runner = new TaskRunner({ all: true });
+    // @ts-expect-error
+    Bun.spawnSync = mock(() => ({
+      success: true,
+      stdout: Buffer.from(
+        "out\n---AGENT-TEAM-ENV-uuid---\nNEW_KEY=NEW_VALUE\n",
+      ),
+    }));
+
+    // Mock crypto.randomUUID to match our delimiter
+    // @ts-expect-error
+    spyOn(crypto, "randomUUID").mockReturnValue("uuid");
+
+    // @ts-expect-error
+    await runner.executeSetupCommands(["echo 1"]);
+    expect(process.env.NEW_KEY).toBe("NEW_VALUE");
+
+    Bun.spawnSync = originalSpawnSync;
+  });
+
+  it("covers recoverStuckTasks", () => {
+    process.chdir(tmpDir);
+    spyOn(common, "log").mockImplementation(() => {});
+    spyOn(common, "ok").mockImplementation(() => {});
+    spyOn(common, "warn").mockImplementation(() => {});
+
+    // Legacy format requires a code block
+    fs.writeFileSync(
+      "ROADMAP.md",
+      "```\n- [~] id:1 priority:high agents:dev T\n```",
+    );
+    const runner = new TaskRunner({ all: true });
+    // @ts-expect-error
+    runner.recoverStuckTasks();
+    // No logs, should reset to [ ]
+    expect(fs.readFileSync("ROADMAP.md", "utf-8")).toContain("[ ] id:1");
+
+    // With log
+    fs.writeFileSync(
+      "ROADMAP.md",
+      "```\n- [~] id:1 priority:high agents:dev T\n```",
+    );
+    fs.mkdirSync(".claude-loop/logs", { recursive: true });
+    fs.writeFileSync(".claude-loop/logs/task-1-ts.log", "done");
+    // @ts-expect-error
+    runner.recoverStuckTasks();
+    expect(fs.readFileSync("ROADMAP.md", "utf-8")).toContain("[x] id:1");
   });
 });
