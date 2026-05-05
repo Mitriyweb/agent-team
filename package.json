@@ -50,7 +50,7 @@
   "overrides": {
     "picomatch": "2.3.2",
     "vite": "8.0.5",
-    "axios": "1.15.0"
+    "axios": "1.15.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
