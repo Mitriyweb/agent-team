@@ -139,6 +139,16 @@ Monitoring:
 All setup commands (`init`, `new-team`, `import`) are interactive by default.
 Pass CLI flags to skip prompts for scripting and CI.
 
+## Commands
+
+| Command | Description |
+|---|---|
+| `bun run start` | Run the orchestrator |
+| `bun run agents:list` | List all registered agents and their roles |
+| `bun run docs:validate` | Lint all markdown documentation |
+| `bun run test` | Run the test suite |
+| `bun run validate` | Run full project validation (lint, check, typecheck, tests) |
+
 ## Planning
 
 ### Built-in planner (default)
