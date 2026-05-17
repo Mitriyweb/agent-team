@@ -388,6 +388,7 @@ export interface ProjectConfig {
   planner: Planner;
   team?: string;
   vaultPath?: string;
+  pageIndexPath?: string;
   /** Extra regex patterns to block in Bash (added to built-in defaults) */
   blockedBashPatterns?: string[];
   /** External CLI agent for spec/implementation review */

@@ -75,6 +75,45 @@ export async function promptVault(
   return result;
 }
 
+export async function promptPageIndex(
+  message: string,
+  defaultValue?: string,
+  allowSkip = true,
+): Promise<string | symbol | undefined> {
+  if (allowSkip) {
+    const enable = await p.confirm({
+      message: defaultValue
+        ? `Keep PageIndex integration? (${defaultValue})`
+        : "Enable PageIndex for document reasoning?",
+      initialValue: !!defaultValue,
+    });
+
+    if (p.isCancel(enable)) return enable;
+    if (!enable) return undefined;
+  }
+
+  const cwd = process.cwd();
+  const result = await p.text({
+    message: `${message}
+  - absolute:       /Users/you/Documents/Docs
+  - home-relative:  ~/Documents/Docs
+  - project-relative (cwd=${cwd}): ./docs`,
+    placeholder: defaultValue || "./docs",
+    initialValue: defaultValue,
+    validate: (v) => {
+      if (!v?.trim()) return "Path is required";
+      const expanded = expandHome(v);
+      if (!fs.existsSync(expanded)) return "Path does not exist";
+      return undefined;
+    },
+  });
+
+  if (typeof result === "string") {
+    return expandHome(result);
+  }
+  return result;
+}
+
 const EXTERNAL_REVIEW_AGENTS: {
   value: ExternalReviewAgent | "__none__";
   label: string;
@@ -188,6 +227,7 @@ export interface InitAnswers {
   planner: Planner;
   humanReview: boolean;
   vaultPath?: string;
+  pageIndexPath?: string;
   externalReview?: ExternalReviewAgent;
   telegram?: TelegramConfig;
   setupCommands?: string[];
@@ -252,6 +292,18 @@ export async function promptInit(
         }
         return result as string | undefined;
       },
+      pageIndexPath: async () => {
+        const result = await promptPageIndex(
+          "Select PageIndex documents directory (optional):",
+          defaults.pageIndexPath,
+          true,
+        );
+        if (p.isCancel(result)) {
+          p.cancel("Setup cancelled.");
+          process.exit(0);
+        }
+        return result as string | undefined;
+      },
       externalReview: async () => {
         return promptExternalReview(defaults.externalReview);
       },
@@ -286,6 +338,7 @@ export async function promptInit(
     planner: result.planner as Planner,
     humanReview: result.humanReview as boolean,
     vaultPath: (result as { vaultPath?: string }).vaultPath,
+    pageIndexPath: (result as { pageIndexPath?: string }).pageIndexPath,
     externalReview: result.externalReview as ExternalReviewAgent | undefined,
     telegram,
     setupCommands: (result.setupCommands as string)

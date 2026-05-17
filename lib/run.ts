@@ -1446,6 +1446,37 @@ then Read only the specific file(s) you need. Do not scan or pre-load the vault.
 `;
     }
 
+    // Inject PageIndex context if configured
+    let pageIndexSection = "";
+    const pageIndexLink = ".claude/page-index";
+    if (fs.existsSync(pageIndexLink)) {
+      let pageIndexTarget = pageIndexLink;
+      try {
+        const resolved = fs.realpathSync(pageIndexLink);
+        if (resolved && resolved !== path.resolve(pageIndexLink)) {
+          pageIndexTarget = `${pageIndexLink} -> ${resolved}`;
+        }
+      } catch {
+        // Fall back to the link path if realpath fails
+      }
+      let prefix = team.substring(0, 2).toLowerCase();
+      if (prefix) prefix = `${prefix}-`;
+      else prefix = "";
+
+      pageIndexSection = `
+## PageIndex (Document Reasoning)
+
+A PageIndex document reasoning source is connected at \`${pageIndexTarget}\`.
+It contains hierarchical tree structures of complex documents (financial reports,
+manuals, etc.) optimized for LLM reasoning.
+
+When a task requires deep document analysis:
+1. Delegate to the \`${prefix}analyst\` agent — it is specialized in PageIndex retrieval.
+2. The \`${prefix}analyst\` will use the tree structures in \`.claude/page-index\` to
+   navigate and extract precise information with page references.
+`;
+    }
+
     return `
 You are the ${team} team-lead orchestrating an autonomous agent team.
 You NEVER write code, tests, or content yourself — you delegate to teammates via the Teammate tool.
@@ -1454,7 +1485,7 @@ TASK #${taskId}: ${desc}
 
 ## Detailed specification
 ${spec}
-${memorySection}${vaultSection}
+${memorySection}${vaultSection}${pageIndexSection}
 ## Instructions
 
 1. **Classify the task in one sentence** — is it (a) code-writing, (b) verification/run-command, or
