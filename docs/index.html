@@ -150,6 +150,9 @@
                     <span class="output">&#9654; Enable Obsidian vault for RAG?</span>
                     Yes / <span class="highlight">No</span><br><br>
 
+                    <span class="output">&#9654; Enable PageIndex for document reasoning?</span>
+                    Yes / <span class="highlight">No</span><br><br>
+
                     <span class="output">&#9654; External review agent (optional)</span><br>
                     <span class="highlight">&nbsp;&nbsp;&#9679; None</span><br>
                     <span>&nbsp;&nbsp;&#9675; Codex</span>
@@ -316,6 +319,11 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                         Dataview metadata.</p>
                 </article>
                 <article>
+                    <h3>PageIndex</h3>
+                    <p>Leverage PageIndex for deep reasoning over complex documents. Specialized <code>analyst</code>
+                        role uses hierarchical trees to extract precise answers with page references.</p>
+                </article>
+                <article>
                     <h3>Setup Commands</h3>
                     <p>Run environment setup (Python, Node versions) or install dependencies automatically before agents
                         start their cycle.</p>
@@ -325,7 +333,7 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <p>For CI/scripting, every option has a flag equivalent:</p>
             <pre><code>agent-team init --team fullstack --planner openspec --external-review codex \
   --telegram-token T --telegram-chat C --setup-commands "nvm use 20" \
-  --no-human-review --no-sound</code></pre>
+  --page-index ./docs --no-human-review --no-sound</code></pre>
         </section>
 
         <section id="execution">
@@ -372,6 +380,7 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
             <ul>
                 <li><strong>Platforms:</strong> macOS and Linux supported. Windows is planned.</li>
                 <li><strong>Teams:</strong> 4 built-in teams + custom team creation.</li>
+                <li><strong>Document Reasoning:</strong> PageIndex support for reasoning-based RAG.</li>
                 <li><strong>External Review:</strong> 5 supported agents (Codex, Claude, Gemini, Devin, Aider).</li>
             </ul>
         </section>

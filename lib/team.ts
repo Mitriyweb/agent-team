@@ -21,10 +21,15 @@ import {
 import { EMBEDDED_TEAM_NAMES, EMBEDDED_TEAMS } from "./embedded-agents.ts";
 import {
   promptExternalReview,
+  promptPageIndex,
   promptTelegram,
   promptVault,
 } from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
+import ANALYST_TEMPLATE from "./templates/analyst.md" with { type: "text" };
+import DOCUMENT_REASONING_SKILL from "./templates/document-reasoning.md" with {
+  type: "text",
+};
 /**
  * Port of create_team logic from team.sh
  */
@@ -96,6 +101,7 @@ interface InitProjectOptions {
   sourceDir?: string;
   planner?: Planner;
   vaultPath?: string;
+  pageIndexPath?: string;
   externalReview?: string;
   telegram?: TelegramConfig;
   setupCommands?: string[];
@@ -109,6 +115,7 @@ export async function initProject(options: InitProjectOptions) {
     sourceDir = ".",
     planner = Planner.Builtin,
     vaultPath,
+    pageIndexPath,
     externalReview,
     telegram,
     setupCommands,
@@ -128,6 +135,7 @@ export async function initProject(options: InitProjectOptions) {
     "tasks/",
     ".agents/",
     ".claude/vault",
+    ".claude/page-index",
     "*.log",
     ".DS_Store",
     "settings.local.json",
@@ -149,6 +157,7 @@ export async function initProject(options: InitProjectOptions) {
   const config: ProjectConfig = { ...loadConfig(), planner };
   if (teamName) config.team = teamName;
   if (vaultPath) config.vaultPath = vaultPath;
+  if (pageIndexPath) config.pageIndexPath = pageIndexPath;
   if (externalReview) {
     config.externalReview = { agent: externalReview as ExternalReviewAgent };
   }
@@ -164,6 +173,8 @@ export async function initProject(options: InitProjectOptions) {
 
   // Manage Obsidian vault symlink
   manageVaultSymlink(vaultPath);
+  // Manage PageIndex symlink
+  managePageIndexSymlink(pageIndexPath);
   ok(`Planner: ${planner === Planner.Openspec ? "OpenSpec" : "built-in"}`);
 
   // Initialize OpenSpec if selected
@@ -289,6 +300,84 @@ export async function initProject(options: InitProjectOptions) {
   const librarianPath = path.join(CLAUDE_AGENTS_DIR, "librarian.md");
   fs.writeFileSync(librarianPath, LIBRARIAN_TEMPLATE as string);
   ok("Deployed librarian agent");
+
+  // Deploy PageIndex analyst agent if enabled
+  if (pageIndexPath) {
+    let prefix = teamName?.substring(0, 2).toLowerCase();
+    if (prefix) prefix = `${prefix}-`;
+    else prefix = "";
+
+    const analystPath = path.join(CLAUDE_AGENTS_DIR, `${prefix}analyst.md`);
+    const protocolFile = `${prefix}PROTOCOL.md`;
+    const analystContent = (ANALYST_TEMPLATE as string)
+      .replace(/{{TEAM_PREFIX}}/g, prefix)
+      .replace(/{{TEAM_NAME}}/g, teamName || "development")
+      .replace(/{{PROTOCOL_FILE}}/g, protocolFile);
+    fs.writeFileSync(analystPath, analystContent);
+    ok(`Deployed analyst agent: ${analystPath}`);
+
+    // Deploy PageIndex document-reasoning skill
+    const skillDir = path.join(
+      CLAUDE_AGENTS_DIR,
+      "skills",
+      "document-reasoning",
+    );
+    if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, "SKILL.md"),
+      DOCUMENT_REASONING_SKILL as string,
+    );
+    ok(`Deployed document-reasoning skill to ${skillDir}`);
+
+    // Update PROTOCOL.md to include analyst role
+    const protocolPath = path.join(CLAUDE_AGENTS_DIR, protocolFile);
+    if (fs.existsSync(protocolPath)) {
+      let protocol = fs.readFileSync(protocolPath, "utf-8");
+      if (protocol.includes("Communication Graph")) {
+        const analystNode = ` → ${prefix}analyst`;
+        if (!protocol.includes(analystNode)) {
+          // Placeholder might have been replaced or still exists
+          const agentsAnchor = protocol.includes(
+            `${prefix}agents (per task spec)`,
+          )
+            ? `${prefix}agents (per task spec)`
+            : "{{TEAM_PREFIX}}agents (per task spec)";
+
+          const teamLeadAnchor = protocol.includes(`${prefix}team-lead`)
+            ? `${prefix}team-lead`
+            : "{{TEAM_PREFIX}}team-lead";
+
+          protocol = protocol.replace(
+            agentsAnchor,
+            `${agentsAnchor}\n                         ↓\n       ${teamLeadAnchor} → ${prefix}analyst (document analysis)`,
+          );
+
+          // Also update Message Types table if present
+          if (protocol.includes("| `ANSWER` |")) {
+            if (!protocol.includes("| `ANALYSIS_REQUEST` |")) {
+              protocol = protocol.replace(
+                /(\| `ANSWER` \|.*\|)/,
+                "$1\n| `ANALYSIS_REQUEST` | Requesting document or codebase analysis |\n| `ANALYSIS_REPORT` | Detailed findings from an analysis task |",
+              );
+            }
+          }
+
+          // Also update Artifacts table if present
+          if (protocol.includes("| Task summary (team-lead) |")) {
+            if (!protocol.includes("| Analysis report |")) {
+              protocol = protocol.replace(
+                /(\| Task summary \(team-lead\) \|.*\|)/,
+                "$1\n| Analysis report | `.claude-loop/reports/task-{id}-analysis.md` |",
+              );
+            }
+          }
+
+          fs.writeFileSync(protocolPath, protocol);
+          ok("Updated PROTOCOL.md with analyst role and message types");
+        }
+      }
+    }
+  }
 
   if (!humanReview && fs.existsSync(targetSettings)) {
     try {
@@ -536,6 +625,46 @@ export function validateTeam(_name: string) {
 }
 
 /**
+ * Create or update a symlink at .claude/page-index pointing to the PageIndex directory.
+ */
+export function managePageIndexSymlink(pageIndexPath?: string) {
+  const pageIndexLink = path.join(".claude", "page-index");
+  const expanded = pageIndexPath ? expandHome(pageIndexPath) : undefined;
+
+  // Remove existing link/file if it exists
+  try {
+    if (
+      fs.existsSync(pageIndexLink) ||
+      fs.lstatSync(pageIndexLink, { throwIfNoEntry: false })
+    ) {
+      fs.unlinkSync(pageIndexLink);
+    }
+  } catch (e: unknown) {
+    // Ignore error if it doesn't exist, otherwise warn
+    // biome-ignore lint/suspicious/noExplicitAny: error code check
+    if ((e as any).code !== "ENOENT") {
+      warn(`Failed to remove existing PageIndex link: ${(e as Error).message}`);
+    }
+  }
+
+  if (expanded) {
+    const absolutePath = path.resolve(expanded);
+    if (fs.existsSync(absolutePath)) {
+      try {
+        if (!fs.existsSync(".claude"))
+          fs.mkdirSync(".claude", { recursive: true });
+        fs.symlinkSync(absolutePath, pageIndexLink);
+        ok(`Connected PageIndex: ${BLUE}${pageIndexPath}${NC}`);
+      } catch (e: unknown) {
+        warn(`Failed to create symlink to PageIndex: ${(e as Error).message}`);
+      }
+    } else {
+      warn(`PageIndex path not found: ${pageIndexPath}`);
+    }
+  }
+}
+
+/**
  * Detect installed team by reading the project config.
  */
 function getInstalledTeam(): string | undefined {
@@ -644,6 +773,15 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
         if (p.isCancel(result)) return p.cancel();
         return result as string | undefined;
       },
+      pageIndexPath: async () => {
+        const result = await promptPageIndex(
+          "PageIndex documents directory (optional):",
+          config.pageIndexPath,
+          true,
+        );
+        if (p.isCancel(result)) return p.cancel();
+        return result as string | undefined;
+      },
       externalReview: async () => {
         return promptExternalReview(config.externalReview?.agent);
       },
@@ -678,6 +816,8 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
   const telegramConfig = await promptTelegram(config.telegram);
 
   const newVaultPath = answers.vaultPath;
+  const newPageIndexPath = (answers as { pageIndexPath?: string })
+    .pageIndexPath;
 
   if (newVaultPath) {
     config.vaultPath = newVaultPath;
@@ -686,6 +826,109 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
     manageVaultSymlink(undefined);
   } else {
     manageVaultSymlink(config.vaultPath);
+  }
+
+  if (newPageIndexPath) {
+    config.pageIndexPath = newPageIndexPath;
+    managePageIndexSymlink(config.pageIndexPath);
+
+    // Ensure analyst agent is deployed
+    let prefix = teamName.substring(0, 2).toLowerCase();
+    if (prefix) prefix = `${prefix}-`;
+    else prefix = "";
+
+    const analystPath = path.join(CLAUDE_AGENTS_DIR, `${prefix}analyst.md`);
+    if (!fs.existsSync(analystPath)) {
+      const protocolFile = `${prefix}PROTOCOL.md`;
+      const analystContent = (ANALYST_TEMPLATE as string)
+        .replace(/{{TEAM_PREFIX}}/g, prefix)
+        .replace(/{{TEAM_NAME}}/g, teamName || "development")
+        .replace(/{{PROTOCOL_FILE}}/g, protocolFile);
+      fs.writeFileSync(analystPath, analystContent);
+      ok(`Deployed analyst agent: ${analystPath}`);
+
+      // Update PROTOCOL.md to include analyst role
+      const protocolPath = path.join(CLAUDE_AGENTS_DIR, protocolFile);
+      if (fs.existsSync(protocolPath)) {
+        let protocol = fs.readFileSync(protocolPath, "utf-8");
+        if (protocol.includes("Communication Graph")) {
+          const analystNode = ` → ${prefix}analyst`;
+          if (!protocol.includes(analystNode)) {
+            const agentsAnchor = protocol.includes(
+              `${prefix}agents (per task spec)`,
+            )
+              ? `${prefix}agents (per task spec)`
+              : "{{TEAM_PREFIX}}agents (per task spec)";
+
+            const teamLeadAnchor = protocol.includes(`${prefix}team-lead`)
+              ? `${prefix}team-lead`
+              : "{{TEAM_PREFIX}}team-lead";
+
+            protocol = protocol.replace(
+              agentsAnchor,
+              `${agentsAnchor}\n                         ↓\n       ${teamLeadAnchor} → ${prefix}analyst (document analysis)`,
+            );
+
+            // Also update Message Types table if present
+            if (protocol.includes("| `ANSWER` |")) {
+              if (!protocol.includes("| `ANALYSIS_REQUEST` |")) {
+                protocol = protocol.replace(
+                  /(\| `ANSWER` \|.*\|)/,
+                  "$1\n| `ANALYSIS_REQUEST` | Requesting document or codebase analysis |\n| `ANALYSIS_REPORT` | Detailed findings from an analysis task |",
+                );
+              }
+            }
+
+            // Also update Artifacts table if present
+            if (protocol.includes("| Task summary (team-lead) |")) {
+              if (!protocol.includes("| Analysis report |")) {
+                protocol = protocol.replace(
+                  /(\| Task summary \(team-lead\) \|.*\|)/,
+                  "$1\n| Analysis report | `.claude-loop/reports/task-{id}-analysis.md` |",
+                );
+              }
+            }
+
+            fs.writeFileSync(protocolPath, protocol);
+            ok("Updated PROTOCOL.md with analyst role and message types");
+          }
+        }
+      }
+    }
+  } else {
+    // If PageIndex was disabled, remove analyst agent
+    const oldPrefix = teamName.substring(0, 2).toLowerCase();
+    const prefixStr = oldPrefix ? `${oldPrefix}-` : "";
+    const analystPath = path.join(CLAUDE_AGENTS_DIR, `${prefixStr}analyst.md`);
+    if (fs.existsSync(analystPath)) {
+      fs.rmSync(analystPath);
+      ok(`Removed analyst agent: ${analystPath}`);
+
+      const protocolFile = `${prefixStr}PROTOCOL.md`;
+      const protocolPath = path.join(CLAUDE_AGENTS_DIR, protocolFile);
+      if (fs.existsSync(protocolPath)) {
+        const protocol = fs.readFileSync(protocolPath, "utf-8");
+        const analystNode = `${prefixStr}analyst (document analysis)`;
+        if (protocol.includes(analystNode)) {
+          // Find the whole line/block for analyst and remove it
+          const lines = protocol.split("\n");
+          const filtered = lines.filter((l) => !l.includes(analystNode));
+          // Also remove the arrow line above it if it's empty/just an arrow
+          for (let i = 0; i < filtered.length; i++) {
+            const current = filtered[i];
+            const next = filtered[i + 1];
+            if (current?.trim() === "↓" && (!next || next.trim() === "")) {
+              filtered.splice(i, 1);
+            }
+          }
+          fs.writeFileSync(protocolPath, filtered.join("\n"));
+          ok("Updated PROTOCOL.md (removed analyst role)");
+        }
+      }
+    }
+
+    delete config.pageIndexPath;
+    managePageIndexSymlink(undefined);
   }
 
   // Update external review config

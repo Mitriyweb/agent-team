@@ -71,6 +71,7 @@ async function main() {
     const explicitNoReview = hasFlag("--no-human-review");
     const explicitNoSound = hasFlag("--no-sound");
     const explicitVault = flagValue("--vault");
+    const explicitPageIndex = flagValue("--page-index");
     const explicitExternalReview = flagValue("--external-review");
     const explicitTelegramToken = flagValue("--telegram-token");
     const explicitTelegramChat = flagValue("--telegram-chat");
@@ -82,6 +83,7 @@ async function main() {
       explicitNoReview ||
       explicitNoSound ||
       explicitVault !== undefined ||
+      explicitPageIndex !== undefined ||
       explicitExternalReview !== undefined ||
       explicitTelegramToken !== undefined ||
       explicitSetupCommands !== undefined;
@@ -91,6 +93,7 @@ async function main() {
     let humanReview: boolean;
     let sound: boolean;
     let vaultPath: string | undefined;
+    let pageIndexPath: string | undefined;
     let externalReview: string | undefined;
     let telegram: { botToken: string; chatId: string } | undefined;
     let setupCommands: string[] | undefined;
@@ -103,6 +106,7 @@ async function main() {
       humanReview = !explicitNoReview;
       sound = !explicitNoSound;
       vaultPath = explicitVault;
+      pageIndexPath = explicitPageIndex;
       externalReview = explicitExternalReview;
       if (explicitTelegramToken && explicitTelegramChat) {
         telegram = {
@@ -134,6 +138,7 @@ async function main() {
       humanReview = answers.humanReview;
       sound = answers.sound;
       vaultPath = answers.vaultPath;
+      pageIndexPath = answers.pageIndexPath;
       externalReview = answers.externalReview;
       telegram = answers.telegram;
       setupCommands = answers.setupCommands;
@@ -146,6 +151,7 @@ async function main() {
       sourceDir,
       planner,
       vaultPath,
+      pageIndexPath,
       externalReview,
       telegram,
       setupCommands,
@@ -288,7 +294,7 @@ async function main() {
       "    agent-team init                                      Interactive setup",
     );
     console.log(
-      "    agent-team init --team NAME [--planner P] [--vault V]  Non-interactive",
+      "    agent-team init --team NAME [--planner P] [--vault V] [--page-index D]  Non-interactive",
     );
     console.log(
       "                    [--external-review codex|devin|aider|claude|gemini]",

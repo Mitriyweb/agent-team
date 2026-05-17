@@ -20,6 +20,8 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
 
 - `fe-qa` performs functional UI testing and visual regression.
 
+- `fe-analyst` (optional) uses PageIndex for deep document reasoning.
+
 ## Agent Roles
 
 ### fe-team-lead
@@ -59,6 +61,12 @@ fe-team-lead ──► fe-architect ◄──► fe-dev ◄──► fe-qa
   for pixel-perfection, ensures WCAG 2.1 AA accessibility compliance.
 
 - **Out of Scope:** Architectural changes, functional testing.
+
+### fe-analyst (optional)
+
+- **Model:** claude-opus
+
+- **Responsibility:** Uses PageIndex to reason over complex UI/UX documentation, design specs, or WCAG guidelines.
 
 ### fe-qa
 
