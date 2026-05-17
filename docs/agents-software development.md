@@ -20,6 +20,8 @@ team-lead ──► architect ◄──► developer ◄──► qa
 
 - `qa` reports bugs directly to `developer`, reports final status to `team-lead`
 
+- `analyst` (optional) uses PageIndex for deep document reasoning
+
 ---
 
 ## Agent Reference
@@ -84,6 +86,14 @@ team-lead ──► architect ◄──► developer ◄──► qa
 - **Runs:** In parallel with reviewer after developer finishes
 
 - **Output:** `.claude-loop/reports/task-{id}-verdict.json` + `.claude-loop/reports/task-{id}-qa-report.md` → reports to team-lead
+
+### analyst (optional)
+
+- **Model:** claude-opus
+
+- **Responsibilities:** Uses PageIndex to reason over complex documents, extracts precise section/page references
+
+- **Triggers:** Tasks requiring deep document analysis or RAG
 
 ### librarian (cross-team)
 

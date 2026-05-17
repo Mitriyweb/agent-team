@@ -46,6 +46,8 @@ Teammate({
 |------|-------------|
 | `QUESTION` | Need clarification before continuing |
 | `ANSWER` | Response to a `QUESTION` |
+| `ANALYSIS_REQUEST` | Requesting document or codebase analysis |
+| `ANALYSIS_REPORT` | Detailed findings from an analysis task |
 | `REVIEW_REQUEST` | Asking architect or reviewer to check work |
 | `REVIEW_FEEDBACK` | Review result with findings |
 | `BUG_REPORT` | QA found a bug, reporting to developer |
@@ -155,6 +157,7 @@ task-scoped prefix — NEVER in the project root.
 | Artifact | Path |
 |---|---|
 | Task summary (team-lead) | `.claude-loop/reports/task-{id}.md` |
+| Analysis report | `.claude-loop/reports/task-{id}-analysis.md` |
 | Code review | `.claude-loop/reports/task-{id}-review.md` |
 | Visual review (frontend) | `.claude-loop/reports/task-{id}-visual-review.md` |
 | Test review | `.claude-loop/reports/task-{id}-test-review.md` |

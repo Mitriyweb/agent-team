@@ -27,6 +27,9 @@ import {
 } from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 import ANALYST_TEMPLATE from "./templates/analyst.md" with { type: "text" };
+import DOCUMENT_REASONING_SKILL from "./templates/document-reasoning.md" with {
+  type: "text",
+};
 /**
  * Port of create_team logic from team.sh
  */
@@ -313,6 +316,19 @@ export async function initProject(options: InitProjectOptions) {
     fs.writeFileSync(analystPath, analystContent);
     ok(`Deployed analyst agent: ${analystPath}`);
 
+    // Deploy PageIndex document-reasoning skill
+    const skillDir = path.join(
+      CLAUDE_AGENTS_DIR,
+      "skills",
+      "document-reasoning",
+    );
+    if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, "SKILL.md"),
+      DOCUMENT_REASONING_SKILL as string,
+    );
+    ok(`Deployed document-reasoning skill to ${skillDir}`);
+
     // Update PROTOCOL.md to include analyst role
     const protocolPath = path.join(CLAUDE_AGENTS_DIR, protocolFile);
     if (fs.existsSync(protocolPath)) {
@@ -335,8 +351,29 @@ export async function initProject(options: InitProjectOptions) {
             agentsAnchor,
             `${agentsAnchor}\n                         ↓\n       ${teamLeadAnchor} → ${prefix}analyst (document analysis)`,
           );
+
+          // Also update Message Types table if present
+          if (protocol.includes("| `ANSWER` |")) {
+            if (!protocol.includes("| `ANALYSIS_REQUEST` |")) {
+              protocol = protocol.replace(
+                /(\| `ANSWER` \|.*\|)/,
+                "$1\n| `ANALYSIS_REQUEST` | Requesting document or codebase analysis |\n| `ANALYSIS_REPORT` | Detailed findings from an analysis task |",
+              );
+            }
+          }
+
+          // Also update Artifacts table if present
+          if (protocol.includes("| Task summary (team-lead) |")) {
+            if (!protocol.includes("| Analysis report |")) {
+              protocol = protocol.replace(
+                /(\| Task summary \(team-lead\) \|.*\|)/,
+                "$1\n| Analysis report | `.claude-loop/reports/task-{id}-analysis.md` |",
+              );
+            }
+          }
+
           fs.writeFileSync(protocolPath, protocol);
-          ok("Updated PROTOCOL.md with analyst role");
+          ok("Updated PROTOCOL.md with analyst role and message types");
         }
       }
     }
@@ -831,8 +868,29 @@ export async function reconfigureProject(options: { sourceDir?: string }) {
               agentsAnchor,
               `${agentsAnchor}\n                         ↓\n       ${teamLeadAnchor} → ${prefix}analyst (document analysis)`,
             );
+
+            // Also update Message Types table if present
+            if (protocol.includes("| `ANSWER` |")) {
+              if (!protocol.includes("| `ANALYSIS_REQUEST` |")) {
+                protocol = protocol.replace(
+                  /(\| `ANSWER` \|.*\|)/,
+                  "$1\n| `ANALYSIS_REQUEST` | Requesting document or codebase analysis |\n| `ANALYSIS_REPORT` | Detailed findings from an analysis task |",
+                );
+              }
+            }
+
+            // Also update Artifacts table if present
+            if (protocol.includes("| Task summary (team-lead) |")) {
+              if (!protocol.includes("| Analysis report |")) {
+                protocol = protocol.replace(
+                  /(\| Task summary \(team-lead\) \|.*\|)/,
+                  "$1\n| Analysis report | `.claude-loop/reports/task-{id}-analysis.md` |",
+                );
+              }
+            }
+
             fs.writeFileSync(protocolPath, protocol);
-            ok("Updated PROTOCOL.md with analyst role");
+            ok("Updated PROTOCOL.md with analyst role and message types");
           }
         }
       }

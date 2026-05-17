@@ -26,6 +26,10 @@ When asked to analyze documents:
 3. **Retrieve**: Based on the tree, identify the most relevant pages or sections.
 4. **Synthesize**: Provide detailed answers with page/section references.
 
+## Skills
+
+Activate `skills/document-reasoning/` for all analysis tasks.
+
 ## Technical Standards
 
 - Provide traceable and interpretable retrieval results.
