@@ -6,7 +6,7 @@ import { BLUE, GREEN, log, NC } from "./common.ts";
  * Lists all registered agents and their roles by parsing frontmatter.
  * Scans both agents/ and .claude/agents/.
  */
-async function main() {
+export async function listAgents() {
   const agentDirs = ["agents", path.join(".claude", "agents")];
   const foundAgents = new Map<
     string,
@@ -102,5 +102,3 @@ function deriveTeam(filePath: string): string {
   }
   return "unknown";
 }
-
-main().catch(console.error);

@@ -27,6 +27,9 @@ import {
 } from "./prompts.ts";
 import AGENT_TEMPLATE from "./templates/agent.md" with { type: "text" };
 import ANALYST_TEMPLATE from "./templates/analyst.md" with { type: "text" };
+import ARCHITECTURE_TEMPLATE from "./templates/architecture.md" with {
+  type: "text",
+};
 import DOCUMENT_REASONING_SKILL from "./templates/document-reasoning.md" with {
   type: "text",
 };
@@ -37,6 +40,7 @@ import LIBRARIAN_TEMPLATE from "./templates/librarian.md" with { type: "text" };
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import PROTOCOL_TEMPLATE from "./templates/PROTOCOL.md" with { type: "text" };
 import DEFAULT_SETTINGS from "./templates/settings.json" with { type: "json" };
+import SKILL_TEMPLATE from "./templates/skill.md" with { type: "text" };
 
 const CLAUDE_AGENTS_DIR = path.join(".claude", "agents");
 
@@ -421,6 +425,9 @@ export async function initProject(options: InitProjectOptions) {
     }
   }
 
+  // Generate docs/ARCHITECTURE.md and SKILL.md
+  deployDocumentation();
+
   // Generate CLAUDE.md with agent-team context
   generateClaudeMd(teamName);
 
@@ -430,6 +437,18 @@ export async function initProject(options: InitProjectOptions) {
 
 const CLAUDE_MD_START = "<!-- agent-team:start -->";
 const CLAUDE_MD_END = "<!-- agent-team:end -->";
+
+/**
+ * Deploy ARCHITECTURE.md and SKILL.md to the project.
+ */
+function deployDocumentation() {
+  if (!fs.existsSync("docs")) fs.mkdirSync("docs", { recursive: true });
+  fs.writeFileSync(
+    path.join("docs", "ARCHITECTURE.md"),
+    ARCHITECTURE_TEMPLATE as string,
+  );
+  fs.writeFileSync("SKILL.md", SKILL_TEMPLATE as string);
+}
 
 function generateClaudeMd(teamName?: string) {
   const claudeMdPath = "CLAUDE.md";

@@ -6,6 +6,7 @@
 
 import path from "node:path";
 import * as p from "@clack/prompts";
+import { listAgents } from "../lib/agents.ts";
 import { extractReviewSound } from "../lib/assets.ts";
 import { auditReport } from "../lib/audit.ts";
 import { runAuditHook } from "../lib/audit-hook.ts";
@@ -239,6 +240,8 @@ async function main() {
     await updateProject({ sourceDir });
   } else if (command === Command.Reconfigure) {
     await reconfigureProject({ sourceDir });
+  } else if (command === Command.Agents) {
+    await listAgents();
   } else if (command === Command.Validate) {
     const name = args[1];
     if (!name) err("Usage: agent-team validate NAME");
@@ -310,6 +313,9 @@ async function main() {
     );
     console.log(
       "    agent-team reconfigure                               Update skills & workflows",
+    );
+    console.log(
+      "    agent-team agents                                    List all registered agents",
     );
     console.log(
       "    agent-team import [path]                             Import rules (interactive if no path)",

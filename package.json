@@ -38,7 +38,7 @@
     "test": "bun test",
     "validate": "bun run lint && bun run check && bun run typecheck && bun run knip && bun run test",
     "docs:validate": "bun x markdownlint-cli2 \"docs/**/*.md\" \"SKILL.md\" \"README.md\"",
-    "agents:list": "bun run lib/list-agents.ts",
+    "agents:list": "bun run bin/init.ts agents",
     "prebuild": "bun lib/bundle-agents.ts",
     "build": "mkdir -p tmp && cd tmp && bun build ../bin/init.ts --compile --outfile ../dist/agent-team",
     "build:linux-x64": "mkdir -p tmp && cd tmp && bun build ../bin/init.ts --compile --target=bun-linux-x64 --outfile ../dist/agent-team-linux-x64",
