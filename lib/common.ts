@@ -342,6 +342,7 @@ export enum Command {
   Import = "import",
   Update = "update",
   Reconfigure = "reconfigure",
+  Agents = "agents",
   Validate = "validate",
   AuditHook = "audit-hook",
   Audit = "audit",
