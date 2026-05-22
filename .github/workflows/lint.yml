@@ -13,4 +13,5 @@ jobs:
       - run: bun install
       - run: bun audit --audit-level=high
       - run: bun run validate
+      - run: bun test tests/e2e
       - run: bun run build:linux-x64
