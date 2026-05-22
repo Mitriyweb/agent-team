@@ -35,9 +35,13 @@ describe("Compiled Build", () => {
   });
 
   it("should run the compiled binary and initialize a project", () => {
-    const proc = spawnSync(DIST_PATH, ["init", "--team", "software development", "--no-human-review"], {
-      cwd: tmpDir,
-    });
+    const proc = spawnSync(
+      DIST_PATH,
+      ["init", "--team", "software development", "--no-human-review"],
+      {
+        cwd: tmpDir,
+      },
+    );
 
     expect(proc.status).toBe(0);
 
@@ -45,14 +49,22 @@ describe("Compiled Build", () => {
     expect(fs.existsSync(path.join(tmpDir, "docs/ARCHITECTURE.md"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, "SKILL.md"))).toBe(true);
 
-    const archContent = fs.readFileSync(path.join(tmpDir, "docs/ARCHITECTURE.md"), "utf-8");
+    const archContent = fs.readFileSync(
+      path.join(tmpDir, "docs/ARCHITECTURE.md"),
+      "utf-8",
+    );
     expect(archContent).toContain("# agent-team Architecture");
 
-    const skillContent = fs.readFileSync(path.join(tmpDir, "SKILL.md"), "utf-8");
+    const skillContent = fs.readFileSync(
+      path.join(tmpDir, "SKILL.md"),
+      "utf-8",
+    );
     expect(skillContent).toContain("# agent-team Skill");
 
     // Also verify CLAUDE.md and team agents were extracted
     expect(fs.existsSync(path.join(tmpDir, "CLAUDE.md"))).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, ".claude/agents/sw-PROTOCOL.md"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".claude/agents/sw-PROTOCOL.md")),
+    ).toBe(true);
   });
 });

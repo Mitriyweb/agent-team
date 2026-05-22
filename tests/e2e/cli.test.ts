@@ -23,7 +23,7 @@ describe("CLI Basic Commands", () => {
   });
 
   it("should fail with non-zero exit code for invalid command", () => {
-    const proc = spawnSync("bun", [CLI_PATH, "invalid-command"]);
+    spawnSync("bun", [CLI_PATH, "invalid-command"]);
     // Based on the code in bin/init.ts, unknown commands fall through to showing help and exiting with 0 currently?
     // Wait, let me check bin/init.ts again.
     // ...
@@ -39,6 +39,8 @@ describe("CLI Basic Commands", () => {
     // Actually, Command.Validate might exit with 1 if name is missing.
     const procValidate = spawnSync("bun", [CLI_PATH, "validate"]);
     expect(procValidate.status).toBe(1);
-    expect(procValidate.stderr.toString()).toContain("Usage: agent-team validate NAME");
+    expect(procValidate.stderr.toString()).toContain(
+      "Usage: agent-team validate NAME",
+    );
   });
 });
