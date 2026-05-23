@@ -443,11 +443,17 @@ const CLAUDE_MD_END = "<!-- agent-team:end -->";
  */
 function deployDocumentation() {
   if (!fs.existsSync("docs")) fs.mkdirSync("docs", { recursive: true });
-  fs.writeFileSync(
-    path.join("docs", "ARCHITECTURE.md"),
-    ARCHITECTURE_TEMPLATE as string,
-  );
-  fs.writeFileSync("SKILL.md", SKILL_TEMPLATE as string);
+  const archPath = path.join("docs", "ARCHITECTURE.md");
+  if (!fs.existsSync(archPath)) {
+    fs.writeFileSync(archPath, ARCHITECTURE_TEMPLATE as string);
+    ok(`Created ${archPath}`);
+  }
+
+  const skillPath = "SKILL.md";
+  if (!fs.existsSync(skillPath)) {
+    fs.writeFileSync(skillPath, SKILL_TEMPLATE as string);
+    ok(`Created ${skillPath}`);
+  }
 }
 
 function generateClaudeMd(teamName?: string) {

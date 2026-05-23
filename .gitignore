@@ -13,3 +13,8 @@ bin/claude
 tmp/*
 .obsidian
 vault/
+# Agent team artifacts
+tasks/
+.agents/
+.claude/vault
+.claude/page-index
