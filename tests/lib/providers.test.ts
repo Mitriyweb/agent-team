@@ -30,7 +30,8 @@ describe("OllamaProvider", () => {
 
     // Mock global fetch
     const originalFetch = global.fetch;
-    global.fetch = mock(async (url, init) => {
+    // biome-ignore lint/suspicious/noExplicitAny: mocking global fetch
+    (global as any).fetch = mock(async (url: string, init: any) => {
       expect(url).toBe(`${PROVIDERS_CONFIG.ollama.host}/api/generate`);
       const body = JSON.parse(init.body);
       expect(body.model).toBe("test-model");
