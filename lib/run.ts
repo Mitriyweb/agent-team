@@ -68,6 +68,8 @@ export interface RunOptions {
   cli?: boolean;
   /** Stop after completing this task id */
   stopAt?: string;
+  /** Execution stage (planning | implementation | review) */
+  stage?: string;
 }
 
 const AGENTS_DIR = path.join(".claude", "agents");
@@ -998,6 +1000,7 @@ export class TaskRunner {
           prompt,
           maxTurns: 20,
           model: this.teamLeadModel,
+          stage: this.options.stage as any,
         });
 
         clearInterval(timer);

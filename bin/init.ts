@@ -186,6 +186,9 @@ async function main() {
     const stopAtIdx = args.indexOf("--stop-at");
     if (stopAtIdx !== -1) options.stopAt = args[stopAtIdx + 1] ?? "";
 
+    const stageIdx = args.indexOf("--stage");
+    if (stageIdx !== -1) options.stage = args[stageIdx + 1] ?? "";
+
     const runner = new TaskRunner(options);
     await runner.run();
   } else if (command === Command.Plan) {
@@ -325,7 +328,7 @@ async function main() {
     console.log(
       "    agent-team run [--all] [--plan] [--dry-run]          Execute tasks",
     );
-    console.log("                  [--team NAME] [--model MODEL]");
+    console.log("                  [--team NAME] [--model MODEL] [--stage STAGE]");
     console.log(
       "                  [--budget N] [--resume ID] [--stop-at ID] [--branch]",
     );

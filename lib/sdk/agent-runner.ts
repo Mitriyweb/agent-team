@@ -7,8 +7,11 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolveModelAlias } from "../common.ts";
+import { ModelRouter } from "../model-router.ts";
 import { createHooks } from "./hooks.ts";
 import { createLogger, type Logger } from "./logger.ts";
+
+export type Stage = "planning" | "implementation" | "review";
 
 export interface AgentRunnerOptions {
   /** Team name (e.g. "software development", "frontend") */
@@ -27,6 +30,8 @@ export interface AgentRunnerOptions {
   model?: string;
   /** Working directory for the agent */
   cwd?: string;
+  /** Current execution stage */
+  stage?: Stage;
 }
 
 export interface AgentRunResult {
@@ -37,12 +42,13 @@ export interface AgentRunResult {
   sessionId?: string;
 }
 
-interface AgentFrontmatter {
+export interface AgentFrontmatter {
   name?: string;
   role?: string;
   team?: string;
   description?: string;
-  model?: string;
+  model?: string | Record<Stage, string>;
+  stage?: Stage;
   tools?: string;
   allowed_tools?: string[];
   max_turns?: number;
@@ -101,7 +107,29 @@ function parseFrontmatter(filePath: string): {
     }
   };
 
+  let currentNestedKey: string | null = null;
+  let currentNestedObject: Record<string, string> = {};
+
+  const flushNested = () => {
+    if (currentKey && Object.keys(currentNestedObject).length > 0) {
+      (frontmatter as Record<string, unknown>)[currentKey] = currentNestedObject;
+      currentNestedObject = {};
+      currentKey = null;
+    }
+  };
+
   for (const line of lines) {
+    // Nested object member (e.g., "  planning: qwen3:70b")
+    const nestedMatch = line.match(/^\s+([a-z_]+):\s*(.*)$/);
+    if (nestedMatch && currentKey) {
+      const [, nKey, nRaw] = nestedMatch;
+      const nValue = (nRaw ?? "").trim().replace(/^['"]|['"]$/g, "");
+      if (nKey) {
+        currentNestedObject[nKey] = nValue;
+      }
+      continue;
+    }
+
     if (/^\s+-\s+/.test(line)) {
       const value = line
         .replace(/^\s+-\s+/, "")
@@ -114,6 +142,7 @@ function parseFrontmatter(filePath: string): {
     const kvMatch = line.match(/^([a-z_]+):\s*(.*)$/);
     if (kvMatch) {
       flush();
+      flushNested();
       const [, key, raw] = kvMatch;
       const value = (raw ?? "").trim().replace(/^['"]|['"]$/g, "");
 
@@ -124,6 +153,7 @@ function parseFrontmatter(filePath: string): {
       }
     }
   }
+  flushNested();
   flush();
 
   return { frontmatter, systemPrompt: (body ?? "").trim() };
@@ -211,8 +241,9 @@ export async function runAgent(
   ];
 
   const resolvedMaxTurns = maxTurns ?? frontmatter.max_turns ?? 50;
+  const resolvedStage = opts.stage || frontmatter.stage || "implementation";
   const resolvedModel = resolveModelAlias(
-    model ?? (typeof frontmatter.model === "string" ? frontmatter.model : ""),
+    model ?? ModelRouter.getModel(frontmatter, opts.stage),
   );
   const resolvedPermission = (frontmatter.permission_mode ??
     "acceptEdits") as PermissionMode;
@@ -244,7 +275,7 @@ export async function runAgent(
   let sessionId: string | undefined;
 
   logger.info(
-    `Starting | model: ${resolvedModel || "(sdk default)"} | tools: [${options.allowedTools?.join(", ")}] maxTurns: ${resolvedMaxTurns}`,
+    `Starting | stage: ${resolvedStage} | model: ${resolvedModel || "(sdk default)"} | tools: [${options.allowedTools?.join(", ")}] maxTurns: ${resolvedMaxTurns}`,
   );
 
   try {
