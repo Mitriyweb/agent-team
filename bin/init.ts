@@ -328,7 +328,9 @@ async function main() {
     console.log(
       "    agent-team run [--all] [--plan] [--dry-run]          Execute tasks",
     );
-    console.log("                  [--team NAME] [--model MODEL] [--stage STAGE]");
+    console.log(
+      "                  [--team NAME] [--model MODEL] [--stage STAGE]",
+    );
     console.log(
       "                  [--budget N] [--resume ID] [--stop-at ID] [--branch]",
     );

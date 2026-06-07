@@ -7,7 +7,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolveModelAlias } from "../common.ts";
-import { ModelRouter } from "../model-router.ts";
+import { getModel } from "../model-router.ts";
 import { createHooks } from "./hooks.ts";
 import { createLogger, type Logger } from "./logger.ts";
 
@@ -107,12 +107,12 @@ function parseFrontmatter(filePath: string): {
     }
   };
 
-  let currentNestedKey: string | null = null;
   let currentNestedObject: Record<string, string> = {};
 
   const flushNested = () => {
     if (currentKey && Object.keys(currentNestedObject).length > 0) {
-      (frontmatter as Record<string, unknown>)[currentKey] = currentNestedObject;
+      (frontmatter as Record<string, unknown>)[currentKey] =
+        currentNestedObject;
       currentNestedObject = {};
       currentKey = null;
     }
@@ -243,7 +243,7 @@ export async function runAgent(
   const resolvedMaxTurns = maxTurns ?? frontmatter.max_turns ?? 50;
   const resolvedStage = opts.stage || frontmatter.stage || "implementation";
   const resolvedModel = resolveModelAlias(
-    model ?? ModelRouter.getModel(frontmatter, opts.stage),
+    model ?? getModel(frontmatter, opts.stage),
   );
   const resolvedPermission = (frontmatter.permission_mode ??
     "acceptEdits") as PermissionMode;

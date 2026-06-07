@@ -43,7 +43,7 @@ import {
   planRoadmap,
   validateOpenSpecChange,
 } from "./plan.ts";
-import { runAgent } from "./sdk/agent-runner.ts";
+import { runAgent, type Stage } from "./sdk/agent-runner.ts";
 import MEMORY_TEMPLATE from "./templates/memory.md" with { type: "text" };
 import { TerminalUI } from "./ui.ts";
 
@@ -1000,7 +1000,7 @@ export class TaskRunner {
           prompt,
           maxTurns: 20,
           model: this.teamLeadModel,
-          stage: this.options.stage as any,
+          stage: this.options.stage as Stage,
         });
 
         clearInterval(timer);
