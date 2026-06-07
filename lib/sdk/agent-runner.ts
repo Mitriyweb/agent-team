@@ -8,8 +8,8 @@ import type {
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolveModelAlias } from "../common.ts";
 import { getModel, getProvider } from "../model-router.ts";
+import { resolveProvider } from "../providers/registry.ts";
 import { PROVIDERS_CONFIG } from "../providers.config.ts";
-import { ProviderRegistry } from "../providers/registry.ts";
 import { createHooks } from "./hooks.ts";
 import { createLogger, type Logger } from "./logger.ts";
 
@@ -239,7 +239,9 @@ export async function runAgent(
   const resolvedModel = resolveModelAlias(
     model ??
       (getModel(frontmatter, resolvedStage) ||
-        (PROVIDERS_CONFIG as any)[resolvedProvider]?.defaultModel ||
+        (PROVIDERS_CONFIG as Record<string, { defaultModel: string }>)[
+          resolvedProvider
+        ]?.defaultModel ||
         ""),
   );
   const resolvedPermission = (frontmatter.permission_mode ??
@@ -320,10 +322,7 @@ export async function runAgent(
         }
       }
     } else {
-      const providerInstance = ProviderRegistry.resolve(
-        resolvedProvider,
-        resolvedModel,
-      );
+      const providerInstance = resolveProvider(resolvedProvider, resolvedModel);
       output = await providerInstance.query(prompt, {
         systemPrompt: systemPrompt || undefined,
         maxTokens: 4096,

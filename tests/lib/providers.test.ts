@@ -1,32 +1,32 @@
-import { expect, test, describe, mock } from "bun:test";
-import { ProviderRegistry } from "../../lib/providers/registry.ts";
+import { describe, expect, mock, test } from "bun:test";
+import { resolveProvider } from "../../lib/providers/registry.ts";
 import { PROVIDERS_CONFIG } from "../../lib/providers.config.ts";
 
-describe("ProviderRegistry", () => {
+describe("resolveProvider", () => {
   test("resolves claude provider by default", () => {
-    const provider = ProviderRegistry.resolve("unknown");
+    const provider = resolveProvider("unknown");
     expect(provider.name).toBe("claude");
   });
 
   test("resolves gemini provider", () => {
-    const provider = ProviderRegistry.resolve("gemini");
+    const provider = resolveProvider("gemini");
     expect(provider.name).toBe("gemini");
   });
 
   test("resolves ollama provider", () => {
-    const provider = ProviderRegistry.resolve("ollama");
+    const provider = resolveProvider("ollama");
     expect(provider.name).toBe("ollama");
   });
 
   test("resolves openai provider", () => {
-    const provider = ProviderRegistry.resolve("openai");
+    const provider = resolveProvider("openai");
     expect(provider.name).toBe("openai");
   });
 });
 
 describe("OllamaProvider", () => {
   test("query calls fetch with correct parameters", async () => {
-    const provider = ProviderRegistry.resolve("ollama", "test-model");
+    const provider = resolveProvider("ollama", "test-model");
 
     // Mock global fetch
     const originalFetch = global.fetch;

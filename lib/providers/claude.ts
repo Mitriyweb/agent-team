@@ -1,6 +1,6 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import type { ModelProvider, QueryOptions } from "./base.ts";
 import { PROVIDERS_CONFIG } from "../providers.config.ts";
+import type { ModelProvider, QueryOptions } from "./base.ts";
 
 export class ClaudeProvider implements ModelProvider {
   name = "claude";

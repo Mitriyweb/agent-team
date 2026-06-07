@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { ModelProvider, QueryOptions } from "./base.ts";
 import { PROVIDERS_CONFIG } from "../providers.config.ts";
+import type { ModelProvider, QueryOptions } from "./base.ts";
 
 export class GeminiProvider implements ModelProvider {
   name = "gemini";

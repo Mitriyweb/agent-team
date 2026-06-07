@@ -1,5 +1,5 @@
-import type { ModelProvider, QueryOptions } from "./base.ts";
 import { PROVIDERS_CONFIG } from "../providers.config.ts";
+import type { ModelProvider, QueryOptions } from "./base.ts";
 
 export class OllamaProvider implements ModelProvider {
   name = "ollama";
