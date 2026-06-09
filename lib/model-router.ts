@@ -1,7 +1,7 @@
 import type { AgentFrontmatter, Stage } from "./sdk/agent-runner.ts";
 
 /**
- * Resolves the model name for an agent based on the current execution stage.
+ * Resolves the model name and provider for an agent based on the current execution stage.
  *
  * Logic priority:
  * 1. Runtime stage (if provided)
@@ -26,4 +26,14 @@ export function getModel(
   }
 
   return (frontmatter.model as string) || "";
+}
+
+/**
+ * Resolves the provider for an agent.
+ * Logic priority:
+ * 1. Frontmatter 'provider' field
+ * 2. Fallback to 'claude'
+ */
+export function getProvider(frontmatter: AgentFrontmatter): string {
+  return frontmatter.provider || "claude";
 }

@@ -7,7 +7,9 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { resolveModelAlias } from "../common.ts";
-import { getModel } from "../model-router.ts";
+import { getModel, getProvider } from "../model-router.ts";
+import { resolveProvider } from "../providers/registry.ts";
+import { PROVIDERS_CONFIG } from "../providers.config.ts";
 import { createHooks } from "./hooks.ts";
 import { createLogger, type Logger } from "./logger.ts";
 
@@ -28,6 +30,8 @@ export interface AgentRunnerOptions {
   maxTurns?: number;
   /** Override model from frontmatter */
   model?: string;
+  /** Override provider from frontmatter */
+  provider?: string;
   /** Working directory for the agent */
   cwd?: string;
   /** Current execution stage */
@@ -48,6 +52,7 @@ export interface AgentFrontmatter {
   team?: string;
   description?: string;
   model?: string | Record<Stage, string>;
+  provider?: string;
   stage?: Stage;
   tools?: string;
   allowed_tools?: string[];
@@ -218,7 +223,6 @@ export async function runAgent(
     cwd,
   } = opts;
 
-  const logger: Logger = createLogger(`${team}/${role}`);
   const agentFile = findAgentFile(team, role);
 
   let frontmatter: AgentFrontmatter = {};
@@ -228,6 +232,26 @@ export async function runAgent(
     const parsed = parseFrontmatter(agentFile);
     frontmatter = parsed.frontmatter;
     systemPrompt = parsed.systemPrompt;
+  }
+
+  const resolvedStage = opts.stage || frontmatter.stage || "implementation";
+  const resolvedProvider = opts.provider || getProvider(frontmatter);
+  const resolvedModel = resolveModelAlias(
+    model ??
+      (getModel(frontmatter, resolvedStage) ||
+        (PROVIDERS_CONFIG as Record<string, { defaultModel: string }>)[
+          resolvedProvider
+        ]?.defaultModel ||
+        ""),
+  );
+  const resolvedPermission = (frontmatter.permission_mode ??
+    "acceptEdits") as PermissionMode;
+
+  const logger: Logger = createLogger(
+    `${team}/${role}][${resolvedProvider}:${resolvedModel}`,
+  );
+
+  if (agentFile) {
     logger.info(`Loaded agent: ${agentFile}`);
   } else {
     logger.warn(`No agent file found for ${team}/${role}, using defaults`);
@@ -241,32 +265,6 @@ export async function runAgent(
   ];
 
   const resolvedMaxTurns = maxTurns ?? frontmatter.max_turns ?? 50;
-  const resolvedStage = opts.stage || frontmatter.stage || "implementation";
-  const resolvedModel = resolveModelAlias(
-    model ?? getModel(frontmatter, opts.stage),
-  );
-  const resolvedPermission = (frontmatter.permission_mode ??
-    "acceptEdits") as PermissionMode;
-
-  // CLI path: env > local node_modules > global which(claude)
-  const cliPath =
-    process.env.CLAUDE_CLI_PATH ??
-    (fs.existsSync("./node_modules/.bin/claude")
-      ? "./node_modules/.bin/claude"
-      : findGlobalClaude());
-
-  const hooks = createHooks(logger, role, team);
-
-  const options: Options = {
-    systemPrompt: systemPrompt || undefined,
-    allowedTools: [...new Set(resolvedTools)],
-    permissionMode: resolvedPermission,
-    maxTurns: resolvedMaxTurns,
-    hooks,
-    ...(cliPath ? { pathToClaudeCodeExecutable: cliPath } : {}),
-    ...(resolvedModel ? { model: resolvedModel } : {}),
-    ...(cwd ? { cwd } : {}),
-  };
 
   let output = "";
   let cost: number | undefined;
@@ -275,37 +273,63 @@ export async function runAgent(
   let sessionId: string | undefined;
 
   logger.info(
-    `Starting | stage: ${resolvedStage} | model: ${resolvedModel || "(sdk default)"} | tools: [${options.allowedTools?.join(", ")}] maxTurns: ${resolvedMaxTurns}`,
+    `Starting | stage: ${resolvedStage} | tools: [${[...new Set(resolvedTools)].join(", ")}] maxTurns: ${resolvedMaxTurns}`,
   );
 
   try {
-    for await (const message of query({ prompt, options })) {
-      if (message.type === "system") continue;
+    if (resolvedProvider === "claude") {
+      // CLI path: env > local node_modules > global which(claude)
+      const cliPath =
+        process.env.CLAUDE_CLI_PATH ??
+        (fs.existsSync("./node_modules/.bin/claude")
+          ? "./node_modules/.bin/claude"
+          : findGlobalClaude());
 
-      if (message.type === "assistant") {
-        turns++;
-        for (const block of message.message.content) {
-          if (block.type === "text" && block.text) {
-            logger.assistant(block.text);
+      const hooks = createHooks(logger, role, team);
+
+      const options: Options = {
+        systemPrompt: systemPrompt || undefined,
+        allowedTools: [...new Set(resolvedTools)],
+        permissionMode: resolvedPermission,
+        maxTurns: resolvedMaxTurns,
+        hooks,
+        ...(cliPath ? { pathToClaudeCodeExecutable: cliPath } : {}),
+        ...(resolvedModel ? { model: resolvedModel } : {}),
+        ...(cwd ? { cwd } : {}),
+      };
+
+      for await (const message of query({ prompt, options })) {
+        if (message.type === "system") continue;
+
+        if (message.type === "assistant") {
+          turns++;
+          for (const block of message.message.content) {
+            if (block.type === "text" && block.text) {
+              logger.assistant(block.text);
+            }
           }
-          // tool_use blocks are logged by the PreToolUse hook as [PRE] <name>,
-          // and PostToolUse as [POST] <name> with the result. No need to log
-          // again here — it just duplicates the pre-execution line.
         }
-      }
 
-      if (message.type === "result") {
-        const result = message as SDKResultMessage;
-        sessionId = result.session_id;
-        cost = result.total_cost_usd;
-        turns = result.num_turns;
-        timedOut = result.is_error;
-        if (result.subtype === "success") {
-          output = result.result ?? "";
+        if (message.type === "result") {
+          const result = message as SDKResultMessage;
+          sessionId = result.session_id;
+          cost = result.total_cost_usd;
+          turns = result.num_turns;
+          timedOut = result.is_error;
+          if (result.subtype === "success") {
+            output = result.result ?? "";
+          }
         }
-        logger.info(`Done | turns=${turns} cost=$${cost?.toFixed(4) ?? "?"}`);
       }
+    } else {
+      const providerInstance = resolveProvider(resolvedProvider, resolvedModel);
+      output = await providerInstance.query(prompt, {
+        systemPrompt: systemPrompt || undefined,
+        maxTokens: 4096,
+      });
+      turns = 1;
     }
+    logger.info(`Done | turns=${turns} cost=$${cost?.toFixed(4) ?? "?"}`);
   } catch (err) {
     logger.error(`Agent error: ${err}`);
     throw err;
