@@ -5,9 +5,9 @@ import { BLUE, log, NC, warn } from "./common.ts";
 /** Max number of most-recent task entries included from memory.md in a prompt. */
 export const MEMORY_PROMPT_TASK_CAP = 30;
 /** Archive memory.md → memory.archive.md once total task entries exceed this. */
-export const MEMORY_ARCHIVE_TASK_THRESHOLD = 100;
+const MEMORY_ARCHIVE_TASK_THRESHOLD = 100;
 /** Rotate memory.archive.md → memory.archive.N.md once it crosses this size. */
-export const MEMORY_ARCHIVE_ROTATE_BYTES = 2_000_000; // ~2 MB
+const MEMORY_ARCHIVE_ROTATE_BYTES = 2_000_000; // ~2 MB
 
 /**
  * Keep only the header + last N `## Task #...` blocks from memory content.
