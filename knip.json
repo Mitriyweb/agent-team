@@ -3,5 +3,6 @@
   "project": ["bin/**/*.ts", "lib/**/*.ts"],
   "ignore": ["lib/sdk/orchestrator.ts"],
   "ignoreDependencies": ["bats", "vitest", "@vitest/coverage-v8"],
+  "ignoreBinaries": ["agents", "invalid-command", "lib/bundle-agents.ts"],
   "ignoreExportsUsedInFile": true
 }
