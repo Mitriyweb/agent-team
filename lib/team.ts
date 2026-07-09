@@ -652,7 +652,7 @@ export function validateTeam(_name: string) {
 /**
  * Create or update a symlink at .claude/page-index pointing to the PageIndex directory.
  */
-export function managePageIndexSymlink(pageIndexPath?: string) {
+function managePageIndexSymlink(pageIndexPath?: string) {
   const pageIndexLink = path.join(".claude", "page-index");
   const expanded = pageIndexPath ? expandHome(pageIndexPath) : undefined;
 

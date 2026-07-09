@@ -9,7 +9,7 @@ export function expandHome(input: string): string {
   return input;
 }
 
-export enum Platform {
+enum Platform {
   Darwin = "darwin",
   Linux = "linux",
   Win32 = "win32",
