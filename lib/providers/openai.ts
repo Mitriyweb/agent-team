@@ -7,11 +7,21 @@ export class OpenAIProvider implements ModelProvider {
   private model: string;
   private client: OpenAI;
 
-  constructor(modelOverride?: string) {
+  constructor(
+    modelOverride?: string,
+    options?: { baseURL?: string; apiKey?: string },
+  ) {
     this.model = modelOverride ?? PROVIDERS_CONFIG.openai.defaultModel;
     this.client = new OpenAI({
-      apiKey: PROVIDERS_CONFIG.openai.apiKey || "mock-key",
-      baseURL: PROVIDERS_CONFIG.openai.baseURL,
+      apiKey:
+        options?.apiKey ||
+        process.env.OPENAI_API_KEY ||
+        PROVIDERS_CONFIG.openai.apiKey ||
+        "mock-key",
+      baseURL:
+        options?.baseURL ||
+        process.env.OPENAI_BASE_URL ||
+        PROVIDERS_CONFIG.openai.baseURL,
     });
   }
 

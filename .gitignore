@@ -8,6 +8,7 @@ target_dir/
 dist/
 .bun-build.bun-build
 *.bun-build
+*.tsbuildinfo
 bin/claude
 .claude/settings.json
 tmp/*
