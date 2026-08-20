@@ -25,10 +25,10 @@ describe("resolveProvider", () => {
 
   test("resolves model-router provider", () => {
     const provider1 = resolveProvider("model-router");
-    expect(provider1.name).toBe("openai");
+    expect(provider1.name).toBe("model-router");
 
     const provider2 = resolveProvider("modelrouter", "custom-model");
-    expect(provider2.name).toBe("openai");
+    expect(provider2.name).toBe("model-router");
   });
 });
 

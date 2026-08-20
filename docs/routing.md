@@ -64,7 +64,7 @@ deploy:
 
 ## model-router Proxy (Universal Token Source)
 
-[model-router](https://github.com/Mitriyweb/model-router) acts as a universal AI proxy and token source.
+[model-router](https://mitriyweb.github.io/model-router/) acts as a universal AI proxy and token source.
 It offers free-tier access across multiple LLM providers (GitHub Models, Groq, Cerebras, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Ollama).
 
 ### Setup

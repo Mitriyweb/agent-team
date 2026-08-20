@@ -1,7 +1,7 @@
-import { PROVIDERS_CONFIG } from "../providers.config.ts";
 import type { ModelProvider } from "./base.ts";
 import { ClaudeProvider } from "./claude.ts";
 import { GeminiProvider } from "./gemini.ts";
+import { ModelRouterProvider } from "./modelrouter.ts";
 import { OllamaProvider } from "./ollama.ts";
 import { OpenAIProvider } from "./openai.ts";
 
@@ -20,15 +20,7 @@ export function resolveProvider(
     case "openai":
       return new OpenAIProvider(modelOverride);
     case "modelrouter":
-      return new OpenAIProvider(
-        modelOverride ?? PROVIDERS_CONFIG.modelrouter.defaultModel,
-        {
-          baseURL:
-            process.env.OPENAI_BASE_URL || PROVIDERS_CONFIG.modelrouter.baseURL,
-          apiKey:
-            process.env.OPENAI_API_KEY || PROVIDERS_CONFIG.modelrouter.apiKey,
-        },
-      );
+      return new ModelRouterProvider(modelOverride);
     default:
       // Fallback to claude
       return new ClaudeProvider(modelOverride);
