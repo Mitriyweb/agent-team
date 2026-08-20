@@ -297,9 +297,22 @@ export function configureProvider() {
       break;
     }
 
+    case "model-router":
+    case "modelrouter": {
+      const host = process.env.MODEL_ROUTER_HOST || "http://localhost:8787";
+      process.env.ANTHROPIC_BASE_URL = host;
+      process.env.ANTHROPIC_API_KEY =
+        process.env.MODEL_ROUTER_API_KEY || "dummy";
+      const openAiUrl = `${host.replace(/\/+$/, "")}/v1`;
+      process.env.OPENAI_BASE_URL = openAiUrl;
+      process.env.OPENAI_API_KEY = process.env.MODEL_ROUTER_API_KEY || "dummy";
+      log(`Provider: ${GREEN}model-router${NC} → ${host}`);
+      break;
+    }
+
     default:
       err(
-        `Unknown PROVIDER '${provider}'. Use: oauth, anthropic, azure-apim, azure-apim-oauth, litellm`,
+        `Unknown PROVIDER '${provider}'. Use: oauth, anthropic, azure-apim, azure-apim-oauth, litellm, model-router`,
       );
   }
 }

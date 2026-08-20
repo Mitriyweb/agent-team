@@ -160,6 +160,25 @@ describe("common.ts", () => {
     process.env.LITELLM_HOST = "http://lite";
     common.configureProvider();
 
+    process.env.PROVIDER = "model-router";
+    process.env.MODEL_ROUTER_HOST = "http://router:8787";
+    common.configureProvider();
+    expect(process.env.ANTHROPIC_BASE_URL).toBe("http://router:8787");
+    expect(process.env.OPENAI_BASE_URL).toBe("http://router:8787/v1");
+    expect(process.env.ANTHROPIC_API_KEY as unknown as string).toBe("dummy");
+    expect(process.env.OPENAI_API_KEY as unknown as string).toBe("dummy");
+
+    process.env.PROVIDER = "modelrouter";
+    process.env.MODEL_ROUTER_HOST = "http://router2:8787";
+    process.env.MODEL_ROUTER_API_KEY = "custom-key";
+    common.configureProvider();
+    expect(process.env.ANTHROPIC_BASE_URL).toBe("http://router2:8787");
+    expect(process.env.OPENAI_BASE_URL).toBe("http://router2:8787/v1");
+    expect(process.env.ANTHROPIC_API_KEY as unknown as string).toBe(
+      "custom-key",
+    );
+    expect(process.env.OPENAI_API_KEY as unknown as string).toBe("custom-key");
+
     process.env.PROVIDER = "anthropic";
     process.env.ANTHROPIC_API_KEY = "test-key";
     common.configureProvider();

@@ -62,6 +62,33 @@ deploy:
 
 ---
 
+## model-router Proxy (Universal Token Source)
+
+[model-router](https://mitriyweb.github.io/model-router/) acts as a universal AI proxy and token source.
+It offers free-tier access across multiple LLM providers (GitHub Models, Groq, Cerebras, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Ollama).
+
+### Setup
+
+Start `model-router` on port `8787`:
+
+```bash
+# Clone and start model-router
+git clone https://github.com/Mitriyweb/model-router.git
+cd model-router && bun install && bun run start
+```
+
+Configure `.env` in `agent-team`:
+
+```env
+PROVIDER=model-router
+MODEL_ROUTER_HOST=http://localhost:8787
+MODEL_ROUTER_API_KEY=dummy
+```
+
+`agent-team` will route requests via `model-router`'s Anthropic (`/v1/messages`) and OpenAI (`/v1/chat/completions`) endpoints.
+
+---
+
 ## LiteLLM Proxy
 
 Runs on `http://localhost:8080`.
@@ -83,6 +110,9 @@ Configure in `config/litellm.yaml`.
 ```bash
 # Ollama running?
 curl http://localhost:11434/api/tags
+
+# model-router running?
+curl http://localhost:8787/v1/models
 
 # LiteLLM running?
 curl http://localhost:8080/health

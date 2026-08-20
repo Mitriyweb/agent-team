@@ -2,8 +2,8 @@ import OpenAI from "openai";
 import { PROVIDERS_CONFIG } from "../providers.config.ts";
 import type { ModelProvider, QueryOptions } from "./base.ts";
 
-export class OpenAIProvider implements ModelProvider {
-  name = "openai";
+export class ModelRouterProvider implements ModelProvider {
+  name = "model-router";
   private model: string;
   private client: OpenAI;
 
@@ -11,17 +11,16 @@ export class OpenAIProvider implements ModelProvider {
     modelOverride?: string,
     options?: { baseURL?: string; apiKey?: string },
   ) {
-    this.model = modelOverride ?? PROVIDERS_CONFIG.openai.defaultModel;
+    this.model = modelOverride ?? PROVIDERS_CONFIG.modelrouter.defaultModel;
     this.client = new OpenAI({
       apiKey:
         options?.apiKey ||
         process.env.OPENAI_API_KEY ||
-        PROVIDERS_CONFIG.openai.apiKey ||
-        "mock-key",
+        PROVIDERS_CONFIG.modelrouter.apiKey,
       baseURL:
         options?.baseURL ||
         process.env.OPENAI_BASE_URL ||
-        PROVIDERS_CONFIG.openai.baseURL,
+        PROVIDERS_CONFIG.modelrouter.baseURL,
     });
   }
 

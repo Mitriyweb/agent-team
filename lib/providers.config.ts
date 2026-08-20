@@ -15,4 +15,18 @@ export const PROVIDERS_CONFIG = {
     baseURL: process.env.OPENAI_BASE_URL,
     apiKey: process.env.OPENAI_API_KEY,
   },
+  modelrouter: {
+    defaultModel: "model-router-auto",
+    baseURL: process.env.MODEL_ROUTER_HOST
+      ? `${process.env.MODEL_ROUTER_HOST.replace(/\/+$/, "")}/v1`
+      : "http://localhost:8787/v1",
+    apiKey: process.env.MODEL_ROUTER_API_KEY ?? "dummy",
+  },
+  "model-router": {
+    defaultModel: "model-router-auto",
+    baseURL: process.env.MODEL_ROUTER_HOST
+      ? `${process.env.MODEL_ROUTER_HOST.replace(/\/+$/, "")}/v1`
+      : "http://localhost:8787/v1",
+    apiKey: process.env.MODEL_ROUTER_API_KEY ?? "dummy",
+  },
 };

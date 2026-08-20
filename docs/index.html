@@ -336,6 +336,29 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
   --page-index ./docs --no-human-review --no-sound</code></pre>
         </section>
 
+        <section id="providers">
+            <h2>Token Source &amp; Providers</h2>
+            <p>Configure provider options via environment variables (in <code>.env</code>):</p>
+            <div class="grid">
+                <article>
+                    <h3>OAuth (Default)</h3>
+                    <p>Uses your direct <code>claude /login</code> browser session with no API keys required.</p>
+                </article>
+                <article>
+                    <h3>model-router Proxy</h3>
+                    <p>Route requests via <a href="https://mitriyweb.github.io/model-router/">model-router</a> &mdash;
+                        a universal AI proxy offering free-tier and local LLM provider access (GitHub Models, Groq, Cerebras, Gemini, OpenRouter, Mistral, NVIDIA NIM, Cloudflare AI, Cohere, Ollama).</p>
+                    <pre><code>PROVIDER=model-router
+MODEL_ROUTER_HOST=http://localhost:8787</code></pre>
+                </article>
+                <article>
+                    <h3>Cloud &amp; Custom Proxies</h3>
+                    <p>Direct Anthropic API, Azure APIM (key or OAuth), or LiteLLM proxy.</p>
+                    <pre><code>PROVIDER=anthropic | azure-apim | litellm</code></pre>
+                </article>
+            </div>
+        </section>
+
         <section id="execution">
             <h2>Execution</h2>
             <div class="grid">
@@ -382,6 +405,7 @@ ln -sf $(pwd)/dist/agent-team ~/.local/bin/agent-team</code></pre>
                 <li><strong>Teams:</strong> 4 built-in teams + custom team creation.</li>
                 <li><strong>Document Reasoning:</strong> PageIndex support for reasoning-based RAG.</li>
                 <li><strong>External Review:</strong> 5 supported agents (Codex, Claude, Gemini, Devin, Aider).</li>
+                <li><strong>Providers:</strong> Direct OAuth, Anthropic, Azure APIM, LiteLLM, and <a href="https://mitriyweb.github.io/model-router/">model-router</a> proxy.</li>
             </ul>
         </section>
     </main>

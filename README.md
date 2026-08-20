@@ -302,6 +302,14 @@ docker build -f Dockerfile.sdk -t agent-team-sdk .
 docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
 ```
 
+### Token Source & Providers
+
+`agent-team` supports multiple LLM providers configured via environment variables (in `.env`):
+
+- `PROVIDER=oauth` (default, direct Claude Code session)
+- `PROVIDER=model-router` (routes via [model-router](https://mitriyweb.github.io/model-router/) universal proxy for free-tier and local LLMs)
+- `PROVIDER=anthropic` | `azure-apim` | `azure-apim-oauth` | `litellm`
+
 ### Configuration
 
 `agent-team.json` supports project-level settings:
