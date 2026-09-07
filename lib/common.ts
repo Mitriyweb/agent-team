@@ -326,6 +326,7 @@ export enum ExternalReviewAgent {
   Aider = "aider",
   Claude = "claude",
   Gemini = "gemini",
+  MiniAgent = "mini-agent",
 }
 
 export interface ExternalReviewConfig {

@@ -338,7 +338,7 @@ docker run -e ANTHROPIC_API_KEY=sk-ant-... agent-team-sdk
 
 Configure an external CLI agent to independently review **both plans and implementations**.
 
-Supported agents: `codex`, `devin`, `aider`, `claude`, `gemini`.
+Supported agents: `codex`, `devin`, `aider`, `claude`, `gemini`, `mini-agent`.
 
 ```bash
 # Interactive setup

@@ -519,7 +519,7 @@ ${(() => {
   if (cfg.externalReview?.agent) {
     return `All plans and code produced by agents will be independently reviewed by \`${cfg.externalReview.agent}\` — after planning and after each task completion.\nDo NOT skip or bypass this review step — it is mandatory.\n`;
   }
-  return "External review is not configured. To enable an independent second-opinion review (after planning and after each task), run `agent-team reconfigure` and select a review agent (codex, claude, gemini, devin, or aider).\n";
+  return "External review is not configured. To enable an independent second-opinion review (after planning and after each task), run `agent-team reconfigure` and select a review agent (codex, claude, gemini, devin, aider, or mini-agent).\n";
 })()}
 
 ## Reports

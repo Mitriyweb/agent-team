@@ -140,6 +140,11 @@ const EXTERNAL_REVIEW_AGENTS: {
     label: "Gemini CLI",
     hint: "Google Gemini CLI (gemini)",
   },
+  {
+    value: ExternalReviewAgent.MiniAgent,
+    label: "mini-agent",
+    hint: "mini-agent CLI (mini-agent)",
+  },
 ];
 
 export async function promptExternalReview(
