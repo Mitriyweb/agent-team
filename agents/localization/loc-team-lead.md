@@ -1,7 +1,8 @@
 ---
 name: loc-team-lead
-description: Localization team orchestrator. Launch when you need to produce documented, localized, and SEO-optimized content — decomposes work,
-delegates to tech-writer, localizers, seo-specialist, and qa. Never writes docs or translations itself.
+description: >-
+  Localization team orchestrator. Launch when you need to produce documented, localized, and SEO-optimized content — decomposes work,
+  delegates to tech-writer, localizers, seo-specialist, and qa. Never writes docs or translations itself.
 model: opus
 tools: Read, Write, Glob, Grep, Task, Teammate
 allow_sub_agents: true

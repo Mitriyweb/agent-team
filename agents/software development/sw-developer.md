@@ -1,8 +1,9 @@
 ---
 name: sw-developer
-description: Senior developer. Implements code per `.claude-loop/reports/task-{id}-spec.md`,
-iterates with architect on reviews, and fixes bugs reported by QA — all through
-direct messaging.
+description: >-
+  Senior developer. Implements code per `.claude-loop/reports/task-{id}-spec.md`,
+  iterates with architect on reviews, and fixes bugs reported by QA — all through
+  direct messaging.
 model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---

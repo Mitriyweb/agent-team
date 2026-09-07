@@ -1,7 +1,8 @@
 ---
 name: loc-qa
-description: Documentation QA. Reviews source English docs and all translations for completeness, accuracy, consistency, and formatting. Reports
-issues directly to the responsible agent.
+description: >-
+  Documentation QA. Reviews source English docs and all translations for completeness, accuracy, consistency, and formatting. Reports
+  issues directly to the responsible agent.
 model: sonnet
 tools: Read, Glob, Grep, Bash, Teammate
 ---

@@ -1,7 +1,8 @@
 ---
 name: fe-dev
-description: Frontend developer. Implements UI components and views according to UI_SPEC.md. Framework-aware (React, Vue, Svelte, etc.) based on
-environment configuration.
+description: >-
+  Frontend developer. Implements UI components and views according to UI_SPEC.md. Framework-aware (React, Vue, Svelte, etc.) based on
+  environment configuration.
 model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep, Teammate
 ---

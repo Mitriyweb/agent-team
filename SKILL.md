@@ -1,9 +1,6 @@
 ---
 name: agent-team
-description: Use this skill when working on the agent-team repository — adding agents,
-  modifying orchestration logic, updating CLAUDE.md configs, extending memory patterns,
-  or debugging multi-agent flows. Covers: Claude SDK query() loop, YAML frontmatter
-  agent configs, memory.md lifecycle, librarian agent, Telegram notifications, and
+description: Use this skill when working on the agent-team repository — adding agents, modifying orchestration logic, updating CLAUDE.md configs, extending memory patterns, or debugging multi-agent flows. Covers: Claude SDK query() loop, YAML frontmatter, agent configs, memory.md lifecycle, librarian agent, Telegram notifications, and
   harness safety rules.
 ---
 
