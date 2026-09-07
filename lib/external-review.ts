@@ -29,7 +29,7 @@ export interface ReviewResult {
 }
 
 /**
- * Run the configured external CLI agent (codex, devin, aider, claude, gemini)
+ * Run the configured external CLI agent (codex, devin, aider, claude, gemini, mini-agent)
  * on an arbitrary prompt. Returns null if no external review is configured or
  * the agent binary is not on PATH.
  */
@@ -123,6 +123,8 @@ function buildExternalArgs(
       return [cmd, "--message", prompt, "--yes"];
     case ExternalReviewAgent.Gemini:
       return [cmd, "-p", prompt];
+    case ExternalReviewAgent.MiniAgent:
+      return [cmd, "-y", prompt];
     default:
       return [cmd, prompt];
   }

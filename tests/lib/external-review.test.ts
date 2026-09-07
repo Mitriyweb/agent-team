@@ -82,4 +82,33 @@ describe("runExternalReview", () => {
     expect(content).toContain("# External Review — task #1");
     expect(content).toContain("**Agent:** codex");
   });
+
+  it("writes the review output file when mini-agent is configured as the external review agent", () => {
+    fs.writeFileSync(
+      "agent-team.json",
+      JSON.stringify({
+        planner: common.Planner.Builtin,
+        externalReview: {
+          agent: common.ExternalReviewAgent.MiniAgent,
+          command: "/bin/echo",
+        },
+      }),
+    );
+
+    const outputFile = path.join(tmpDir, "nested", "mini-out.md");
+    const result = runExternalReview({
+      subject: "task #2",
+      prompt: "review with mini-agent",
+      outputFile,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.ok).toBe(true);
+    expect(fs.existsSync(outputFile)).toBe(true);
+
+    const content = fs.readFileSync(outputFile, "utf-8");
+    expect(content).toContain("# External Review — task #2");
+    expect(content).toContain("**Agent:** mini-agent");
+    expect(content).toContain("-y review with mini-agent");
+  });
 });

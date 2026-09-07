@@ -303,7 +303,7 @@ async function main() {
       "    agent-team init --team NAME [--planner P] [--vault V] [--page-index D]  Non-interactive",
     );
     console.log(
-      "                    [--external-review codex|devin|aider|claude|gemini]",
+      "                    [--external-review codex|devin|aider|claude|gemini|mini-agent]",
     );
     console.log(
       "                    [--telegram-token TOKEN --telegram-chat CHAT_ID]",
